@@ -1,0 +1,30 @@
+{
+  "brand": "Cinder",
+  "approved_direction": "black brackets + cobalt-blue center",
+  "palette": {
+    "cinder_cobalt": {
+      "hex": "#0051FE"
+    },
+    "black": {
+      "hex": "#0B0B0B"
+    },
+    "white": {
+      "hex": "#FFFFFF"
+    },
+    "charcoal": {
+      "hex": "#1F1F1F"
+    },
+    "graphite": {
+      "hex": "#6B7280"
+    },
+    "light_gray": {
+      "hex": "#F4F6F8"
+    },
+    "off_white": {
+      "hex": "#FAFAFB"
+    },
+    "dark_surface": {
+      "hex": "#252A2E"
+    }
+  }
+}

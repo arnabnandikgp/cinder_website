@@ -1,0 +1,9 @@
+node_modules
+.next
+test-results
+package-lock.json
+cinder_design_system
+public
+AGENTS.md
+CLAUDE.md
+next-env.d.ts
