@@ -4,14 +4,12 @@ import {
   Code2,
   Layers3,
   LockKeyhole,
-  ShieldCheck,
   TrendingUp,
 } from "lucide-react";
 import { Header } from "@/components/header";
-import { Brand, ExploreButton, Mark, SectionLabel } from "@/components/ui";
+import { Brand, ExploreButton, Mark } from "@/components/ui";
 import {
   AdvantageMini,
-  ExecutionFactors,
   ExecutionFlow,
   Fragmentation,
   HeroNetwork,
@@ -38,7 +36,7 @@ const advantages = [
     title: "Venue liquidity",
     icon: Layers3,
     type: "liquidity" as const,
-    text: "Orders execute against the markets and liquidity of integrated perp venues. Cinder is the prime broker—not another isolated exchange.",
+    text: "Orders execute against the markets and liquidity of integrated perp venues. Cinder is the prime broker, not another isolated exchange.",
   },
   {
     title: "Programmatic by default",
@@ -113,12 +111,9 @@ export default function Home() {
                 </h1>
                 <p className="hero-intro">
                   Cinder is building a unified trading account for accessing
-                  Solana perp venues privately and programmatically.
-                </p>
-                <p className="hero-promise">
-                  Keep your positions private. Pool volume for better fee tiers.
-                  <br className="desktop-break" /> Trade through the liquidity
-                  of existing venues.
+                  Solana perp venues privately and programmatically. Keep your
+                  positions private. Pool volume for better fee tiers. Trade
+                  through the liquidity of existing venues.
                 </p>
                 <div className="hero-actions">
                   <ExploreButton />
@@ -138,7 +133,6 @@ export default function Home() {
           aria-labelledby="market-title"
         >
           <div className="container">
-            <SectionLabel number="01">THE MARKET TODAY</SectionLabel>
             <div className="split-layout">
               <div className="section-copy">
                 <h2 id="market-title">
@@ -172,14 +166,8 @@ export default function Home() {
           aria-labelledby="advantage-title"
         >
           <div className="container">
-            <SectionLabel number="02">THE CINDER ADVANTAGE</SectionLabel>
             <div className="section-heading-row">
               <h2 id="advantage-title">Trade through Cinder.</h2>
-              <p>
-                The account you need.
-                <br />
-                The markets you already know.
-              </p>
             </div>
             <div className="advantage-grid">
               {advantages.map((advantage, i) => (
@@ -194,13 +182,6 @@ export default function Home() {
                 </article>
               ))}
             </div>
-            <div className="advantage-bottom">
-              <Mark />
-              <span>One private account.</span>
-              <div className="advantage-rule" />
-              <span>Multiple venues. Existing liquidity.</span>
-              <Layers3 size={18} />
-            </div>
           </div>
         </section>
 
@@ -210,7 +191,6 @@ export default function Home() {
           aria-labelledby="execution-title"
         >
           <div className="container">
-            <SectionLabel number="03">PRIVATE EXECUTION</SectionLabel>
             <h2 id="execution-title">
               Your strategy stays private.
               <br />
@@ -219,16 +199,6 @@ export default function Home() {
               </span>
             </h2>
             <ExecutionFlow />
-            <div className="execution-note">
-              <ShieldCheck size={21} strokeWidth={1.4} />
-              <p>
-                The venue receives what it needs to execute.{" "}
-                <span>
-                  The trader’s identity, portfolio, and broader strategy remain
-                  within Cinder.
-                </span>
-              </p>
-            </div>
           </div>
         </section>
 
@@ -238,11 +208,12 @@ export default function Home() {
           aria-labelledby="economics-title"
         >
           <div className="container">
-            <SectionLabel number="04">BETTER TRADING ECONOMICS</SectionLabel>
             <div className="split-layout">
               <div className="section-copy">
                 <h2 id="economics-title">
                   Pooled volume.
+                  <br />
+                  Lowest fees
                   <br />
                   <span className="muted-heading">Better execution.</span>
                 </h2>
@@ -259,18 +230,9 @@ export default function Home() {
                   price impact, funding, and execution quality determine what a
                   trade ultimately costs.
                 </p>
-                <ExecutionFactors />
               </div>
               <PooledVolume />
             </div>
-            <blockquote className="economics-quote">
-              <span aria-hidden="true">↗</span>
-              <p>
-                Better fee tiers are the starting point.
-                <br />
-                <span>Better net execution is the goal.</span>
-              </p>
-            </blockquote>
           </div>
         </section>
 
@@ -281,12 +243,11 @@ export default function Home() {
         >
           <Mark className="privacy-watermark" />
           <div className="container">
-            <SectionLabel number="05">CONFIDENTIAL BY DESIGN</SectionLabel>
             <div className="privacy-heading">
               <h2 id="privacy-title">
-                Your account
+                Confidential by design:
                 <br />
-                belongs to you.
+                your account belongs to you
               </h2>
               <div>
                 <p>
@@ -295,24 +256,12 @@ export default function Home() {
                   providers, and Cinder’s ordinary operators.
                 </p>
                 <p>
-                  The selected venue sees the order required for execution—not
+                  The selected venue sees the order required for execution, not
                   the end user’s complete portfolio or Cinder account history.
                 </p>
               </div>
             </div>
             <PrivacyMap />
-            <div className="privacy-support">
-              <p>
-                Privacy is supported by an attested execution environment,
-                protected signing credentials, private accounting, and
-                verifiable backing.
-              </p>
-              <span>
-                Private trading state. Verifiable execution.
-                <br />
-                Accountable backing.
-              </span>
-            </div>
           </div>
         </section>
 
@@ -322,13 +271,12 @@ export default function Home() {
           aria-labelledby="vision-title"
         >
           <div className="container">
-            <SectionLabel number="06">THE LARGER VISION</SectionLabel>
             <div className="split-layout">
               <div className="section-copy">
                 <h2 id="vision-title">
-                  The private account layer
+                  The larger vision: The private account layer
                   <br />
-                  for Solana perps.
+                  for Solana perps
                 </h2>
                 <p>
                   Cinder begins as a private prime broker connecting traders to
@@ -343,10 +291,6 @@ export default function Home() {
                   The long-term destination is a private clearing layer
                   connecting traders and venues across Solana.
                 </p>
-                <span className="development-note">
-                  <span className="status-dot" />
-                  In development. Built for what comes next.
-                </span>
               </div>
               <VisionNetwork />
             </div>
@@ -393,12 +337,7 @@ export default function Home() {
         >
           <div className="container faq-layout">
             <div>
-              <SectionLabel number="07">A FEW MORE THINGS</SectionLabel>
-              <h2 id="faq-title">
-                Good questions.
-                <br />
-                <span className="muted-heading">Clear answers.</span>
-              </h2>
+              <h2 id="faq-title">FAQs</h2>
               <a
                 href={site.contact}
                 target="_blank"
@@ -427,12 +366,6 @@ export default function Home() {
 
         <section className="closing-section" aria-label="Cinder vision">
           <div className="container closing-inner">
-            <span className="mono">
-              <span className="tiny-cross" aria-hidden="true">
-                +
-              </span>{" "}
-              THE NEXT CHAPTER OF SOLANA PERPS
-            </span>
             <p>
               Private positions.
               <br />

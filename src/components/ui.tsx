@@ -36,21 +36,6 @@ export function ExploreButton() {
   );
 }
 
-export function SectionLabel({
-  number,
-  children,
-}: {
-  number: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="section-label">
-      <span className="section-number">{number}</span>
-      <span>{children}</span>
-    </div>
-  );
-}
-
 export function Mark({ className = "" }: { className?: string }) {
   return (
     <Image

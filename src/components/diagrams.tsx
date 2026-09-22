@@ -4,7 +4,6 @@ import { useEffect, useId, useRef, useState, type RefObject } from "react";
 import { motion, useInView, useReducedMotion } from "motion/react";
 import {
   ArrowDown,
-  ArrowDownLeft,
   ArrowUpRight,
   Check,
   CheckCheck,
@@ -14,25 +13,16 @@ import {
   Fingerprint,
   Layers3,
   LockKeyhole,
-  Radio,
   RotateCcw,
   ShieldCheck,
   UserRound,
 } from "lucide-react";
 import { Mark } from "./ui";
 
-function useVisibleDiagram() {
+function useDiagramMotion() {
   const ref = useRef<HTMLDivElement>(null);
-  const visible = useInView(ref, { amount: 0.2 });
   const reduceMotion = useReducedMotion();
-  const [pageVisible, setPageVisible] = useState(true);
-  useEffect(() => {
-    const update = () => setPageVisible(!document.hidden);
-    update();
-    document.addEventListener("visibilitychange", update);
-    return () => document.removeEventListener("visibilitychange", update);
-  }, []);
-  return { ref, active: visible && pageVisible && !reduceMotion, reduceMotion };
+  return { ref, reduceMotion };
 }
 
 function HeroConnections({
@@ -193,29 +183,13 @@ function HeroConnections({
 }
 
 export function HeroNetwork() {
-  const { ref, active } = useVisibleDiagram();
   const stageRef = useRef<HTMLDivElement>(null);
-  const [playing, setPlaying] = useState(true);
   return (
     <div
-      ref={ref}
-      className={`hero-network ${active && playing ? "is-active" : ""}`}
+      className="hero-network"
       role="group"
       aria-label="Conceptual order flow: a trader sends an encrypted instruction to Cinder. Private account state stays in Cinder while executable orders reach venue liquidity and fills return."
     >
-      <div className="network-topline">
-        <span className="mono">
-          <span className="status-dot" /> THE PRIVATE ACCOUNT LAYER
-        </span>
-        <button
-          className="diagram-toggle"
-          onClick={() => setPlaying(!playing)}
-          aria-pressed={!playing}
-        >
-          {playing ? "Pause flow" : "Play flow"}
-          <span aria-hidden="true">{playing ? "Ⅱ" : "▷"}</span>
-        </button>
-      </div>
       <div className="network-stage" ref={stageRef}>
         <HeroConnections stageRef={stageRef} />
         <div className="trader-node">
@@ -347,7 +321,7 @@ const steps = [
 ];
 
 export function ExecutionFlow() {
-  const { ref, reduceMotion } = useVisibleDiagram();
+  const { ref, reduceMotion } = useDiagramMotion();
   const seen = useInView(ref, { once: true, amount: 0.3 });
   return (
     <div ref={ref} className="execution-flow">
@@ -398,7 +372,7 @@ export function ExecutionFlow() {
 }
 
 export function PooledVolume() {
-  const { ref, reduceMotion } = useVisibleDiagram();
+  const { ref, reduceMotion } = useDiagramMotion();
   const seen = useInView(ref, { once: true, amount: 0.35 });
   const [replay, setReplay] = useState(0);
   return (
@@ -485,10 +459,6 @@ export function PooledVolume() {
         <span>VENUE LIQUIDITY</span>
         <Layers3 size={18} />
       </div>
-      <p className="diagram-footnote">
-        Conceptual illustration. Fee tiers depend on venue rules and qualifying
-        volume.
-      </p>
     </div>
   );
 }
@@ -586,9 +556,6 @@ export function PrivacyMap() {
           </div>
         </div>
       </div>
-      <p className="diagram-footnote">
-        Intended information boundaries. Cinder is in development.
-      </p>
     </div>
   );
 }
@@ -638,10 +605,6 @@ export function VisionNetwork() {
           <span>VENUE {n}</span>
         </div>
       ))}
-      <div className="vision-note">
-        <Radio size={12} />
-        AN EXPANDING NETWORK
-      </div>
     </div>
   );
 }
@@ -708,23 +671,6 @@ export function AdvantageMini({
       </div>
       <div>
         {"}"})<span className="code-caption">ILLUSTRATIVE INTERFACE</span>
-      </div>
-    </div>
-  );
-}
-
-export function ExecutionFactors() {
-  return (
-    <div className="execution-factors">
-      {["Fees", "Liquidity", "Price impact", "Funding"].map((factor) => (
-        <span key={factor}>
-          {factor}
-          <Check size={12} />
-        </span>
-      ))}
-      <div>
-        <ArrowDownLeft size={16} />
-        <strong>Better net execution</strong>
       </div>
     </div>
   );

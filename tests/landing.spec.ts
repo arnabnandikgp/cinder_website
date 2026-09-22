@@ -121,28 +121,126 @@ test("mobile navigation closes on selection and Escape", async ({ page }) => {
   ).not.toBeVisible();
 });
 
-test("hero flow pauses offscreen, on demand, and with reduced motion", async ({
+test("navigation stays legible and available around its responsive breakpoint", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1024, height: 900 });
+  await page.goto("/");
+  const desktopNav = page.getByRole("navigation", { name: "Main navigation" });
+  await expect(desktopNav).toBeVisible();
+  await expect(page.locator(".header-inner")).toHaveCSS(
+    "border-radius",
+    "999px",
+  );
+  await expect(
+    desktopNav.getByRole("link", { name: "The advantage" }),
+  ).toHaveCSS("font-size", "14px");
+
+  await page.setViewportSize({ width: 921, height: 900 });
+  await expect(desktopNav).toBeVisible();
+  const spacing = await page.evaluate(() => {
+    const brand = document.querySelector(".header-inner .brand")!;
+    const nav = document.querySelector(".desktop-nav")!;
+    const contact = document.querySelector(".header-contact")!;
+    return {
+      beforeNav:
+        nav.getBoundingClientRect().left - brand.getBoundingClientRect().right,
+      afterNav:
+        contact.getBoundingClientRect().left -
+        nav.getBoundingClientRect().right,
+    };
+  });
+  expect(spacing.beforeNav).toBeGreaterThan(0);
+  expect(spacing.afterNav).toBeGreaterThan(0);
+
+  await page.setViewportSize({ width: 900, height: 900 });
+  await expect(desktopNav).toBeHidden();
+  await page.getByRole("button", { name: "Open navigation" }).click();
+  await expect(
+    page.getByRole("navigation", { name: "Mobile navigation" }),
+  ).toBeVisible();
+});
+
+test("navigation indicator follows links and scrolling", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/");
+  const nav = page.getByRole("navigation", { name: "Main navigation" });
+  const advantage = nav.getByRole("link", { name: "The advantage" });
+  const execution = nav.getByRole("link", { name: "How it works" });
+  const vision = nav.getByRole("link", { name: "The vision" });
+  const faq = nav.getByRole("link", { name: "FAQ" });
+  const dot = nav.locator(".nav-indicator");
+
+  await expect(nav.locator("[aria-current]")).toHaveCount(0);
+  await expect(dot).toHaveCSS("opacity", "0");
+  await page.evaluate(() =>
+    document.getElementById("market")?.scrollIntoView({ behavior: "instant" }),
+  );
+  await expect(nav.locator("[aria-current]")).toHaveCount(0);
+  await page.evaluate(() =>
+    document
+      .getElementById("advantage")
+      ?.scrollIntoView({ behavior: "instant" }),
+  );
+  await expect(advantage).toHaveAttribute("aria-current", "location");
+  await expect(dot).toHaveCSS("opacity", "1");
+  const initialX = await dot.evaluate(
+    (element) => element.getBoundingClientRect().x,
+  );
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+  await expect(nav.locator("[aria-current]")).toHaveCount(0);
+  await expect(dot).toHaveCSS("opacity", "0");
+  await page.getByRole("link", { name: "See how it works" }).click();
+  await expect(page).toHaveURL(/#execution$/);
+  await expect(execution).toHaveAttribute("aria-current", "location");
+  await expect
+    .poll(async () =>
+      dot.evaluate((element) => element.getBoundingClientRect().x),
+    )
+    .toBeGreaterThan(initialX + 40);
+
+  await page.evaluate(() =>
+    document.getElementById("vision")?.scrollIntoView({ behavior: "instant" }),
+  );
+  await expect(vision).toHaveAttribute("aria-current", "location");
+  await page.evaluate(() =>
+    document.getElementById("faq")?.scrollIntoView({ behavior: "instant" }),
+  );
+  await expect(faq).toHaveAttribute("aria-current", "location");
+});
+
+test("hero promise shares the main description typography", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const intro = page.locator(".hero-intro");
+  await expect(intro).toContainText(
+    "Cinder is building a unified trading account",
+  );
+  await expect(intro).toContainText("Keep your positions private.");
+  await expect(intro).toContainText(
+    "Trade through the liquidity of existing venues.",
+  );
+  await expect(page.locator(".hero-promise")).toHaveCount(0);
+});
+
+test("hero flow loops without controls and respects reduced motion", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
-  const flow = page.locator(".hero-network");
-  await expect(flow).toHaveClass(/is-active/);
-  await page.getByRole("button", { name: "Pause flow" }).click();
-  await expect(flow).not.toHaveClass(/is-active/);
-  await page.getByRole("button", { name: "Play flow" }).click();
-  await expect(flow).toHaveClass(/is-active/);
+  await expect(
+    page.getByRole("button", { name: /pause flow|play flow/i }),
+  ).toHaveCount(0);
+  const flow = page.locator(".hero-connectors .flow-in");
+  await expect(flow).toHaveCSS("animation-name", "route-flow");
+  await expect(flow).toHaveCSS("animation-play-state", "running");
   await page
     .getByRole("heading", { name: "Trade through Cinder." })
     .scrollIntoViewIfNeeded();
-  await expect(flow).not.toHaveClass(/is-active/);
+  await expect(flow).toHaveCSS("animation-play-state", "running");
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/");
-  await expect(flow).not.toHaveClass(/is-active/);
-  const animation = await page
-    .locator(".hero-connectors .flow-in")
-    .evaluate((el) => getComputedStyle(el).animationName);
-  expect(animation).toBe("none");
+  await expect(flow).toHaveCSS("animation-name", "none");
 });
 
 test("branded social preview is available", async ({ request }) => {
@@ -152,6 +250,21 @@ test("branded social preview is available", async ({ request }) => {
   const body = await response.body();
   expect(body.readUInt32BE(16)).toBe(1200);
   expect(body.readUInt32BE(20)).toBe(630);
+});
+
+test("page copy and metadata use no em dashes", async ({ page }) => {
+  await page.goto("/");
+  const title = "Cinder | One private account for Solana perps";
+  await expect(page).toHaveTitle(title);
+  await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
+    "content",
+    title,
+  );
+  await expect(page.locator('meta[name="twitter:title"]')).toHaveAttribute(
+    "content",
+    title,
+  );
+  expect(await page.locator("body").innerText()).not.toContain("—");
 });
 
 test("hero connections stay attached to each node when the layout resizes", async ({

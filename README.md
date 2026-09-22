@@ -35,7 +35,7 @@ The page and social-preview image are generated at build time. Fonts are self-ho
 - `public/brand/`: copies of approved logo assets used on the page.
 - `public/art/cobalt-architecture.png`: generated atmospheric hero artwork. See [art direction and exact generation prompt](docs/art-direction.md).
 
-The frontend design guidelines informed semantic controls, visible keyboard focus, contrast, responsive layouts, and motion handling. Only the diagrams animate: hero routing pauses offscreen, when the tab is hidden, or when manually paused; execution and pooled volume play once on entry; pooled volume has a replay control. Reduced-motion users receive static states. Small screens use a vertical hero flow. The privacy map supports hover, keyboard focus, and tap.
+The frontend design guidelines informed semantic controls, visible keyboard focus, contrast, responsive layouts, and motion handling. Only the diagrams animate: hero routing loops continuously; execution and pooled volume play once on entry; pooled volume has a replay control. Reduced-motion users receive static states. Small screens use a vertical hero flow. The privacy map supports hover, keyboard focus, and tap.
 
 Venue names and volumes are conceptual; no unsupported integration, live fee, or performance claims are introduced. X and Contact link to https://x.com/CinderExchange. GitHub links to https://github.com/arnabnandikgp/cinder. Early access has been removed as requested.
 
