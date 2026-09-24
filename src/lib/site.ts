@@ -11,7 +11,7 @@ function publicUrl(value: string | undefined) {
 export const site = {
   name: "Cinder",
   description:
-    "One private account for Solana perps. Private positions, pooled economics, and access to the liquidity of existing venues.",
+    "One account for Solana perps. Cinder is building a prime broker layer for connected venue access, order routing, and account management.",
   url: publicUrl(process.env.NEXT_PUBLIC_SITE_URL),
   x: "https://x.com/CinderExchange",
   github: "https://github.com/arnabnandikgp/cinder",

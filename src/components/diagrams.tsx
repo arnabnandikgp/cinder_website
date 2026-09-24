@@ -6,15 +6,13 @@ import {
   ArrowDown,
   ArrowUpRight,
   Check,
-  CheckCheck,
   ChevronRight,
-  Code2,
   EyeOff,
-  Fingerprint,
   Layers3,
   LockKeyhole,
   RotateCcw,
-  ShieldCheck,
+  Route,
+  Send,
   UserRound,
 } from "lucide-react";
 import { Mark } from "./ui";
@@ -188,42 +186,42 @@ export function HeroNetwork() {
     <div
       className="hero-network"
       role="group"
-      aria-label="Conceptual order flow: a trader sends an encrypted instruction to Cinder. Private account state stays in Cinder while executable orders reach venue liquidity and fills return."
+      aria-label="Conceptual prime broker flow: a trader sends an instruction to one Cinder account. Cinder routes an order to a connected perp venue and records the result for the trader. Venue integrations are in development."
     >
       <div className="network-stage" ref={stageRef}>
         <HeroConnections stageRef={stageRef} />
         <div className="trader-node">
           <div className="node-icon">
-            <Code2 size={24} strokeWidth={1.4} />
+            <Send size={24} strokeWidth={1.4} />
           </div>
-          <strong>Your strategy</strong>
-          <span>Signed + encrypted</span>
+          <strong>Trader</strong>
+          <span>Trading instruction</span>
         </div>
         <div className="account-node">
           <div className="account-heading">
             <Mark />
             <span>Cinder</span>
-            <LockKeyhole size={14} />
+            <Route size={14} />
           </div>
-          <div className="account-caption">YOUR PRIVATE ACCOUNT</div>
+          <div className="account-caption">ONE TRADING ACCOUNT</div>
           <div className="private-row">
-            <span>Balances</span>
-            <span>••••••</span>
+            <span>Orders</span>
+            <span>Unified view</span>
           </div>
           <div className="private-row">
             <span>Positions</span>
-            <span>••••••</span>
+            <span>Unified view</span>
           </div>
           <div className="private-row">
-            <span>Open orders</span>
-            <span>••••••</span>
+            <span>Routing</span>
+            <span>Connected venues</span>
           </div>
           <div className="account-status">
-            <ShieldCheck size={12} />
-            <span>Confidential by design</span>
+            <Route size={12} />
+            <span>Prime broker layer</span>
             <span className="account-update" aria-hidden="true">
               <Check size={12} />
-              Private account updated
+              Account updated
             </span>
           </div>
         </div>
@@ -296,27 +294,27 @@ export function Fragmentation() {
 
 const steps = [
   {
-    icon: Fingerprint,
-    title: "Send",
-    label: "SIGNED BY YOU",
-    description: "The trader signs and encrypts a trading instruction.",
-    detail: "Encrypted instruction",
+    icon: UserRound,
+    title: "Trader",
+    label: "ONE INSTRUCTION",
+    description: "Send an order through the Cinder trading interface.",
+    detail: "Trader-facing account",
   },
   {
-    icon: ShieldCheck,
-    title: "Execute",
-    label: "PRIVATE BY DESIGN",
+    icon: Route,
+    title: "Cinder account and routing",
+    label: "PRIME BROKER LAYER",
     description:
-      "Cinder evaluates the account, manages risk, and selects an execution path inside its confidential runtime.",
-    detail: "Private risk evaluation",
+      "Cinder would record the trader’s activity internally and aim to select a suitable connected venue for execution.",
+    detail: "Internal account record",
   },
   {
-    icon: CheckCheck,
-    title: "Settle",
-    label: "CONNECTED TO THE MARKET",
+    icon: Layers3,
+    title: "Connected perp venue",
+    label: "VENUE LIQUIDITY",
     description:
-      "The order executes on the selected venue. The resulting position, fill, fee, and funding activity return to the trader’s private Cinder account.",
-    detail: "Venue execution + private update",
+      "The selected venue provides market liquidity. Cinder would reflect the resulting order and position activity in the trader’s account.",
+    detail: "Venue execution + account update",
   },
 ];
 
@@ -362,7 +360,7 @@ export function ExecutionFlow() {
           <h3>{step.title}</h3>
           <p>{step.description}</p>
           <div className="step-detail">
-            <LockKeyhole size={12} />
+            <Check size={12} />
             {step.detail}
           </div>
         </div>
@@ -378,7 +376,7 @@ export function PooledVolume() {
   return (
     <div ref={ref} className="pool-diagram">
       <div className="diagram-title">
-        <span className="mono">THE POWER OF POOLED VOLUME</span>
+        <span className="mono">ILLUSTRATIVE FEE-TIER PATH</span>
         <button
           onClick={() => setReplay((n) => n + 1)}
           className="replay-button"
@@ -431,7 +429,7 @@ export function PooledVolume() {
             <Mark />
             Cinder pooled volume
           </span>
-          <LockKeyhole size={15} />
+          <Route size={15} />
         </div>
         <div className="pool-bar">
           <motion.div
@@ -450,13 +448,13 @@ export function PooledVolume() {
           <span>Qualifying venue volume</span>
           <span>
             <Check size={13} />
-            Better fee tier
+            Potential fee tier
           </span>
         </div>
       </div>
       <div className="pool-output">
         <ArrowDown size={18} />
-        <span>VENUE LIQUIDITY</span>
+        <span>SUBJECT TO VENUE RULES</span>
         <Layers3 size={18} />
       </div>
     </div>
@@ -467,34 +465,34 @@ const visibility = [
   {
     name: "You",
     icon: UserRound,
-    label: "Complete visibility. Yours alone.",
+    label: "Your Cinder account view.",
     description:
-      "Access your balances, positions, open orders, and trading history through your private Cinder account.",
-    cells: [true, true, true, true],
+      "The planned account experience brings your balances, positions, orders, and history together in one view.",
+    cells: ["visible", "visible", "visible", "visible"],
   },
   {
     name: "Selected venue",
     icon: Layers3,
-    label: "Only what execution requires.",
+    label: "The information needed to execute.",
     description:
-      "The venue receives the executable order, without the end user’s full Cinder portfolio or account history.",
-    cells: [false, false, true, false],
+      "The venue sees the order and any other data its execution requires. Cinder aims not to share the trader’s complete Cinder portfolio or account history.",
+    cells: ["limited", "limited", "visible", "limited"],
   },
   {
     name: "Operators",
-    icon: Code2,
-    label: "Operation without account visibility.",
+    icon: Route,
+    label: "Routine access is designed to be limited.",
     description:
-      "Cinder is designed to keep account state confidential from ordinary operators and infrastructure providers.",
-    cells: [false, false, false, false],
+      "The attested runtime is intended to keep individual account state and routing decisions from ordinary operators and infrastructure providers.",
+    cells: ["limited", "limited", "limited", "limited"],
   },
   {
     name: "Public observers",
     icon: EyeOff,
-    label: "Your broader strategy stays private.",
+    label: "Venue-level visibility may vary.",
     description:
-      "Public venue activity does not expose the end user’s complete private Cinder account. Public execution and settlement remain subject to venue design.",
-    cells: [false, false, false, false],
+      "Cinder aims to avoid linking public activity to a trader’s full Cinder account. Order and settlement visibility still depend on the venue.",
+    cells: ["limited", "limited", "depends", "limited"],
   },
 ];
 
@@ -531,22 +529,32 @@ export function PrivacyMap() {
         <div className="visibility-detail" id={`${id}-detail`}>
           <div className="visibility-grid">
             {[
-              "Balances",
-              "Positions",
+              "Account balances",
+              "Individual positions",
               "Execution order",
               "Account history",
             ].map((label, i) => (
               <div
                 key={label}
-                className={current.cells[i] ? "visible-cell" : "private-cell"}
+                className={
+                  current.cells[i] === "visible"
+                    ? "visible-cell"
+                    : "private-cell"
+                }
               >
-                {current.cells[i] ? (
+                {current.cells[i] === "visible" ? (
                   <Check size={18} />
                 ) : (
                   <LockKeyhole size={17} />
                 )}
                 <span>{label}</span>
-                <small>{current.cells[i] ? "Visible" : "Private"}</small>
+                <small>
+                  {current.cells[i] === "visible"
+                    ? "Visible"
+                    : current.cells[i] === "depends"
+                      ? "Venue-dependent"
+                      : "Limited by design"}
+                </small>
               </div>
             ))}
           </div>
@@ -569,13 +577,13 @@ export function VisionNetwork() {
       ref={ref}
       className="vision-network"
       role="img"
-      aria-label="Cinder’s vision: a private account connecting an expanding network of venues through unified execution and, eventually, private clearing."
+      aria-label="Cinder’s long-term vision: one trader-facing account connected to an expanding network of perp venues, with deeper risk management and a future clearing layer."
     >
       <div className="vision-orbit orbit-outer" />
       <div className="vision-orbit orbit-inner" />
       <div className="vision-center">
         <Mark />
-        <span>One private account</span>
+        <span>One Cinder account</span>
       </div>
       <svg viewBox="0 0 560 390" fill="none" aria-hidden="true">
         {[
@@ -612,20 +620,20 @@ export function VisionNetwork() {
 export function AdvantageMini({
   type,
 }: {
-  type: "private" | "fees" | "liquidity" | "code";
+  type: "account" | "fees" | "liquidity";
 }) {
-  if (type === "private")
+  if (type === "account")
     return (
       <div className="mini-private" aria-hidden="true">
         <div>
-          <LockKeyhole size={14} />
-          <span>PRIVATE ACCOUNT</span>
-          <ShieldCheck size={15} />
+          <Route size={14} />
+          <span>ONE ACCOUNT VIEW</span>
+          <Check size={15} />
         </div>
-        {["Balances", "Positions"].map((label) => (
+        {["Orders", "Positions"].map((label) => (
           <p key={label}>
             <span>{label}</span>
-            <span>••••••••</span>
+            <span>────────</span>
           </p>
         ))}
       </div>
@@ -658,20 +666,5 @@ export function AdvantageMini({
         ))}
       </div>
     );
-  return (
-    <div className="mini-code" aria-hidden="true">
-      <div>
-        <span className="code-blue">cinder</span>.orders.create({"{"}
-      </div>
-      <div>
-        &nbsp; market: <span>&quot;SOL-PERP&quot;</span>,
-      </div>
-      <div>
-        &nbsp; privacy: <span>&quot;by default&quot;</span>
-      </div>
-      <div>
-        {"}"})<span className="code-caption">ILLUSTRATIVE INTERFACE</span>
-      </div>
-    </div>
-  );
+  return null;
 }

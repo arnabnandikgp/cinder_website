@@ -740,7 +740,7 @@ p {
 }
 .advantage-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
 }
@@ -774,6 +774,22 @@ p {
   font-size: var(--text-supporting);
   line-height: 1.9;
   margin-top: 14px;
+}
+.economics-block {
+  margin-top: clamp(68px, 8vw, 112px);
+  padding-top: clamp(68px, 8vw, 112px);
+  border-top: 1px solid var(--border);
+}
+.economics-block .section-copy h3 {
+  font-size: clamp(29px, 3vw, 43px);
+  line-height: 1.15;
+  letter-spacing: -1.5px;
+  margin-bottom: 28px;
+}
+.economics-caveat {
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--subtle);
 }
 .mini-private,
 .mini-fees,
@@ -928,6 +944,12 @@ p {
 }
 .execution-section {
   background: var(--surface);
+}
+.execution-intro {
+  max-width: 790px;
+  margin-top: 28px;
+  font-size: var(--text-body);
+  line-height: 1.8;
 }
 .execution-flow {
   display: grid;
@@ -1364,7 +1386,7 @@ p {
 }
 .vision-pillars {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   margin-top: 64px;
   border-top: 1px solid var(--border);
 }
@@ -1922,6 +1944,10 @@ p {
   }
   .advantage-card:nth-child(-n + 2) {
     border-bottom: 1px solid var(--border);
+  }
+  .advantage-card:last-child {
+    border-bottom: 0;
+    grid-column: 1 / -1;
   }
   .advantage-card h3 {
     font-size: 19px;
@@ -2569,20 +2595,15 @@ p {
     width: 13px;
   }
   .vision-pillars {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
     margin-top: 35px;
   }
   .vision-pillars > div {
-    padding: 22px 18px !important;
-  }
-  .vision-pillars > div:nth-child(2n) {
+    padding: 22px 0 !important;
     border-right: 0;
   }
-  .vision-pillars > div:nth-child(-n + 2) {
+  .vision-pillars > div:not(:last-child) {
     border-bottom: 1px solid var(--border);
-  }
-  .vision-pillars > div:nth-child(2n + 1) {
-    padding-left: 0 !important;
   }
   .vision-pillars h3 {
     margin-top: 12px;

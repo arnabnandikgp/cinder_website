@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { site } from "@/lib/site";
 import "./globals.css";
 
-const pageTitle = "Cinder | One private account for Solana perps";
+const pageTitle = "Cinder | One account for Solana perps";
 
 export const metadata: Metadata = {
   metadataBase: site.url ? new URL(site.url) : undefined,

@@ -1,6 +1,6 @@
 # Cinder
 
-A responsive landing page for Cinder, the private prime broker for Solana perpetuals. Built with Next.js App Router, TypeScript, Motion, and the approved assets in `cinder_design_system/`.
+A responsive landing page for Cinder, a prime broker layer being built for Solana perpetuals. Built with Next.js App Router, TypeScript, Motion, and the approved assets in `cinder_design_system/`.
 
 ## Run locally
 
@@ -37,7 +37,7 @@ The page and social-preview image are generated at build time. Fonts are self-ho
 
 The frontend design guidelines informed semantic controls, visible keyboard focus, contrast, responsive layouts, and motion handling. Only the diagrams animate: hero routing loops continuously; execution and pooled volume play once on entry; pooled volume has a replay control. Reduced-motion users receive static states. Small screens use a vertical hero flow. The privacy map supports hover, keyboard focus, and tap.
 
-Venue names and volumes are conceptual; no unsupported integration, live fee, or performance claims are introduced. X and Contact link to https://x.com/CinderExchange. GitHub links to https://github.com/arnabnandikgp/cinder. Early access has been removed as requested.
+The homepage leads with one trader-facing account, connected venue access, and trading economics, then explains confidential order handling and the longer-term clearing ambition. Venue names and volume bars are conceptual; connected integrations, fee-tier eligibility, routing results, TEE privacy properties, and future clearing capabilities require product-level verification before stronger claims are made. X and Contact link to https://x.com/CinderExchange. GitHub links to https://github.com/arnabnandikgp/cinder. Early access remains absent because there is no signup destination.
 
 ## Verify
 

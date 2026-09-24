@@ -8,7 +8,7 @@ for (const width of [375, 768, 1280]) {
     page.on("pageerror", (error) => errors.push(error.message));
     await page.goto("/");
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-      "One private accountfor Solana perps.",
+      "One accountfor Solana perps.",
     );
     await page.evaluate(() => document.fonts.ready);
     await expect(page.getByRole("link", { name: /early access/i })).toHaveCount(
@@ -54,7 +54,7 @@ test("FAQ, navigation and information boundaries work with the keyboard", async 
     .click();
   await expect(
     page.getByText(
-      "No. Cinder routes execution to existing venues and their liquidity.",
+      "No. Cinder is designed to route orders to connected perp venues. Each venue continues to operate its own market and liquidity.",
       { exact: true },
     ),
   ).toBeVisible();
@@ -64,11 +64,11 @@ test("FAQ, navigation and information boundaries work with the keyboard", async 
   await question.focus();
   await page.keyboard.press("Enter");
   await expect(
-    page.getByText(/Balances, positions, open orders, risk, and user-linked/),
+    page.getByText(/Cinder is designed to handle individual account state/),
   ).toBeVisible();
   await expect(
     page.getByText(
-      "No. Cinder routes execution to existing venues and their liquidity.",
+      "No. Cinder is designed to route orders to connected perp venues. Each venue continues to operate its own market and liquidity.",
       { exact: true },
     ),
   ).not.toBeVisible();
@@ -76,10 +76,10 @@ test("FAQ, navigation and information boundaries work with the keyboard", async 
     name: "Selected venue",
     exact: true,
   });
-  await selectedVenue.click();
+  await selectedVenue.focus();
   await expect(selectedVenue).toHaveAttribute("aria-pressed", "true");
   await expect(
-    page.getByText("Only what execution requires.", { exact: true }),
+    page.getByText("The information needed to execute.", { exact: true }),
   ).toBeVisible();
   await expect(page.locator(".visibility-grid .visible-cell")).toHaveCount(1);
   await page.getByRole("button", { name: "Operators", exact: true }).focus();
@@ -132,9 +132,10 @@ test("navigation stays legible and available around its responsive breakpoint", 
     "border-radius",
     "999px",
   );
-  await expect(
-    desktopNav.getByRole("link", { name: "The advantage" }),
-  ).toHaveCSS("font-size", "14px");
+  await expect(desktopNav.getByRole("link", { name: "The account" })).toHaveCSS(
+    "font-size",
+    "14px",
+  );
 
   await page.setViewportSize({ width: 921, height: 900 });
   await expect(desktopNav).toBeVisible();
@@ -165,10 +166,10 @@ test("navigation indicator follows links and scrolling", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
   const nav = page.getByRole("navigation", { name: "Main navigation" });
-  const advantage = nav.getByRole("link", { name: "The advantage" });
+  const advantage = nav.getByRole("link", { name: "The account" });
   const execution = nav.getByRole("link", { name: "How it works" });
+  const privacy = nav.getByRole("link", { name: "Privacy" });
   const vision = nav.getByRole("link", { name: "The vision" });
-  const faq = nav.getByRole("link", { name: "FAQ" });
   const dot = nav.locator(".nav-indicator");
 
   await expect(nav.locator("[aria-current]")).toHaveCount(0);
@@ -200,27 +201,29 @@ test("navigation indicator follows links and scrolling", async ({ page }) => {
     .toBeGreaterThan(initialX + 40);
 
   await page.evaluate(() =>
+    document.getElementById("privacy")?.scrollIntoView({ behavior: "instant" }),
+  );
+  await expect(privacy).toHaveAttribute("aria-current", "location");
+  await page.evaluate(() =>
     document.getElementById("vision")?.scrollIntoView({ behavior: "instant" }),
   );
   await expect(vision).toHaveAttribute("aria-current", "location");
   await page.evaluate(() =>
     document.getElementById("faq")?.scrollIntoView({ behavior: "instant" }),
   );
-  await expect(faq).toHaveAttribute("aria-current", "location");
+  await expect(nav.locator("[aria-current]")).toHaveCount(1);
 });
 
-test("hero promise shares the main description typography", async ({
-  page,
-}) => {
+test("hero leads with the prime broker proposition", async ({ page }) => {
   await page.goto("/");
   const intro = page.locator(".hero-intro");
   await expect(intro).toContainText(
-    "Cinder is building a unified trading account",
+    "Access connected perp venues through a single prime broker account.",
   );
-  await expect(intro).toContainText("Keep your positions private.");
   await expect(intro).toContainText(
-    "Trade through the liquidity of existing venues.",
+    "benefit from aggregated trading activity.",
   );
+  await expect(intro).not.toContainText(/private|confidential|TEE/i);
   await expect(page.locator(".hero-promise")).toHaveCount(0);
 });
 
@@ -236,7 +239,7 @@ test("hero flow loops without controls and respects reduced motion", async ({
   await expect(flow).toHaveCSS("animation-name", "route-flow");
   await expect(flow).toHaveCSS("animation-play-state", "running");
   await page
-    .getByRole("heading", { name: "Trade through Cinder." })
+    .getByRole("heading", { name: /One account.*More connected trading/ })
     .scrollIntoViewIfNeeded();
   await expect(flow).toHaveCSS("animation-play-state", "running");
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -254,7 +257,7 @@ test("branded social preview is available", async ({ request }) => {
 
 test("page copy and metadata use no em dashes", async ({ page }) => {
   await page.goto("/");
-  const title = "Cinder | One private account for Solana perps";
+  const title = "Cinder | One account for Solana perps";
   await expect(page).toHaveTitle(title);
   await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
     "content",
@@ -265,6 +268,44 @@ test("page copy and metadata use no em dashes", async ({ page }) => {
     title,
   );
   expect(await page.locator("body").innerText()).not.toContain("—");
+});
+
+test("the story introduces privacy after the account and routing proposition", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const ids = await page
+    .locator("main > section[id]")
+    .evaluateAll((sections) => sections.map((section) => section.id));
+  expect(ids).toEqual([
+    "market",
+    "advantage",
+    "execution",
+    "privacy",
+    "vision",
+    "faq",
+  ]);
+  await expect(
+    page.getByRole("heading", { name: "Connected venue access" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Execution and fee economics" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "One view of trading activity" }),
+  ).toBeVisible();
+  await expect(page.locator("#economics")).toContainText(
+    "venue rules and market conditions",
+  );
+  await expect(page.locator("#execution")).toContainText(
+    "not one external account spanning every exchange",
+  );
+  await expect(page.locator("#privacy")).toContainText(
+    "trusted execution environment (TEE)",
+  );
+  await expect(page.locator("#vision")).toContainText(
+    "not capabilities promised at launch",
+  );
 });
 
 test("hero connections stay attached to each node when the layout resizes", async ({
