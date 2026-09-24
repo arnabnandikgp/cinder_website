@@ -167,9 +167,9 @@ test("navigation indicator follows links and scrolling", async ({ page }) => {
   await page.goto("/");
   const nav = page.getByRole("navigation", { name: "Main navigation" });
   const advantage = nav.getByRole("link", { name: "The account" });
-  const execution = nav.getByRole("link", { name: "How it works" });
   const privacy = nav.getByRole("link", { name: "Privacy" });
   const vision = nav.getByRole("link", { name: "The vision" });
+  const faq = nav.getByRole("link", { name: "FAQs" });
   const dot = nav.locator(".nav-indicator");
 
   await expect(nav.locator("[aria-current]")).toHaveCount(0);
@@ -191,9 +191,9 @@ test("navigation indicator follows links and scrolling", async ({ page }) => {
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
   await expect(nav.locator("[aria-current]")).toHaveCount(0);
   await expect(dot).toHaveCSS("opacity", "0");
-  await page.getByRole("link", { name: "See how it works" }).click();
-  await expect(page).toHaveURL(/#execution$/);
-  await expect(execution).toHaveAttribute("aria-current", "location");
+  await page.getByRole("link", { name: "Why privacy matters" }).click();
+  await expect(page).toHaveURL(/#privacy$/);
+  await expect(privacy).toHaveAttribute("aria-current", "location");
   await expect
     .poll(async () =>
       dot.evaluate((element) => element.getBoundingClientRect().x),
@@ -201,17 +201,13 @@ test("navigation indicator follows links and scrolling", async ({ page }) => {
     .toBeGreaterThan(initialX + 40);
 
   await page.evaluate(() =>
-    document.getElementById("privacy")?.scrollIntoView({ behavior: "instant" }),
-  );
-  await expect(privacy).toHaveAttribute("aria-current", "location");
-  await page.evaluate(() =>
     document.getElementById("vision")?.scrollIntoView({ behavior: "instant" }),
   );
   await expect(vision).toHaveAttribute("aria-current", "location");
   await page.evaluate(() =>
     document.getElementById("faq")?.scrollIntoView({ behavior: "instant" }),
   );
-  await expect(nav.locator("[aria-current]")).toHaveCount(1);
+  await expect(faq).toHaveAttribute("aria-current", "location");
 });
 
 test("hero leads with the prime broker proposition", async ({ page }) => {
@@ -277,29 +273,16 @@ test("the story introduces privacy after the account and routing proposition", a
   const ids = await page
     .locator("main > section[id]")
     .evaluateAll((sections) => sections.map((section) => section.id));
-  expect(ids).toEqual([
-    "market",
-    "advantage",
-    "execution",
-    "privacy",
-    "vision",
-    "faq",
-  ]);
+  expect(ids).toEqual(["market", "advantage", "privacy", "vision", "faq"]);
   await expect(
-    page.getByRole("heading", { name: "Connected venue access" }),
+    page.getByRole("heading", { name: "One connection. More markets." }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Execution and fee economics" }),
+    page.getByRole("heading", { name: "Pool volume. Qualify together." }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "One view of trading activity" }),
+    page.getByRole("heading", { name: "Every position. One account view." }),
   ).toBeVisible();
-  await expect(page.locator("#economics")).toContainText(
-    "venue rules and market conditions",
-  );
-  await expect(page.locator("#execution")).toContainText(
-    "not one external account spanning every exchange",
-  );
   await expect(page.locator("#privacy")).toContainText(
     "trusted execution environment (TEE)",
   );

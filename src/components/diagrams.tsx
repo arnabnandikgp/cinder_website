@@ -3,25 +3,16 @@
 import { useEffect, useId, useRef, useState, type RefObject } from "react";
 import { motion, useInView, useReducedMotion } from "motion/react";
 import {
-  ArrowDown,
-  ArrowUpRight,
   Check,
   ChevronRight,
   EyeOff,
   Layers3,
   LockKeyhole,
-  RotateCcw,
   Route,
   Send,
   UserRound,
 } from "lucide-react";
 import { Mark } from "./ui";
-
-function useDiagramMotion() {
-  const ref = useRef<HTMLDivElement>(null);
-  const reduceMotion = useReducedMotion();
-  return { ref, reduceMotion };
-}
 
 function HeroConnections({
   stageRef,
@@ -292,175 +283,6 @@ export function Fragmentation() {
   );
 }
 
-const steps = [
-  {
-    icon: UserRound,
-    title: "Trader",
-    label: "ONE INSTRUCTION",
-    description: "Send an order through the Cinder trading interface.",
-    detail: "Trader-facing account",
-  },
-  {
-    icon: Route,
-    title: "Cinder account and routing",
-    label: "PRIME BROKER LAYER",
-    description:
-      "Cinder would record the trader’s activity internally and aim to select a suitable connected venue for execution.",
-    detail: "Internal account record",
-  },
-  {
-    icon: Layers3,
-    title: "Connected perp venue",
-    label: "VENUE LIQUIDITY",
-    description:
-      "The selected venue provides market liquidity. Cinder would reflect the resulting order and position activity in the trader’s account.",
-    detail: "Venue execution + account update",
-  },
-];
-
-export function ExecutionFlow() {
-  const { ref, reduceMotion } = useDiagramMotion();
-  const seen = useInView(ref, { once: true, amount: 0.3 });
-  return (
-    <div ref={ref} className="execution-flow">
-      {steps.map((step, index) => (
-        <div className="execution-step" key={step.title}>
-          <div className="execution-track">
-            <motion.div
-              className="execution-icon"
-              initial={false}
-              animate={{
-                borderColor: seen ? "var(--cobalt)" : "var(--border)",
-                backgroundColor: seen ? "var(--cobalt-tint)" : "var(--surface)",
-              }}
-              transition={{
-                duration: reduceMotion ? 0 : 0.35,
-                delay: reduceMotion ? 0 : index * 0.65,
-              }}
-            >
-              <step.icon size={26} strokeWidth={1.3} />
-            </motion.div>
-            {index < 2 && (
-              <div className="step-line">
-                <motion.span
-                  initial={false}
-                  animate={{ scaleX: seen ? 1 : 0 }}
-                  transition={{
-                    duration: reduceMotion ? 0 : 0.6,
-                    delay: reduceMotion ? 0 : index * 0.65 + 0.25,
-                  }}
-                />
-                <ChevronRight size={14} />
-              </div>
-            )}
-          </div>
-          <span className="mono step-eyebrow">
-            0{index + 1} / {step.label}
-          </span>
-          <h3>{step.title}</h3>
-          <p>{step.description}</p>
-          <div className="step-detail">
-            <Check size={12} />
-            {step.detail}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-export function PooledVolume() {
-  const { ref, reduceMotion } = useDiagramMotion();
-  const seen = useInView(ref, { once: true, amount: 0.35 });
-  const [replay, setReplay] = useState(0);
-  return (
-    <div ref={ref} className="pool-diagram">
-      <div className="diagram-title">
-        <span className="mono">ILLUSTRATIVE FEE-TIER PATH</span>
-        <button
-          onClick={() => setReplay((n) => n + 1)}
-          className="replay-button"
-          aria-label="Replay pooled volume animation"
-        >
-          <RotateCcw size={14} />
-          <span>Replay</span>
-        </button>
-      </div>
-      <div className="pool-traders">
-        {[0, 1, 2, 3, 4].map((i) => (
-          <div className="pool-trader" key={i}>
-            <UserRound size={18} strokeWidth={1.5} />
-            <span>Trader {String(i + 1).padStart(2, "0")}</span>
-            <div className="individual-volume">
-              <span style={{ width: `${25 + i * 13}%` }} />
-            </div>
-          </div>
-        ))}
-      </div>
-      <svg
-        className="pool-lines"
-        viewBox="0 0 500 64"
-        fill="none"
-        aria-hidden="true"
-      >
-        {[50, 150, 250, 350, 450].map((x, i) => (
-          <g key={x}>
-            <path
-              className="connection"
-              d={`M${x} 0 V12 Q${x} 30 ${x < 250 ? x + 20 : x > 250 ? x - 20 : 250} 30 H230 Q250 30 250 50 V64`}
-            />
-            <motion.path
-              key={`${replay}-${i}`}
-              d={`M${x} 0 V12 Q${x} 30 ${x < 250 ? x + 20 : x > 250 ? x - 20 : 250} 30 H230 Q250 30 250 50 V64`}
-              stroke="var(--cobalt)"
-              initial={reduceMotion ? false : { pathLength: 0 }}
-              animate={{ pathLength: seen ? 1 : 0 }}
-              transition={{
-                duration: reduceMotion ? 0 : 0.7,
-                delay: reduceMotion ? 0 : i * 0.12,
-              }}
-            />
-          </g>
-        ))}
-      </svg>
-      <div className="pool-account">
-        <div className="pool-account-heading">
-          <span>
-            <Mark />
-            Cinder pooled volume
-          </span>
-          <Route size={15} />
-        </div>
-        <div className="pool-bar">
-          <motion.div
-            key={replay}
-            initial={reduceMotion ? false : { scaleX: 0.16 }}
-            animate={{ scaleX: seen ? 1 : 0.16 }}
-            transition={{
-              duration: reduceMotion ? 0 : 1.5,
-              delay: reduceMotion ? 0 : 0.7,
-              ease: "easeOut",
-            }}
-          />
-          <span className="tier-marker" />
-        </div>
-        <div className="pool-bar-labels">
-          <span>Qualifying venue volume</span>
-          <span>
-            <Check size={13} />
-            Potential fee tier
-          </span>
-        </div>
-      </div>
-      <div className="pool-output">
-        <ArrowDown size={18} />
-        <span>SUBJECT TO VENUE RULES</span>
-        <Layers3 size={18} />
-      </div>
-    </div>
-  );
-}
-
 const visibility = [
   {
     name: "You",
@@ -622,49 +444,175 @@ export function AdvantageMini({
 }: {
   type: "account" | "fees" | "liquidity";
 }) {
-  if (type === "account")
+  if (type === "liquidity")
     return (
-      <div className="mini-private" aria-hidden="true">
-        <div>
-          <Route size={14} />
-          <span>ONE ACCOUNT VIEW</span>
-          <Check size={15} />
-        </div>
-        {["Orders", "Positions"].map((label) => (
-          <p key={label}>
-            <span>{label}</span>
-            <span>────────</span>
-          </p>
-        ))}
-      </div>
+      <figure className="benefit-visual">
+        <svg
+          viewBox="0 0 336 170"
+          role="img"
+          aria-label="Your strategy connects to Cinder routing, with separate paths from Cinder to three conceptual perp venues."
+        >
+          <g className="benefit-path">
+            <path d="M79 86 H104" />
+            <path d="M204 64 C224 64 224 26 246 26" />
+            <path
+              className="is-selected"
+              d="M204 86 H246 M240 82 L246 86 L240 90"
+            />
+            <path d="M204 108 C224 108 224 146 246 146" />
+          </g>
+          <rect
+            className="benefit-node"
+            x="1"
+            y="64"
+            width="78"
+            height="44"
+            rx="3"
+          />
+          <text x="40" y="82" textAnchor="middle">
+            Your
+          </text>
+          <text x="40" y="98" textAnchor="middle">
+            strategy
+          </text>
+          <rect
+            className="benefit-node is-selected"
+            x="104"
+            y="50"
+            width="100"
+            height="72"
+            rx="3"
+          />
+          <text className="benefit-primary" x="154" y="81" textAnchor="middle">
+            Cinder
+          </text>
+          <text x="154" y="101" textAnchor="middle">
+            routing
+          </text>
+          {["A", "B", "C"].map((venue, i) => (
+            <g key={venue}>
+              <rect
+                className={`benefit-node${i === 1 ? " is-selected" : ""}`}
+                x="246"
+                y={9 + i * 60}
+                width="89"
+                height="34"
+                rx="3"
+              />
+              <text x="290" y={31 + i * 60} textAnchor="middle">
+                Venue {venue}
+              </text>
+            </g>
+          ))}
+        </svg>
+        <figcaption>One interface. Connected liquidity.</figcaption>
+      </figure>
     );
   if (type === "fees")
     return (
-      <div className="mini-fees" aria-hidden="true">
-        <div className="fee-bars">
-          {[25, 40, 34, 55, 65, 78, 100].map((height, i) => (
-            <span key={i} style={{ height: `${height}%` }} />
+      <figure className="benefit-visual">
+        <svg
+          viewBox="0 0 336 170"
+          role="img"
+          aria-label="Qualifying activity from several traders contributes to Cinder’s combined volume at one venue. Fee-tier eligibility is determined per venue."
+        >
+          <g className="benefit-path">
+            <path d="M82 30 C114 30 114 86 145 86" />
+            <path d="M82 86 H145" />
+            <path d="M82 142 C114 142 114 86 145 86" />
+          </g>
+          {["A", "B", "C"].map((trader, i) => (
+            <g key={trader}>
+              <rect
+                className="benefit-node"
+                x="1"
+                y={13 + i * 56}
+                width="81"
+                height="34"
+                rx="3"
+              />
+              <text x="41" y={35 + i * 56} textAnchor="middle">
+                Trader {trader}
+              </text>
+            </g>
           ))}
-        </div>
-        <div className="fee-guide">
-          <span>NETWORK SCALE</span>
-          <ArrowUpRight size={15} />
-        </div>
-      </div>
+          <rect
+            className="benefit-node is-selected"
+            x="145"
+            y="37"
+            width="190"
+            height="100"
+            rx="3"
+          />
+          <text className="benefit-primary" x="240" y="63" textAnchor="middle">
+            Qualifying volume
+          </text>
+          {[0, 1, 2].map((i) => (
+            <rect
+              className="benefit-volume"
+              key={i}
+              x={165 + i * 51}
+              y="78"
+              width="47"
+              height="16"
+              rx="1"
+            />
+          ))}
+          <text x="240" y="119" textAnchor="middle">
+            At the same venue
+          </text>
+        </svg>
+        <figcaption>Shared volume. Fee-tier potential.</figcaption>
+      </figure>
     );
-  if (type === "liquidity")
-    return (
-      <div className="mini-liquidity" aria-hidden="true">
-        <span className="mini-center">
-          <Mark />
-        </span>
-        <span className="mini-connector" />
-        {[0, 1, 2].map((i) => (
-          <span className={`mini-venue mv-${i}`} key={i}>
-            <Layers3 size={16} />
-          </span>
+  return (
+    <figure className="benefit-visual">
+      <svg
+        viewBox="0 0 336 170"
+        role="img"
+        aria-label="Execution activity from separate venues is recorded in the trader’s individual Cinder account, with orders and positions in one view."
+      >
+        {["A", "B", "C"].map((venue, i) => (
+          <g key={venue}>
+            <rect
+              className="benefit-node"
+              x="1"
+              y={19 + i * 52}
+              width="80"
+              height="34"
+              rx="3"
+            />
+            <text x="41" y={41 + i * 52} textAnchor="middle">
+              Venue {venue}
+            </text>
+            <path className="benefit-path" d={`M81 ${36 + i * 52} H119`} />
+          </g>
         ))}
-      </div>
-    );
-  return null;
+        <rect
+          className="benefit-node is-selected"
+          x="119"
+          y="8"
+          width="216"
+          height="154"
+          rx="3"
+        />
+        <text className="benefit-primary" x="136" y="34">
+          Your Cinder account
+        </text>
+        <path className="benefit-path" d="M120 48 H334" />
+        {["Orders", "Positions", "Trading history"].map((label, i) => (
+          <g key={label}>
+            <text x="136" y={74 + i * 33}>
+              {label}
+            </text>
+            <path
+              className="benefit-path is-selected"
+              d={`M302 ${68 + i * 33} l4 4 8 -8`}
+            />
+          </g>
+        ))}
+      </svg>
+      <figcaption>Your activity. Your account record.</figcaption>
+    </figure>
+  );
 }

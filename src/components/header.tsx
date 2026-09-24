@@ -7,9 +7,9 @@ import { site } from "@/lib/site";
 
 const links = [
   { label: "The account", href: "#advantage" },
-  { label: "How it works", href: "#execution" },
   { label: "Privacy", href: "#privacy" },
   { label: "The vision", href: "#vision" },
+  { label: "FAQs", href: "#faq" },
 ];
 
 export function Header() {

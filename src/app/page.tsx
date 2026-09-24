@@ -1,19 +1,11 @@
-import {
-  ArrowDown,
-  ArrowUpRight,
-  ChartNoAxesCombined,
-  Layers3,
-  ListFilter,
-} from "lucide-react";
+import { ArrowDown, ArrowUpRight } from "lucide-react";
 import Image from "next/image";
 import { Header } from "@/components/header";
 import { Brand, ExploreButton, Mark } from "@/components/ui";
 import {
   AdvantageMini,
-  ExecutionFlow,
   Fragmentation,
   HeroNetwork,
-  PooledVolume,
   PrivacyMap,
   VisionNetwork,
 } from "@/components/diagrams";
@@ -21,22 +13,19 @@ import { site } from "@/lib/site";
 
 const advantages = [
   {
-    title: "Connected venue access",
-    icon: Layers3,
+    title: "One connection. More markets.",
     type: "liquidity" as const,
-    text: "Trade through one Cinder interface as integrations with Solana perp venues expand. The venues continue to provide the markets and liquidity.",
+    text: "Connect your strategy once. Cinder is being built to route orders to connected Solana perp markets through one interface, with each venue supplying its own liquidity.",
   },
   {
-    title: "Execution and fee economics",
-    icon: ChartNoAxesCombined,
+    title: "Pool volume. Qualify together.",
     type: "fees" as const,
-    text: "Cinder aims to route toward suitable liquidity and aggregate qualifying activity at each venue to pursue more competitive fee tiers.",
+    text: "Cinder aims to combine qualifying volume at each venue for more competitive fee tiers under its rules. Routing also considers liquidity, price impact, funding, and execution quality to pursue better net execution.",
   },
   {
-    title: "One view of trading activity",
-    icon: ListFilter,
+    title: "Every position. One account view.",
     type: "account" as const,
-    text: "Follow orders and positions through a unified Cinder account experience instead of piecing together a view across venue accounts.",
+    text: "Cinder’s planned account keeps an individual record of your orders and positions across connected venues. Execution uses separate venue-side accounts, while your Cinder account brings the activity into one view.",
   },
 ];
 
@@ -116,8 +105,9 @@ export default function Home() {
                 </p>
                 <div className="hero-actions">
                   <ExploreButton />
-                  <a className="text-link" href="#execution">
-                    See how it works <ArrowDown size={15} aria-hidden="true" />
+                  <a className="text-link" href="#privacy">
+                    Why privacy matters{" "}
+                    <ArrowDown size={15} aria-hidden="true" />
                   </a>
                 </div>
               </div>
@@ -137,7 +127,7 @@ export default function Home() {
                 <h2 id="market-title">
                   One market.
                   <br />
-                  <span className="muted-heading">Too many accounts.</span>
+                  Too <span className="heading-accent">many accounts.</span>
                 </h2>
                 <p>
                   Solana perp markets sit across independent venues. Trading on
@@ -149,11 +139,6 @@ export default function Home() {
                   positions become harder to see together. Scale and visibility
                   fragment just when traders need a clearer picture.
                 </p>
-                <div className="statement">
-                  <span />
-                  Cinder is building one trader-facing account for connected
-                  venue access, routing, and account management.
-                </div>
               </div>
               <Fragmentation />
             </div>
@@ -170,67 +155,18 @@ export default function Home() {
               <h2 id="advantage-title">
                 One account.
                 <br />
-                <span className="muted-heading">More connected trading.</span>
+                More <span className="heading-accent">connected trading.</span>
               </h2>
             </div>
             <div className="advantage-grid">
-              {advantages.map((advantage, i) => (
+              {advantages.map((advantage) => (
                 <article className="advantage-card" key={advantage.title}>
-                  <div className="advantage-card-top">
-                    <advantage.icon size={21} strokeWidth={1.5} />
-                    <span className="mono">0{i + 1}</span>
-                  </div>
                   <AdvantageMini type={advantage.type} />
                   <h3>{advantage.title}</h3>
                   <p>{advantage.text}</p>
                 </article>
               ))}
             </div>
-            <div className="economics-block" id="economics">
-              <div className="split-layout">
-                <div className="section-copy">
-                  <h3>Scale the activity. Not the friction.</h3>
-                  <p>
-                    Direct venue accounts qualify for fee tiers separately.
-                    Cinder aims to aggregate eligible activity at each connected
-                    venue, giving traders a path toward more competitive fees as
-                    the network grows.
-                  </p>
-                  <p>
-                    Fees are only part of the outcome. The routing goal is
-                    better net execution after liquidity, price impact, funding,
-                    and execution quality are considered.
-                  </p>
-                  <p className="economics-caveat">
-                    Fee tier eligibility and actual execution results depend on
-                    venue rules and market conditions.
-                  </p>
-                </div>
-                <PooledVolume />
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section
-          className="section execution-section"
-          id="execution"
-          aria-labelledby="execution-title"
-        >
-          <div className="container">
-            <h2 id="execution-title">
-              From one account
-              <br />
-              <span className="muted-heading">to connected markets.</span>
-            </h2>
-            <p className="execution-intro">
-              Trader instruction → Cinder account and routing → connected perp
-              venue. In the planned model, Cinder would record each trader’s
-              position internally and use venue-side accounts for execution. The
-              single account is the trader experience, not one external account
-              spanning every exchange.
-            </p>
-            <ExecutionFlow />
           </div>
         </section>
 
@@ -245,22 +181,21 @@ export default function Home() {
               <h2 id="privacy-title">
                 Confidential order handling.
                 <br />
-                <span className="muted-heading">Built into the account.</span>
+                Built <span className="heading-accent">into the account.</span>
               </h2>
               <div>
                 <p>
-                  Cinder is designed to process individual account state and
-                  routing decisions inside an attested trusted execution
-                  environment (TEE): an isolated runtime whose code can be
-                  verified. The aim is to limit what public observers,
-                  infrastructure providers, and ordinary operators can learn
-                  about a trader’s activity.
+                  Cinder is designed to keep your individual account records
+                  inside its confidential runtime while sending executable
+                  orders to a selected venue. The aim is to make it harder to
+                  connect venue activity to your broader portfolio and strategy.
                 </p>
                 <p>
-                  A selected venue still receives the order and information it
-                  needs to execute. What becomes public depends on that venue’s
-                  execution and settlement design. Privacy is part of the prime
-                  broker account, not a separate trading mode.
+                  A trusted execution environment (TEE) isolates that processing
+                  from ordinary operators and infrastructure providers.
+                  Attestation lets the running code be checked. The venue still
+                  receives what it needs to execute, and public visibility
+                  depends on its execution and settlement design.
                 </p>
               </div>
             </div>
@@ -278,10 +213,8 @@ export default function Home() {
               <div className="section-copy">
                 <h2 id="vision-title">
                   The larger vision:
-                  <br />
-                  <span className="muted-heading">
-                    a clearing layer for Solana perps.
-                  </span>
+                  <br />a clearing layer for{" "}
+                  <span className="heading-accent">Solana perps.</span>
                 </h2>
                 <p>
                   Cinder starts with the prime broker account: a simpler way to
