@@ -38,11 +38,11 @@ export default async function OpenGraphImage() {
         alt=""
         src={markSrc}
         width={660}
-        height={735}
+        height={(660 * 754) / 634}
         style={{ position: "absolute", right: -135, top: -160, opacity: 0.1 }}
       />
       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-        <img alt="" src={markSrc} width={41} height={46} />
+        <img alt="" src={markSrc} width={41} height={(41 * 754) / 634} />
         <img
           alt="Cinder"
           src={`data:image/png;base64,${wordmark.toString("base64")}`}

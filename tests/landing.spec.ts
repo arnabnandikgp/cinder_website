@@ -251,6 +251,28 @@ test("branded social preview is available", async ({ request }) => {
   expect(body.readUInt32BE(20)).toBe(630);
 });
 
+test("the repaired logo retains its full aspect ratio", async ({
+  page,
+  request,
+}) => {
+  const source = await request.get("/brand/mark-dark.png");
+  expect(source.ok()).toBe(true);
+  const png = await source.body();
+  expect(png.readUInt32BE(16)).toBe(634);
+  expect(png.readUInt32BE(20)).toBe(754);
+  await page.goto("/");
+  const mark = page.locator(".header-inner .brand-mark");
+  await expect(mark).toHaveAttribute("src", /mark-dark\.[\w-]+\.png/);
+  await expect(mark).toHaveAttribute("width", "634");
+  await expect(mark).toHaveAttribute("height", "754");
+  for (const width of [375, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    const box = await mark.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.height / box!.width).toBeCloseTo(754 / 634, 2);
+  }
+});
+
 test("page copy and metadata use no em dashes", async ({ page }) => {
   await page.goto("/");
   const title = "Cinder | One account for Solana perps";

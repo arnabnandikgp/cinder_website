@@ -1,0 +1,38 @@
+{
+  "name": "cinder-social-video",
+  "version": "1.0.0",
+  "description": "Standalone Cinder introductory film for X",
+  "repository": {},
+  "license": "UNLICENSED",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@remotion/cli": "4.0.528",
+    "@remotion/media": "4.0.528",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.528"
+  },
+  "devDependencies": {
+    "@remotion/eslint-config-flat": "4.0.528",
+    "@types/react": "19.2.7",
+    "@types/web": "0.0.166",
+    "eslint": "9.19.0",
+    "prettier": "3.8.1",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio --port 3002 --no-open",
+    "build": "remotion bundle",
+    "upgrade": "remotion upgrade",
+    "lint": "eslint src && tsc",
+    "test": "node --test tests/*.test.mjs",
+    "audio": "node scripts/make-audio.mjs",
+    "assets": "node scripts/fetch-assets.mjs",
+    "render": "remotion render CinderIntro out/cinder-intro-x.mp4 --codec h264 --crf 18 --color-space bt709",
+    "still": "remotion still CinderIntro out/cover-x.png --frame 755"
+  },
+  "sideEffects": [
+    "*.css"
+  ]
+}
