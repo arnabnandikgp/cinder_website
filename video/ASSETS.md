@@ -8,7 +8,7 @@ Review applicable brand guidance and confirm any needed permission before public
 | Local file | Official source | Notes |
 | --- | --- | --- |
 | `public/brand/cinder-mark.png` | `../cinder_design_system/mark/png/cinder-mark-dark.png` | Approved repaired 634 × 754 Cinder master, copied unchanged. Lower-right tip restored; no other source geometry redrawn. |
-| `public/brand/cinder-wordmark.png` | `../cinder_design_system/wordmark/png/cinder-wordmark-dark.png` | Approved Cinder asset, copied unchanged. |
+| `public/brand/cinder-wordmark.svg` | Lettering in `../cinder_design_system/assets/reference/approved-light-reference.png` | Clean native vector reconstruction against the original letter silhouettes (source region x224–1034, y900–1114). Removes the detached symbol fragment and damaged extraction edges; no replacement font or embedded raster. |
 | `public/venues/bulk.svg` | https://www.bulk.trade/brand | Exact standalone inline mark; page-specific 28px size removed, official white treatment via currentColor. |
 | `public/venues/pacifica.svg` | https://www.pacifica.fi/imgs/icon.svg | Official SVG app icon, unchanged. |
 | `public/venues/velocity.svg` | https://app.velocity.exchange/favicon.svg | Official SVG icon, unchanged. |
@@ -21,7 +21,8 @@ The five venue choices were supplied by the user. None has been independently co
 a live Cinder integration. The on-screen disclaimer was removed at the user's request.
 No venue performance/security claims are made or endorsed by the artwork.
 
-`npm run assets` refreshes remote artwork and recopies the local Cinder marks. This is an
+`npm run assets` refreshes remote artwork and recopies the local Cinder symbol. It preserves
+the repaired vector wordmark instead of reimporting the malformed PNG. This is an
 explicit maintenance operation: inspect refreshed assets before rendering or publishing.
 
 ## Active music

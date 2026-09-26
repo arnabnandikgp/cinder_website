@@ -10,7 +10,42 @@ import {
   connection,
   routeSignal,
   venuePosition,
+  markPosition,
+  traderContribution,
 } from "../src/motion.ts";
+
+test("the logo follows one continuous path directly into its closing position", () => {
+  assert.deepEqual(markPosition(645), { x: 1029, y: 428 });
+  assert.deepEqual(markPosition(697), { x: 869, y: 225 });
+  assert.deepEqual(markPosition(809), markPosition(697));
+  let previousSpeed = 0;
+  for (let frame = 646; frame <= 698; frame++) {
+    const previous = markPosition(frame - 1);
+    const next = markPosition(frame);
+    const speed = Math.hypot(next.x - previous.x, next.y - previous.y);
+    assert.ok(
+      next.x <= previous.x && next.y <= previous.y,
+      "No bounce or detour",
+    );
+    assert.ok(speed < 10, `Logo jump at ${frame}`);
+    assert.ok(
+      Math.abs(speed - previousSpeed) < 0.6,
+      `Abrupt acceleration at ${frame}`,
+    );
+    previousSpeed = speed;
+  }
+  for (const [a, b] of [
+    [645, 646],
+    [696, 697],
+  ]) {
+    assert.ok(
+      Math.hypot(
+        markPosition(b).x - markPosition(a).x,
+        markPosition(b).y - markPosition(a).y,
+      ) < 0.03,
+    );
+  }
+});
 
 test("all five venue marks stay in the visual safe area throughout the film", () => {
   for (let frame = 0; frame < 690; frame++)
@@ -48,7 +83,7 @@ test("venues clear the account and each other through assembly, orbit and fan", 
 });
 
 test("venues share the brisk invisible orbit before it opens into a fan", () => {
-  for (let frame = 232; frame <= 324; frame++)
+  for (let frame = 268; frame <= 346; frame++)
     for (let i = 0; i < 5; i++) {
       const p = venuePosition(frame, i);
       assert.ok(
@@ -99,7 +134,7 @@ test("choreography has no frame jumps", () => {
     for (let i = 0; i < 5; i++) {
       const a = venuePosition(frame - 1, i);
       const b = venuePosition(frame, i);
-      assert.ok(Math.hypot(b.x - a.x, b.y - a.y) < 24, `Jump at ${frame}/${i}`);
+      assert.ok(Math.hypot(b.x - a.x, b.y - a.y) < 38, `Jump at ${frame}/${i}`);
     }
 });
 
@@ -112,23 +147,23 @@ test("opening drift travels substantially farther and the orbit is over 10x fast
       distance += Math.hypot(b.x - a.x, b.y - a.y);
     }
     assert.ok(
-      distance > 400,
+      distance > 330,
       `Opening is too subdued for venue ${i}: ${distance}`,
     );
   }
   assert.ok(orbitRotation(290) - orbitRotation(289) > 0.00165 * 10);
-  assert.ok(orbitRotation(324) > Math.PI / 2);
-  assert.equal(orbitRotation(324), orbitRotation(600));
+  assert.ok(orbitRotation(346) > Math.PI / 2);
+  assert.equal(orbitRotation(346), orbitRotation(600));
 });
 
 test("the fan settles to the right with full badge and label clearance", () => {
-  assert.equal(fanProgress(324), 0);
-  assert.equal(fanProgress(378), 1);
+  assert.equal(fanProgress(346), 0);
+  assert.equal(fanProgress(388), 1);
   for (let frame = 0; frame < 690; frame++) {
     const half = badgeSize(frame) / 2;
     for (let i = 0; i < 5; i++) {
       const p = venuePosition(frame, i);
-      if (frame >= 378) assert.ok(p.x > accountPosition(frame).x + 190);
+      if (frame >= 388) assert.ok(p.x > accountPosition(frame).x + 190);
       for (let j = i + 1; j < 5; j++) {
         const q = venuePosition(frame, j);
         // Actual axis-aligned badge + label rectangles, not only centre distances.
@@ -138,6 +173,54 @@ test("the fan settles to the right with full badge and label clearance", () => {
           `Label overlap ${frame}/${i}/${j}`,
         );
       }
+    }
+  }
+});
+
+test("the introduction holds the logo in the center, then carries it into the network", () => {
+  for (let frame = 120; frame <= 204; frame++) {
+    assert.deepEqual(markPosition(frame), { x: 869, y: 306 });
+  }
+  assert.deepEqual(markPosition(252), { x: 1239, y: 428 });
+  for (let frame = 135; frame <= 204; frame++) {
+    for (let i = 0; i < 5; i++) {
+      assert.deepEqual(venuePosition(frame, i), venuePosition(135, i));
+    }
+  }
+  for (let frame = 120; frame <= 268; frame++) {
+    const mark = markPosition(frame);
+    for (let i = 0; i < 5; i++) {
+      const venue = venuePosition(frame, i);
+      assert.ok(
+        Math.abs(venue.x - (mark.x + 91)) > 180 ||
+          Math.abs(venue.y - (mark.y + 108)) > 190,
+        `Venue overlaps intro logo at ${frame}/${i}`,
+      );
+    }
+    if (frame > 204) {
+      const previous = markPosition(frame - 1);
+      assert.ok(Math.hypot(mark.x - previous.x, mark.y - previous.y) < 13);
+    }
+  }
+});
+
+test("three trader contributions converge from distinct users and fade at the account", () => {
+  for (let i = 0; i < 3; i++) {
+    const start = 442 + i * 8;
+    assert.equal(traderContribution(start, i).x, 867);
+    assert.equal(traderContribution(start, i).y, 420 + i * 110);
+    assert.equal(
+      traderContribution(start + 28, i).x,
+      accountPosition(start).x - 125,
+    );
+    assert.equal(traderContribution(start + 28, i).y, 530);
+    assert.equal(traderContribution(start + 28, i).opacity, 0);
+    assert.equal(traderContribution(start + 14, i).opacity, 1);
+    for (let frame = start + 1; frame <= start + 28; frame++) {
+      const a = traderContribution(frame - 1, i);
+      const b = traderContribution(frame, i);
+      assert.ok(b.x >= a.x && b.x + 16 < markPosition(frame).x);
+      assert.ok(Math.hypot(b.x - a.x, b.y - a.y) < 15);
     }
   }
 });

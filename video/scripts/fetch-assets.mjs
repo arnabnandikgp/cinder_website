@@ -11,7 +11,9 @@ const get = (url) =>
   });
 for (const dir of ["public/brand", "public/venues", "public/audio", "out"])
   mkdirSync(path.join(root, dir), { recursive: true });
-for (const kind of ["mark", "wordmark"]) {
+// The video wordmark is now a cleaned, code-native SVG. Do not replace it with
+// the old PNG extraction, which contains damaged edges and a symbol fragment.
+for (const kind of ["mark"]) {
   copyFileSync(
     path.join(
       root,

@@ -31,6 +31,7 @@ npm run still
 ```
 
 Outputs: `out/cinder-intro-x.mp4` and `out/cover-x.png` (ignored by Git).
+Latest delivered revision: `out/cinder-intro-x-final-v2.mp4` (introduction + trader silhouettes).
 The earlier `out/cinder-intro.mp4` is the superseded portrait draft with the rejected music.
 The first render may download Remotion's headless browser. Rendering itself uses local assets.
 
@@ -38,6 +39,7 @@ The first render may download Remotion's headless browser. Rendering itself uses
 
 - `src/scenes/NetworkScene.tsx`: the opening, feature text and scene timing.
 - `src/components/NetworkDiagram.tsx`: venue badges, routed packets, pooled inputs and privacy boundary.
+- `src/components/CinderMark.tsx`: one persistent logo that carries into the end card without a duplicate-image crossfade.
 - `src/scenes/EndCard.tsx`: closing promise and follow CTA.
 - `src/motion.ts`: faster scatter, accelerated orbit, orbit-to-fan paths and connector/packet geometry.
 - `src/venues.ts`: venue names and local logo files.
@@ -51,6 +53,16 @@ All Remotion packages are pinned together. Do not install them into the website 
 The logo uses the approved 634 × 754 repaired master, preserving its full lower tip.
 The privacy scene uses a code-drawn lock below the mark, replacing the previous record bars.
 The September 25 logo/lock revision keeps the 27-second edit, faster motion and soundtrack unchanged.
+The final wordmark revision uses native SVG letter outlines, rebuilt against the intact
+reference lettering: no stray symbol fragment above the “d,” ragged bitmap edges, or font dependency.
+The same central logo remains mounted through the ending and eases directly to top center,
+with zero starting/ending velocity and acceleration. The final label reads
+"Prime brokerage for solana perps." Website assets are not modified by this video-only revision.
+The introduction revision adds “Introducing Cinder. Prime brokerage for Solana perps.”
+before “One account.” The hook/assembly/orbit are retimed without extending the 27-second
+film or changing its music. Pooled inputs are native head-and-shoulders user silhouettes.
+`captions.json` is the timed Caption-shaped source; `node scripts/export-captions.mjs`
+regenerates the optional `captions.srt` sidecar.
 Arial follows Cinder's current typography; systems without Arial use Helvetica/sans-serif.
 The initial render was made on macOS. For pixel-identical renders elsewhere, provide an
 appropriately licensed local Arial font or approve a bundled replacement.

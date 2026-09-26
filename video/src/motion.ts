@@ -17,24 +17,46 @@ const starts = [
 // One brisk orbital flourish, then a different composition for routing.
 // Integrating the speed ramps keeps position AND velocity continuous.
 export const orbitRotation = (frame: number) => {
-  const t = Math.max(0, frame - 232);
+  const t = Math.max(0, frame - 268);
   const up = Math.min(t, 16);
   const ramp = up ** 3 / 16 ** 2 - up ** 4 / (2 * 16 ** 3);
-  const cruise = Math.min(Math.max(0, t - 16), 56);
-  const down = Math.min(Math.max(0, t - 72), 20);
+  const cruise = Math.min(Math.max(0, t - 16), 42);
+  const down = Math.min(Math.max(0, t - 58), 20);
   const brake = down - down ** 3 / 20 ** 2 + down ** 4 / (2 * 20 ** 3);
-  return (ramp + cruise + brake) * 0.0225;
+  return (ramp + cruise + brake) * 0.02775;
 };
 
-export const fanProgress = (frame: number) => smooth((frame - 324) / 54);
+export const fanProgress = (frame: number) => smooth((frame - 346) / 42);
 export const accountPosition = (frame: number) => ({
   x: mix(center.x, 1120, fanProgress(frame)),
   y: center.y,
 });
 export const badgeSize = (frame: number) => mix(146, 108, fanProgress(frame));
 
+// Carry the same mark directly to its final top-center location. Quintic
+// easing brings both velocity and acceleration to zero at either end.
+export const markPosition = (frame: number) => {
+  const account = accountPosition(frame);
+  // First introduce Cinder at center, then carry the very same symbol into
+  // the network while its wordmark and category line fade away.
+  const introduction = smooth((frame - 204) / 48);
+  const t = clamp01((frame - 645) / 52);
+  const progress = t * t * t * (t * (t * 6 - 15) + 10);
+  return {
+    x: mix(mix(869, account.x - 91, introduction), 869, progress),
+    y: mix(mix(306, account.y - 102, introduction), 225, progress),
+  };
+};
+
 export const venuePosition = (frame: number, index: number) => {
-  const driftFrame = Math.min(frame, 150);
+  // Ease the random drift to rest for the introduction, without snapping
+  // venues to a different location or running motion behind the new copy.
+  const brake = Math.min(Math.max(0, frame - 110), 24);
+  const driftFrame =
+    Math.min(frame, 110) +
+    brake -
+    brake ** 3 / 24 ** 2 +
+    brake ** 4 / (2 * 24 ** 3);
   const phase = index * 1.4;
   const x =
     starts[index][0] +
@@ -44,9 +66,9 @@ export const venuePosition = (frame: number, index: number) => {
     starts[index][1] +
     Math.cos(driftFrame * 0.063 + phase) *
       (index === 0 ? 24 : index === 3 ? 36 : 42);
-  const settle = smooth((frame - 150 - index * 2) / 72);
+  const settle = smooth((frame - 210 - index * 2) / 48);
   const angle = -Math.PI / 2 + (index * Math.PI * 2) / 5 + orbitRotation(frame);
-  if (frame >= 324) {
+  if (frame >= 346) {
     const fan = fanProgress(frame);
     // Preserve angular order around the account while opening into a right fan.
     // Left-side venues travel above/below Cinder, never through its mark.
@@ -89,6 +111,29 @@ export const venuePosition = (frame: number, index: number) => {
       center.y +
       Math.sin(travelAngle) * radius +
       (index === 0 ? Math.sin(Math.PI * settle) * 16 : 0),
+  };
+};
+
+// Individual trader identities follow separate paths into the pooled account.
+// The small avatar fades at arrival, before the next contribution catches it.
+export const traderContribution = (frame: number, index: number) => {
+  const startY = 420 + index * 110;
+  const progress = smooth((frame - 442 - index * 8) / 28);
+  const t = 1 - progress;
+  const endX = accountPosition(frame).x - 125;
+  return {
+    startY,
+    endX,
+    progress,
+    x:
+      t ** 3 * 867 +
+      3 * t ** 2 * progress * 925 +
+      3 * t * progress ** 2 * 945 +
+      progress ** 3 * endX,
+    y:
+      (t ** 3 + 3 * t ** 2 * progress) * startY +
+      (3 * t * progress ** 2 + progress ** 3) * center.y,
+    opacity: 1 - smooth((progress - 0.84) / 0.16),
   };
 };
 

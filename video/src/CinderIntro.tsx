@@ -3,6 +3,7 @@ import { Backdrop } from "./components/Backdrop";
 import { NetworkScene } from "./scenes/NetworkScene";
 import { EndCard } from "./scenes/EndCard";
 import { Soundtrack } from "./components/Soundtrack";
+import { CinderMark } from "./components/CinderMark";
 
 export const CinderIntro = () => (
   <AbsoluteFill
@@ -10,7 +11,7 @@ export const CinderIntro = () => (
   >
     <Backdrop />
     <Sequence name="Continuous venue choreography" durationInFrames={690}>
-      <NetworkScene />
+      <NetworkScene includeMark={false} />
     </Sequence>
     <Sequence
       name="Closing identity"
@@ -18,8 +19,9 @@ export const CinderIntro = () => (
       durationInFrames={165}
       premountFor={30}
     >
-      <EndCard />
+      <EndCard includeMark={false} />
     </Sequence>
+    <CinderMark />
     <Soundtrack />
   </AbsoluteFill>
 );

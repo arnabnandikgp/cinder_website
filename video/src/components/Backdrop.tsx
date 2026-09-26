@@ -48,8 +48,12 @@ export const Backdrop = () => {
           style={{ width: 39, height: (39 * 754) / 634, objectFit: "contain" }}
         />
         <Img
-          src={staticFile("brand/cinder-wordmark.png")}
-          style={{ width: 164, height: 47, objectFit: "contain" }}
+          src={staticFile("brand/cinder-wordmark.svg")}
+          style={{
+            width: 164,
+            height: (164 * 214) / 810,
+            objectFit: "contain",
+          }}
         />
       </div>
     </AbsoluteFill>

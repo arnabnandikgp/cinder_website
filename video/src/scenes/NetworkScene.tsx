@@ -11,7 +11,7 @@ import {
 } from "remotion";
 import { Backdrop } from "../components/Backdrop";
 import { NetworkDiagram } from "../components/NetworkDiagram";
-import { accountPosition, mix, smooth } from "../motion";
+import { CinderMark } from "../components/CinderMark";
 
 const timing = {
   extrapolateLeft: "clamp",
@@ -35,7 +35,7 @@ const Opening = () => {
         lineHeight: 1.07,
         textAlign: "center",
         textShadow: "0 3px 40px #0B0B0B",
-        opacity: interpolate(frame, [0, 12, 126, 149], [1, 1, 1, 0], {
+        opacity: interpolate(frame, [0, 12, 96, 119], [1, 1, 1, 0], {
           extrapolateLeft: "clamp",
           extrapolateRight: "clamp",
         }),
@@ -54,6 +54,66 @@ const Opening = () => {
   );
 };
 
+const Introduction = () => {
+  const frame = useCurrentFrame();
+  return (
+    <>
+      <Interactive.Div
+        name="Introducing Cinder"
+        style={{
+          position: "absolute",
+          left: 260,
+          top: 226,
+          width: 1400,
+          textAlign: "center",
+          fontSize: 52,
+          letterSpacing: -1,
+          color: "#BCC7DA",
+          opacity: interpolate(frame, [0, 10, 82, 98], [0, 1, 1, 0], timing),
+          translate: interpolate(
+            frame,
+            [0, 18],
+            ["0px 12px", "0px 0px"],
+            timing,
+          ),
+        }}
+      >
+        Introducing
+      </Interactive.Div>
+      <Img
+        name="Introducing Cinder wordmark"
+        src={staticFile("brand/cinder-wordmark.svg")}
+        style={{
+          position: "absolute",
+          left: 755,
+          top: 550,
+          width: 410,
+          height: (410 * 214) / 810,
+          objectFit: "contain",
+          opacity: interpolate(frame, [5, 15, 82, 98], [0, 1, 1, 0], timing),
+        }}
+      />
+      <Interactive.Div
+        name="Prime broker introduction"
+        style={{
+          position: "absolute",
+          left: 260,
+          top: 710,
+          width: 1400,
+          textAlign: "center",
+          fontSize: 54,
+          letterSpacing: -1.2,
+          textShadow: "0 3px 30px #0B0B0B",
+          opacity: interpolate(frame, [8, 18, 82, 98], [0, 1, 1, 0], timing),
+        }}
+      >
+        Prime brokerage for{" "}
+        <span style={{ color: "#6093ff" }}>Solana perps.</span>
+      </Interactive.Div>
+    </>
+  );
+};
+
 const AccountTitle = () => {
   const frame = useCurrentFrame();
   return (
@@ -67,7 +127,7 @@ const AccountTitle = () => {
         fontWeight: 500,
         letterSpacing: -5.5,
         lineHeight: 1.05,
-        opacity: interpolate(frame, [0, 18, 108, 126], [0, 1, 1, 0], timing),
+        opacity: interpolate(frame, [0, 14, 68, 84], [0, 1, 1, 0], timing),
         translate: interpolate(frame, [0, 25], ["0px 24px", "0px 0px"], timing),
       }}
     >
@@ -91,7 +151,7 @@ const ConnectedTitle = () => {
         fontWeight: 500,
         letterSpacing: -4.5,
         lineHeight: 1.03,
-        opacity: interpolate(frame, [0, 16, 123, 141], [0, 1, 1, 0], timing),
+        opacity: interpolate(frame, [0, 16, 99, 117], [0, 1, 1, 0], timing),
         translate: interpolate(frame, [0, 22], ["0px 22px", "0px 0px"], timing),
       }}
     >
@@ -167,10 +227,13 @@ const PrivacyTitle = () => {
   );
 };
 
-export const NetworkScene = () => {
+export const NetworkScene = ({
+  includeMark = true,
+}: {
+  includeMark?: boolean;
+}) => {
   const frame = useCurrentFrame();
   const { id } = useVideoConfig();
-  const account = accountPosition(frame);
   const finish = interpolate(frame, [645, 680], [1, 0], timing);
   return (
     <AbsoluteFill
@@ -180,48 +243,22 @@ export const NetworkScene = () => {
       <div style={{ opacity: finish }}>
         <NetworkDiagram />
       </div>
-      {/* The central mark is carried into the end card without a cut. */}
-      <div
-        style={{
-          position: "absolute",
-          left: mix(account.x - 91, 869, smooth((frame - 645) / 44)),
-          top: mix(account.y - 102, 225, smooth((frame - 645) / 44)),
-          width: 182,
-          height: (182 * 754) / 634,
-          opacity: interpolate(
-            frame,
-            [150, 177, 678, 689],
-            [0, 1, 1, 0],
-            timing,
-          ),
-          scale: interpolate(frame, [150, 185], [0.7, 1], timing),
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            inset: -80,
-            background: "radial-gradient(ellipse, #0051fe24, transparent 65%)",
-          }}
-        />
-        <Img
-          name="Cinder central mark"
-          src={staticFile("brand/cinder-mark.png")}
-          style={{
-            position: "relative",
-            width: "100%",
-            height: "100%",
-            objectFit: "contain",
-          }}
-        />
-      </div>
-      <Sequence name="Opening hook" durationInFrames={150}>
+      {includeMark && <CinderMark />}
+      <Sequence name="Opening hook" durationInFrames={120}>
         <Opening />
       </Sequence>
-      <Sequence name="Account reveal" from={150} durationInFrames={126}>
+      <Sequence
+        name="Introducing Cinder"
+        from={120}
+        durationInFrames={98}
+        premountFor={30}
+      >
+        <Introduction />
+      </Sequence>
+      <Sequence name="Account reveal" from={216} durationInFrames={84}>
         <AccountTitle />
       </Sequence>
-      <Sequence name="Venue connections" from={276} durationInFrames={141}>
+      <Sequence name="Venue connections" from={300} durationInFrames={117}>
         <ConnectedTitle />
       </Sequence>
       <Sequence name="Pooled economics" from={417} durationInFrames={123}>

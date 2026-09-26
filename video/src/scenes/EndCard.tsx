@@ -9,8 +9,9 @@ import {
   useVideoConfig,
 } from "remotion";
 import { Backdrop } from "../components/Backdrop";
+import { CinderMark } from "../components/CinderMark";
 
-export const EndCard = () => {
+export const EndCard = ({ includeMark = true }: { includeMark?: boolean }) => {
   const frame = useCurrentFrame();
   const { id } = useVideoConfig();
   return (
@@ -18,33 +19,18 @@ export const EndCard = () => {
       style={{ color: "#FAFAFB", fontFamily: "Arial, Helvetica, sans-serif" }}
     >
       {id === "EndCard" && <Backdrop />}
-      <Img
-        name="Closing Cinder mark"
-        src={staticFile("brand/cinder-mark.png")}
-        style={{
-          position: "absolute",
-          left: 869,
-          top: 225,
-          width: 182,
-          height: (182 * 754) / 634,
-          objectFit: "contain",
-          opacity: interpolate(frame, [31, 44], [0, 1], {
-            extrapolateLeft: "clamp",
-            extrapolateRight: "clamp",
-          }),
-        }}
-      />
+      {includeMark && <CinderMark settled />}
       <Img
         name="Closing Cinder wordmark"
-        src={staticFile("brand/cinder-wordmark.png")}
+        src={staticFile("brand/cinder-wordmark.svg")}
         style={{
           position: "absolute",
           left: 780,
           top: 470,
           width: 360,
-          height: 104,
+          height: (360 * 214) / 810,
           objectFit: "contain",
-          opacity: interpolate(frame, [24, 46], [0, 1], {
+          opacity: interpolate(frame, [38, 60], [0, 1], {
             extrapolateLeft: "clamp",
             extrapolateRight: "clamp",
           }),
@@ -85,7 +71,7 @@ export const EndCard = () => {
           width: 1400,
           textAlign: "center",
           fontSize: 31,
-          letterSpacing: 4,
+          letterSpacing: 0.5,
           color: "#AAB4C6",
           opacity: interpolate(frame, [42, 62], [0, 1], {
             extrapolateLeft: "clamp",
@@ -93,7 +79,7 @@ export const EndCard = () => {
           }),
         }}
       >
-        PRIME BROKERAGE
+        Prime brokerage for solana perps
       </Interactive.Div>
       <Interactive.Div
         name="Follow Cinder CTA"

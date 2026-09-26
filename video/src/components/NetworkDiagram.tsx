@@ -8,8 +8,10 @@ import {
   routeSignal,
   smooth,
   venuePosition,
+  traderContribution,
 } from "../motion";
 import { venues } from "../venues";
+import { TraderSilhouette } from "./TraderSilhouette";
 
 // The same geometry drives badges, connectors and packets at every frame.
 // After the orbit, the fan makes the outbound/return flow the focal point.
@@ -24,8 +26,8 @@ export const NetworkDiagram = () => {
     smooth((frame - 470) / 18) * (1 - smooth((frame - 503) / 20));
   const badgesOpacity = interpolate(
     frame,
-    [0, 130, 185, 630, 679],
-    [0.65, 0.65, 1, 1, 0],
+    [0, 110, 138, 198, 268, 630, 679],
+    [0.65, 0.65, 0.06, 0.06, 1, 1, 0],
     {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
@@ -47,7 +49,7 @@ export const NetworkDiagram = () => {
         </defs>
         {venues.map((venue, i) => {
           const line = connection(frame, i);
-          const draw = smooth((frame - 264 - i * 7) / 20);
+          const draw = smooth((frame - 294 - i * 7) / 20);
           const length = Math.hypot(line.x2 - line.x1, line.y2 - line.y1);
           const active = signal?.venue === i ? signal : null;
           const p = active?.progress ?? 0;
@@ -99,47 +101,29 @@ export const NetworkDiagram = () => {
             They do not originate from venues or imply cross-venue fee-tier pooling. */}
         <g opacity={pooling}>
           {[0, 1, 2].map((i) => {
-            const y = 420 + i * 110;
-            const progress = smooth((frame - 442 - i * 8) / 28);
-            const t = 1 - progress;
-            const end = account.x - 125;
-            const x =
-              t ** 3 * 880 +
-              3 * t ** 2 * progress * 940 +
-              3 * t * progress ** 2 * 945 +
-              progress ** 3 * end;
-            const py =
-              (t ** 3 + 3 * t ** 2 * progress) * y +
-              (3 * t * progress ** 2 + progress ** 3) * account.y;
+            const user = traderContribution(frame, i);
             return (
-              <g key={i}>
-                <path
-                  d={`M 880 ${y} C 940 ${y}, 945 ${account.y}, ${end} ${account.y}`}
-                  fill="none"
-                  stroke="#314363"
-                  strokeWidth="2"
-                />
-                <circle
-                  cx="867"
-                  cy={y}
-                  r="12"
-                  fill="#101c32"
-                  stroke="#6093FF"
-                  strokeWidth="2"
-                />
-                {progress > 0 && progress < 1 && (
-                  <>
-                    <circle
-                      cx={x}
-                      cy={py}
-                      r="10"
-                      fill="#0051FE"
-                      filter="url(#ray-glow)"
-                    />
-                    <circle cx={x} cy={py} r="4" fill="#BDD3FF" />
-                  </>
-                )}
-              </g>
+              <path
+                key={i}
+                d={`M 867 ${user.startY} C 925 ${user.startY}, 945 ${account.y}, ${user.endX} ${account.y}`}
+                fill="none"
+                stroke="#314363"
+                strokeWidth="2"
+              />
+            );
+          })}
+          {/* All avatars sit above every path: no lines crossing their faces. */}
+          {[0, 1, 2].map((i) => {
+            const user = traderContribution(frame, i);
+            return (
+              <TraderSilhouette
+                key={i}
+                x={user.x}
+                y={user.y}
+                size={mix(46, 34, user.progress)}
+                color="#A9C7FF"
+                opacity={user.opacity}
+              />
             );
           })}
         </g>
@@ -233,6 +217,9 @@ export const NetworkDiagram = () => {
             <div
               style={{
                 marginTop: 15,
+                opacity:
+                  1 -
+                  smooth((frame - 112) / 18) * (1 - smooth((frame - 204) / 28)),
                 fontSize: 29,
                 fontWeight: 400,
                 color: arrival > 0 ? "#E0EBFF" : "#B9C2D1",

@@ -1,25 +1,31 @@
 1
-00:00:00,000 --> 00:00:05,000
+00:00:00,000 --> 00:00:04,000
 Still juggling positions across Solana venues?
 
 2
-00:00:05,000 --> 00:00:09,200
-One account.
+00:00:04,000 --> 00:00:07,200
+Introducing Cinder.
+Prime brokerage for Solana perps.
 
 3
-00:00:09,200 --> 00:00:13,900
-Connected venues.
+00:00:07,200 --> 00:00:10,000
+One account.
 
 4
+00:00:10,000 --> 00:00:13,900
+Connected venues.
+
+5
 00:00:13,900 --> 00:00:18,000
 Pooled volume.
 Built for better fee economics.
 
-5
+6
 00:00:18,000 --> 00:00:21,900
 Confidential by design.
 
-6
+7
 00:00:22,500 --> 00:00:27,000
 Cinder. Building one account for Solana perps.
-Prime brokerage. Follow @CinderExchange.
+Prime brokerage for solana perps.
+Follow @CinderExchange.

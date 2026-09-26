@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="810" height="214" viewBox="0 0 810 214" role="img" aria-labelledby="title desc">
+  <title id="title">Cinder</title>
+  <desc id="desc">Clean vector outlines rebuilt against the original light-reference lettering. No embedded bitmap, font dependency, or detached symbol fragment.</desc>
+  <g fill="#fff" fill-rule="evenodd">
+    <path aria-label="C" d="M110 9C156 9 198 38 211 83H162C152 65 135 52 109 52C75 52 49 78 49 109C49 141 73 167 109 167C132 167 151 153 160 136H212C200 180 159 210 109 210C49 210 1 170 1 109C1 53 48 9 110 9Z"/>
+    <ellipse aria-label="i dot" cx="244.5" cy="28" rx="24.5" ry="24"/>
+    <path aria-label="i" d="M222 69H263V202H222Z"/>
+    <path aria-label="n" d="M277 69H318V85C330 72 343 66 358 66C388 66 405 86 405 120V202H364V124C364 109 356 102 342 102C328 102 318 112 318 126V202H277Z"/>
+    <path aria-label="d" d="M518 11H560V202H518V187C506 198 495 205 476 205C437 205 412 175 412 136C412 95 438 66 477 66C494 66 507 73 518 83ZM486 101C467 101 453 116 453 136C453 156 467 169 486 169C505 169 519 154 519 135C519 116 505 101 486 101Z"/>
+    <path aria-label="e" d="M640 66C681 66 710 95 710 138V147H609C612 164 624 174 640 174C651 174 659 169 665 160H707C697 189 673 205 640 205C598 205 569 176 569 136C569 94 597 66 640 66ZM610 120H669C665 106 655 97 640 97C626 97 615 106 610 120Z"/>
+    <path aria-label="r" d="M719 69H760V86C772 72 788 66 806 66V102C781 102 760 111 760 140V202H719Z"/>
+  </g>
+</svg>
