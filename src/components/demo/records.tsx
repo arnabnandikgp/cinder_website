@@ -6,6 +6,7 @@ import {
   funding,
   markets,
   number,
+  positionsFor,
   recordLabels,
   signed,
   venues,
@@ -13,12 +14,13 @@ import {
   type Market,
   type RecordTab,
   type Scenario,
+  type Venue,
   type VenueScope,
 } from "./data";
 
 export type RecordActions = {
   onCancel: () => void;
-  onReduce: (market: Market) => void;
+  onReduce: (market: Market, venue: Venue) => void;
   onDetail: (id: string) => void;
 };
 
@@ -44,8 +46,11 @@ export function Records({
   const empty = scenario === "empty";
   const matches = (venue: string) => scope === "all" || scope === venue;
   const filled = scenario === "partial" ? 2 : 0;
-  const showPosition = !empty && matches("pacifica");
-  const showOrder = showPosition && cancel !== "confirmed";
+  const positions = positionsFor(scenario).filter((position) =>
+    matches(position.venue),
+  );
+  const showPosition = positions.length > 0;
+  const showOrder = !empty && matches("pacifica") && cancel !== "confirmed";
   const fills = fillsFor(scenario).filter((fill) => matches(fill.venue));
   const payments = empty ? [] : funding.filter((item) => matches(item.venue));
   const history = empty
@@ -99,7 +104,7 @@ export function Records({
     value: value as RecordTab,
     label,
     ...(value === "positions"
-      ? { count: showPosition ? 2 : 0 }
+      ? { count: positions.length }
       : value === "orders"
         ? { count: showOrder ? 1 : 0 }
         : {}),
@@ -153,7 +158,7 @@ export function Records({
         {!any ? (
           <Empty title={`No ${recordLabels[tab].toLowerCase()} in this view`}>
             {empty
-              ? "This is an empty sample account. Choose another demo scenario to explore populated records."
+              ? "This is an empty sample account with no trading records yet."
               : "Try All venues to see the other sample records."}
             {tab === "orders" && cancel === "confirmed" && (
               <button
@@ -179,37 +184,42 @@ export function Records({
                   </tr>
                 </thead>
                 <tbody>
-                  {Object.entries(markets).map(([key, item]) => (
-                    <tr key={key}>
-                      <td>
-                        <strong>{item.symbol}</strong>
-                        <span className="d-cell-sub">
-                          Pacifica · {item.side}
-                        </span>
-                      </td>
-                      <td className="d-number">
-                        {item.size} {key}
-                      </td>
-                      <td className="d-number">
-                        {number(item.entry)}
-                        <span className="d-cell-sub">{number(item.price)}</span>
-                      </td>
-                      <td className="d-number d-positive">
-                        {signed(item.pnl)}
-                        <span className="d-cell-sub">
-                          USDC · before charges
-                        </span>
-                      </td>
-                      <td>
-                        <button
-                          className="d-small-button"
-                          onClick={() => actions.onReduce(key as Market)}
-                        >
-                          Reduce
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {positions.map(({ market: key, venue }) => {
+                    const item = markets[key];
+                    return (
+                      <tr key={`${venue}-${key}`}>
+                        <td>
+                          <strong>{item.symbol}</strong>
+                          <span className="d-cell-sub">
+                            {venues[venue]} · {item.side}
+                          </span>
+                        </td>
+                        <td className="d-number">
+                          {item.size} {key}
+                        </td>
+                        <td className="d-number">
+                          {number(item.entry)}
+                          <span className="d-cell-sub">
+                            {number(item.price)}
+                          </span>
+                        </td>
+                        <td className="d-number d-positive">
+                          {signed(item.pnl)}
+                          <span className="d-cell-sub">
+                            USDC · before charges
+                          </span>
+                        </td>
+                        <td>
+                          <button
+                            className="d-small-button"
+                            onClick={() => actions.onReduce(key, venue)}
+                          >
+                            Reduce
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             )}

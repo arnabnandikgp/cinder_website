@@ -39,6 +39,26 @@ export const recordLabels = {
 export type RecordTab = keyof typeof recordLabels;
 export type View = "trade" | "account" | "activity";
 export type Scenario = "funded" | "partial" | "empty" | "stale" | "deposit";
+// Illustrative collateral allocations, not computed margin requirements.
+// Both the positions table and account breakdown read these same records.
+const samplePositions: { market: Market; venue: Venue; margin: number }[] = [
+  { market: "SOL", venue: "pacifica", margin: 800 },
+  { market: "BTC", venue: "bulk", margin: 1800 },
+];
+export function positionsFor(scenario: Scenario) {
+  return scenario === "empty" ? [] : samplePositions;
+}
+export function marginByVenue(scenario: Scenario) {
+  const positions = positionsFor(scenario);
+  return (Object.keys(venues) as Venue[]).map((venue) => {
+    const allocated = positions.filter((position) => position.venue === venue);
+    return {
+      venue,
+      positions: allocated.length,
+      margin: allocated.reduce((sum, position) => sum + position.margin, 0),
+    };
+  });
+}
 export type CancelState = "none" | "requested" | "confirmed";
 export type Draft = {
   id: string;

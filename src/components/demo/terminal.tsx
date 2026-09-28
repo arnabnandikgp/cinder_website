@@ -4,8 +4,6 @@ import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   ArrowUpRight,
-  RotateCcw,
-  MessageSquare,
   Info,
   LockKeyhole,
   CandlestickChart,
@@ -66,11 +64,12 @@ export function Terminal() {
     ["pacifica", "bulk", "velocity"],
     "pacifica",
   );
-  const chart = pick<Venue>(
+  const autoChart = pick<Venue>(
     params.get("chart"),
     ["pacifica", "bulk", "velocity"],
-    "pacifica",
+    venue,
   );
+  const chart = mode === "auto" ? autoChart : venue;
   const scope = pick<VenueScope>(
     params.get("scope"),
     ["all", "pacifica", "bulk", "velocity"],
@@ -110,7 +109,8 @@ export function Terminal() {
   }
   const actions = {
     onCancel: () => setDialog({ kind: "cancel" }),
-    onReduce: (value: Market) => setDialog({ kind: "reduce", market: value }),
+    onReduce: (market: Market, venue: Venue) =>
+      setDialog({ kind: "reduce", market, venue }),
     onDetail: (id: string) => setDialog({ kind: "detail", id }),
   };
   const records = (
@@ -228,6 +228,7 @@ export function Terminal() {
               <MarketChart
                 market={market}
                 venue={chart}
+                canChooseVenue={mode === "auto"}
                 leverage={ticket.leverage}
                 onMarket={(value) => {
                   updateQuery({ market: value });
@@ -257,15 +258,18 @@ export function Terminal() {
                   updateQuery({
                     mode: value,
                     scope: value === "auto" ? "all" : venue,
+                    chart: value === "auto" ? chart : venue,
                   });
                   setNotice(
-                    "Execution choice updated. Chart reference and existing positions are unchanged.",
+                    value === "auto"
+                      ? "Auto-route selected. Choose your chart source independently."
+                      : "Chart and order book now follow your execution venue.",
                   );
                 }}
                 onVenue={(value) => {
-                  updateQuery({ venue: value, scope: value });
+                  updateQuery({ venue: value, scope: value, chart: value });
                   setNotice(
-                    "Execution venue and record filter updated. Chart reference is unchanged.",
+                    "Execution venue, chart and record filter updated. Existing positions are unchanged.",
                   );
                 }}
                 onAllowed={() => setDialog({ kind: "route" })}
@@ -296,65 +300,7 @@ export function Terminal() {
             )}
           </div>
         )}
-        <footer className="d-workspace-footer">
-          <span>
-            <LockKeyhole size={12} aria-hidden="true" />
-            Your account. Your trading activity.
-          </span>
-          <span>Private account · Venue-level execution</span>
-        </footer>
       </main>
-      <p className="d-demo-disclosure">
-        Prices, depth and account records are simulated. Venue names and
-        leverage settings illustrate the interface, not live integrations or
-        approved limits. Orders stay as local drafts.
-      </p>
-      <p className="d-chart-attribution">
-        TradingView Lightweight Charts™ · Copyright (с) 2025 TradingView, Inc.{" "}
-        <a
-          href="https://www.tradingview.com/"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          TradingView
-        </a>
-      </p>
-      <div className="d-review-tools">
-        <label htmlFor="d-scenario">
-          Demo scenario
-          <select
-            id="d-scenario"
-            value={scenario}
-            onChange={(e) => {
-              setCancel("none");
-              setDrafts([]);
-              setNotice(
-                "Sample scenario loaded. Local drafts and cancellation state were reset.",
-              );
-              updateQuery({
-                scenario: e.target.value,
-                record: e.target.value === "partial" ? "orders" : "positions",
-              });
-            }}
-          >
-            <option value="funded">Funded account</option>
-            <option value="partial">Partially filled order</option>
-            <option value="empty">Empty account</option>
-            <option value="deposit">Deposit awaiting credit</option>
-            <option value="stale">Stale account</option>
-          </select>
-        </label>
-        <div>
-          <button onClick={() => setDialog({ kind: "reset" })}>
-            <RotateCcw size={14} aria-hidden="true" />
-            Reset demo
-          </button>
-          <button onClick={() => setDialog({ kind: "feedback" })}>
-            <MessageSquare size={14} aria-hidden="true" />
-            Give feedback
-          </button>
-        </div>
-      </div>
       {dialog && (
         <DemoDialogs
           key={dialog.kind}
@@ -389,15 +335,6 @@ export function Terminal() {
             setNotice(
               `${id} saved locally. Find it in Activity → Drafts. No order was submitted.`,
             );
-          }}
-          onReset={() => {
-            window.history.replaceState(null, "", "/demo");
-            setDrafts([]);
-            setCancel("none");
-            setTicket(initialTicket);
-            setAllowed(["pacifica", "bulk"]);
-            setDialog(null);
-            setNotice("Demo reset to the funded sample account.");
           }}
         />
       )}

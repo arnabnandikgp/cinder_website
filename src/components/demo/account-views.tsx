@@ -8,11 +8,12 @@ import {
   LockKeyhole,
   Wallet,
 } from "lucide-react";
-import { DetailList, Empty } from "./controls";
+import { Empty } from "./controls";
 import {
   fillsFor,
   funding,
   markets,
+  marginByVenue,
   number,
   signed,
   venues,
@@ -29,6 +30,11 @@ export function AccountOverview({
   onTransfer: (kind: "deposit" | "withdraw") => void;
 }) {
   const empty = scenario === "empty";
+  const allocations = marginByVenue(scenario);
+  const committed = allocations.reduce(
+    (sum, allocation) => sum + allocation.margin,
+    0,
+  );
   return (
     <>
       <div className="d-view-heading">
@@ -66,13 +72,40 @@ export function AccountOverview({
         </section>
         <section className="d-panel d-capital-detail">
           <h2>Capital availability</h2>
-          <DetailList
-            rows={[
-              ["Available to trade", `${number(empty ? 0 : 7400)} USDC`],
-              ["Margin committed", `${number(empty ? 0 : 2600)} USDC`],
-              ["Available to withdraw", `${number(empty ? 0 : 5000)} USDC`],
-            ]}
-          />
+          <dl className="d-detail-list">
+            <div>
+              <dt>Available to trade</dt>
+              <dd>{number(empty ? 0 : 7400)} USDC</dd>
+            </div>
+            <div className="d-margin-group">
+              <dt>Margin committed</dt>
+              <dd data-testid="margin-committed">{number(committed)} USDC</dd>
+              <dd className="d-margin-details">
+                <dl
+                  className="d-margin-breakdown"
+                  aria-label="Margin committed by venue"
+                >
+                  {allocations.map(({ venue, positions, margin }) => (
+                    <div key={venue} data-testid={`margin-${venue}`}>
+                      <dt>
+                        {venues[venue]}
+                        <span>
+                          {positions
+                            ? `${positions} open position${positions === 1 ? "" : "s"}`
+                            : "No open positions"}
+                        </span>
+                      </dt>
+                      <dd>{number(margin)} USDC</dd>
+                    </div>
+                  ))}
+                </dl>
+              </dd>
+            </div>
+            <div>
+              <dt>Available to withdraw</dt>
+              <dd>{number(empty ? 0 : 5000)} USDC</dd>
+            </div>
+          </dl>
           <p>
             Different measures, not an equity breakdown. Eligibility and risk
             calculations are not implemented in this demo.

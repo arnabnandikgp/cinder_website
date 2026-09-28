@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { ArrowUpRight, Check, Info } from "lucide-react";
-import { site } from "@/lib/site";
+import { Check, Info } from "lucide-react";
 import { DetailList, Modal } from "./controls";
 import {
   fillsFor,
@@ -19,9 +18,9 @@ import {
 export type DialogState =
   | { kind: "review"; draft: Draft }
   | { kind: "detail"; id: string }
-  | { kind: "reduce"; market: Market }
+  | { kind: "reduce"; market: Market; venue: Venue }
   | {
-      kind: "cancel" | "deposit" | "withdraw" | "route" | "reset" | "feedback";
+      kind: "cancel" | "deposit" | "withdraw" | "route";
     };
 
 export function DemoDialogs({
@@ -35,7 +34,6 @@ export function DemoDialogs({
   onSave,
   allowed,
   onAllowed,
-  onReset,
 }: {
   dialog: DialogState;
   onClose: () => void;
@@ -47,7 +45,6 @@ export function DemoDialogs({
   onSave: (draft: Draft) => void;
   allowed: Venue[];
   onAllowed: (venues: Venue[]) => void;
-  onReset: () => void;
 }) {
   const [selected, setSelected] = useState(allowed);
   const [error, setError] = useState("");
@@ -243,7 +240,7 @@ export function DemoDialogs({
         <DetailList
           rows={[
             ["Position", `${item.side} ${item.size} ${dialog.market}`],
-            ["Venue", "Pacifica"],
+            ["Venue", venues[dialog.venue]],
           ]}
         />
         <form onSubmit={(e) => validateAmount(e, item.size)} noValidate>
@@ -439,47 +436,10 @@ export function DemoDialogs({
           </>
         )}
         <p className="d-ticket-note">
-          Illustrative records only. Drafts remain in this tab until you reset
-          or reload.
+          Illustrative records only. Drafts remain in this tab until you reload.
         </p>
       </Modal>
     );
   }
-  if (dialog.kind === "reset")
-    return (
-      <Modal title="Reset the demo?" onClose={onClose}>
-        <p className="d-dialog-intro">
-          Remove your local example drafts and return to the funded, chart-first
-          sample. No real account is affected.
-        </p>
-        <button className="d-button d-primary d-wide" onClick={onReset}>
-          Reset sample account
-        </button>
-      </Modal>
-    );
-  if (dialog.kind === "feedback")
-    return (
-      <Modal title="Help shape Cinder" onClose={onClose}>
-        <p className="d-dialog-intro">
-          What felt clear? Where did you hesitate? What would you need before
-          using a broker instead of trading directly at a venue?
-        </p>
-        <p className="d-dialog-intro">
-          Share your thoughts with Cinder on X. Please do not include wallet
-          secrets, account exports, or personal financial details.
-        </p>
-        <a
-          className="d-button d-primary"
-          href={site.contact}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Open Cinder on X <ArrowUpRight size={16} aria-hidden="true" />
-        </a>
-        <p className="d-ticket-note">
-          Opens the project profile. Nothing is sent automatically.
-        </p>
-      </Modal>
-    );
   return null;
 }

@@ -25,7 +25,6 @@
   color: var(--off-white);
   font-size: 13px;
   line-height: 1.5;
-  padding-bottom: 24px;
 }
 .demo p {
   color: var(--d-muted);
@@ -58,7 +57,7 @@
 .demo h3 {
   font-size: 14px;
 }
-.demo :is(button, a, input, select, [tabindex]):focus-visible {
+.demo :is(button, a, input, select, summary, [tabindex]):focus-visible {
   outline: 2px solid var(--d-blue);
   outline-offset: 3px;
 }
@@ -352,11 +351,19 @@
 .d-chart-source {
   margin-left: auto;
 }
-.d-chart-source label {
+.d-chart-source label,
+.d-chart-source-label {
   color: var(--d-muted);
   display: block;
   font-size: 12px;
   margin-bottom: 4px;
+}
+.d-chart-source > strong {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+  font-size: 13px;
+  font-weight: 500;
 }
 .d-chart-source select {
   min-height: 32px;
@@ -433,7 +440,8 @@
   margin-left: auto;
   gap: 4px;
 }
-.d-chart-tools button {
+.d-chart-tools button,
+.d-chart-credit summary {
   background: none;
   display: grid;
   place-items: center;
@@ -441,6 +449,36 @@
   min-height: 32px;
   color: var(--d-muted);
   border-radius: 4px;
+}
+.d-chart-credit summary {
+  list-style: none;
+  cursor: pointer;
+}
+.d-chart-credit summary::-webkit-details-marker {
+  display: none;
+}
+.d-chart-credit[open] summary {
+  color: var(--d-blue);
+  background: var(--d-raised);
+}
+.d-chart-credit > div {
+  position: absolute;
+  z-index: 2;
+  right: var(--d-pad);
+  bottom: calc(100% + var(--d-gap));
+  width: 264px;
+  max-width: calc(100vw - 32px);
+  padding: 12px;
+  background: var(--d-raised);
+  border: 1px solid var(--d-control-line);
+  border-radius: var(--d-radius);
+}
+.d-chart-credit a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  color: var(--d-blue);
+  text-decoration: underline;
 }
 .d-chart-caption b {
   font-weight: 400;
@@ -450,6 +488,7 @@
   margin-left: 8px;
 }
 .d-chart-caption {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -684,19 +723,6 @@
   background: var(--d-negative);
   color: var(--d-bg);
 }
-.d-demo-disclosure {
-  margin: 16px 28px 0;
-  font-size: 12px;
-  max-width: 1000px;
-}
-.d-chart-attribution {
-  margin: 12px 28px 0;
-  font-size: 12px;
-}
-.d-chart-attribution a {
-  color: var(--d-blue);
-  text-decoration: underline;
-}
 .d-detail-list {
   margin: 0 0 20px;
   font-size: 12px;
@@ -796,6 +822,8 @@
   font-size: 12px;
 }
 .d-table-scroll {
+  /* Keep visually hidden table captions inside their scrolling panel. */
+  position: relative;
   overflow-x: auto;
   scrollbar-width: thin;
 }
@@ -899,50 +927,6 @@
 .d-empty .d-text-button {
   display: block;
   margin: 12px auto 0;
-}
-.d-workspace-footer {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 24px;
-  border-top: 1px solid var(--d-line);
-  color: var(--d-muted);
-  font-size: 12px;
-}
-.d-workspace-footer > span:first-child {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.d-review-tools {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 12px 24px;
-  color: var(--d-muted);
-  font-size: 12px;
-}
-.d-review-tools label,
-.d-review-tools > div {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.d-review-tools select {
-  font-size: 12px;
-}
-.d-review-tools button {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px;
-  min-height: 40px;
-  background: none;
-  color: var(--d-muted);
 }
 .d-feedback-note,
 .d-stale {
@@ -1052,6 +1036,44 @@
 }
 .d-capital-detail .d-detail-list {
   margin-bottom: 12px;
+}
+.d-capital-detail .d-detail-list > .d-margin-group {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+}
+.d-capital-detail .d-margin-group > dd {
+  max-width: none;
+}
+.d-margin-group > dd:not(.d-margin-details) {
+  white-space: nowrap;
+}
+.d-capital-detail .d-margin-details {
+  grid-column: 1 / -1;
+  max-width: none;
+  padding-left: 12px;
+  border-left: 1px solid var(--d-line);
+}
+.d-margin-breakdown {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  color: var(--d-muted);
+  text-align: left;
+}
+.d-margin-breakdown > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 12px;
+}
+.d-margin-breakdown dt > span {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+}
+.d-margin-breakdown dd {
+  white-space: nowrap;
 }
 .d-account-context {
   display: flex;
@@ -1297,6 +1319,10 @@
   .demo .d-button:hover {
     filter: brightness(1.18);
   }
+  .d-chart-credit summary:hover {
+    background: var(--d-raised);
+    color: var(--d-blue);
+  }
   .d-text-button:hover,
   .d-cell-link:hover {
     text-decoration: underline;
@@ -1320,10 +1346,6 @@
   }
 }
 @media (min-width: 1680px) {
-  .d-review-tools {
-    max-width: 1760px;
-    margin-inline: auto;
-  }
   .d-trading-grid {
     grid-template-columns: minmax(0, 1fr) 296px 320px;
   }
@@ -1383,7 +1405,7 @@
     display: flex;
     flex-direction: column;
   }
-  .d-workspace > :is(header, footer, .d-context-strip, [role="status"]) {
+  .d-workspace > :is(header, .d-context-strip, [role="status"]) {
     flex-shrink: 0;
   }
   .d-trading-grid {
@@ -1458,8 +1480,20 @@
     overflow: auto;
     scrollbar-width: thin;
   }
-  .d-workspace-footer {
-    padding-block: 8px;
+}
+@media (min-width: 1181px) and (min-height: 720px) {
+  .d-trading-grid {
+    /* Reserve enough space for a full position row, even on short laptops. */
+    grid-template-rows: minmax(0, 1fr) clamp(256px, 34dvh, 368px);
+  }
+  .d-chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 16px;
+  }
+  .d-chart-legend > span {
+    margin-bottom: 0;
   }
 }
 @media (max-width: 1000px) {
@@ -1618,20 +1652,10 @@
   .d-timeframes button {
     min-width: 40px;
   }
-  .d-chart-tools button {
+  .d-chart-tools button,
+  .d-chart-credit summary {
     min-width: 40px;
     min-height: 40px;
-  }
-  .d-demo-disclosure,
-  .d-chart-attribution {
-    margin-inline: 16px;
-  }
-  .d-workspace-footer {
-    padding: 12px;
-    font-size: 12px;
-  }
-  .d-review-tools {
-    padding-inline: 16px;
   }
   .d-feedback-note,
   .d-stale {

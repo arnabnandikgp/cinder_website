@@ -78,6 +78,16 @@ for (const [width, height] of [
     const workspace = page.getByTestId("demo-workspace");
     const box = await workspace.boundingBox();
     expect(box).toEqual({ x: 0, y: 0, width, height });
+    expect(
+      await page.evaluate(() => document.documentElement.scrollHeight),
+    ).toBe(height);
+    await expect(
+      page.locator(".d-demo-disclosure, .d-review-tools, .d-workspace-footer"),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: /Reset demo|Give feedback/ }),
+    ).toHaveCount(0);
+    await expect(page.getByLabel("Demo scenario")).toHaveCount(0);
     await expect(page.getByRole("link", { name: "About Cinder" })).toHaveCount(
       0,
     );
@@ -90,12 +100,23 @@ for (const [width, height] of [
       ".d-book",
       ".d-ticket",
       ".d-records",
-      ".d-workspace-footer",
     ]) {
       const panel = await page.locator(selector).boundingBox();
       expect(panel!.y).toBeGreaterThanOrEqual(0);
       expect(panel!.y + panel!.height).toBeLessThanOrEqual(height);
     }
+    const records = await page.locator(".d-records").boundingBox();
+    expect(records!.height).toBeGreaterThanOrEqual(256);
+    const tablePanel = await page.locator("#records-panel").boundingBox();
+    const firstPosition = await page
+      .locator("#records-panel tbody tr")
+      .first()
+      .boundingBox();
+    expect(firstPosition!.y + firstPosition!.height).toBeLessThanOrEqual(
+      tablePanel!.y + tablePanel!.height,
+    );
+    const chart = await page.locator(".d-chart-frame").boundingBox();
+    expect(chart!.height).toBeGreaterThanOrEqual(130);
     // Long forms and records remain reachable without scrolling the workspace out of view.
     await page.getByRole("button", { name: "Review buy order" }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
@@ -117,7 +138,9 @@ for (const [width, height] of [
         width,
         height,
       });
-      await expect(page.locator(".d-workspace-footer")).toBeInViewport();
+      expect(
+        await page.evaluate(() => document.documentElement.scrollHeight),
+      ).toBe(height);
     }
   });
 }
@@ -194,7 +217,7 @@ test("leverage and directional colors follow the order without executing it", as
     /Sample account|Review example|Synthetic|Sample day/,
   );
   await expect(page.locator(".d-demo-bar")).toHaveCount(0);
-  await expect(page.locator(".d-demo-disclosure")).toContainText("simulated");
+  await expect(page.locator(".d-demo-disclosure")).toHaveCount(0);
 });
 
 test("TradingView chart loads, responds to controls and changes market context", async ({
@@ -216,9 +239,48 @@ test("TradingView chart loads, responds to controls and changes market context",
     .selectOption("BTC");
   await expect(chart).toHaveAttribute("data-chart-key", "BTC-pacifica-1h");
   await expect(chart).toHaveAttribute("data-chart-status", "ready");
-  await expect(page.locator(".d-chart-attribution a")).toHaveAttribute(
+  const credit = page.locator(".d-chart-credit summary");
+  await credit.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".d-chart-credit > div")).toBeVisible();
+  await expect(page.locator(".d-chart-credit")).toContainText(
+    "Copyright (с) 2025 TradingView, Inc.",
+  );
+  await expect(page.locator(".d-chart-credit a")).toHaveAttribute(
     "href",
     "https://www.tradingview.com/",
+  );
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".d-chart-credit > div")).toBeHidden();
+  await expect(credit).toBeFocused();
+});
+
+test("chart credit stays accessible on mobile without adding a page footer", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 900 });
+  await page.goto("/demo");
+  await expect(page.locator(".d-tv-chart")).toHaveAttribute(
+    "data-chart-status",
+    "ready",
+  );
+  await page.locator(".d-chart-credit summary").click();
+  const notice = page.locator(".d-chart-credit > div");
+  await expect(notice).toBeInViewport();
+  const box = await notice.boundingBox();
+  expect(box!.x).toBeGreaterThanOrEqual(0);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(375);
+  await expect(
+    notice.getByRole("link", { name: "TradingView", exact: true }),
+  ).toBeVisible();
+  const audit = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+    .analyze();
+  expect(audit.violations.map((violation) => violation.id)).toEqual([]);
+  await page.keyboard.press("Escape");
+  const workspace = await page.getByTestId("demo-workspace").boundingBox();
+  expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(
+    Math.ceil(workspace!.height),
   );
 });
 
@@ -283,27 +345,112 @@ for (const width of [375, 768, 1280, 1440]) {
   });
 }
 
-test("chart, execution venue and record scope stay independent", async ({
+test("manual chart follows execution and auto-route allows an independent reference", async ({
   page,
 }) => {
   await page.goto("/demo");
   await page
     .getByLabel("Execution venue", { exact: true })
     .selectOption("bulk");
-  await expect(page.getByLabel("Chart source")).toHaveValue("pacifica");
-  await expect(page.getByLabel("Venue", { exact: true })).toHaveValue("bulk");
-  await page.getByLabel("Chart source").selectOption("velocity");
-  await expect(page.getByLabel("Execution venue", { exact: true })).toHaveValue(
-    "bulk",
+  await expect(
+    page.getByRole("combobox", { name: "Chart source" }),
+  ).toHaveCount(0);
+  await expect(page.getByTestId("manual-chart-source")).toHaveText("BULK");
+  await expect(page.locator(".d-tv-chart")).toHaveAttribute(
+    "data-chart-key",
+    "SOL-bulk-15m",
   );
+  await expect(page.locator(".d-book .d-panel-title")).toContainText("BULK");
   await expect(page.getByLabel("Venue", { exact: true })).toHaveValue("bulk");
   await page.getByRole("tab", { name: "Trade history", exact: true }).click();
   await expect(page.getByRole("tabpanel")).toContainText("FL-203");
   await expect(page.getByRole("tabpanel")).not.toContainText("FL-202");
   await page.getByRole("radio", { name: "Auto-route", exact: true }).check();
   await expect(page.getByLabel("Venue", { exact: true })).toHaveValue("all");
+  await expect(page.getByLabel("Chart source")).toHaveValue("bulk");
+  await page.getByLabel("Chart source").selectOption("velocity");
   await expect(page.getByLabel("Chart source")).toHaveValue("velocity");
+  await expect(page.locator(".d-tv-chart")).toHaveAttribute(
+    "data-chart-key",
+    "SOL-velocity-15m",
+  );
+  await expect(page.getByLabel("Venue", { exact: true })).toHaveValue("all");
   await expect(page.getByRole("tabpanel")).toContainText("FL-202");
+  await page.reload();
+  await expect(page.getByLabel("Chart source")).toHaveValue("velocity");
+  await page.getByRole("radio", { name: "Choose venue", exact: true }).check();
+  await expect(
+    page.getByRole("combobox", { name: "Chart source" }),
+  ).toHaveCount(0);
+  await expect(page.getByLabel("Execution venue", { exact: true })).toHaveValue(
+    "bulk",
+  );
+  await expect(page.getByTestId("manual-chart-source")).toHaveText("BULK");
+  await expect(page.locator(".d-tv-chart")).toHaveAttribute(
+    "data-chart-key",
+    "SOL-bulk-15m",
+  );
+  await page.getByLabel("Venue", { exact: true }).selectOption("pacifica");
+  await expect(page.getByTestId("manual-chart-source")).toHaveText("BULK");
+  await page.goto("/demo?mode=manual&venue=velocity&chart=pacifica");
+  await expect(page.getByTestId("manual-chart-source")).toHaveText("Velocity");
+  await expect(page.locator(".d-tv-chart")).toHaveAttribute(
+    "data-chart-key",
+    "SOL-velocity-15m",
+  );
+});
+
+test("margin breakdown reconciles with venue-scoped positions and empty accounts", async ({
+  page,
+}) => {
+  await page.goto("/demo?view=account&scope=all");
+  await expect(page.getByTestId("margin-committed")).toHaveText(
+    "2,600.00 USDC",
+  );
+  for (const [venue, amount, position] of [
+    ["pacifica", "800.00", "SOL-PERP"],
+    ["bulk", "1,800.00", "BTC-PERP"],
+    ["velocity", "0.00", ""],
+  ]) {
+    const allocation = page.getByTestId(`margin-${venue}`);
+    await expect(allocation.locator("dd")).toHaveText(`${amount} USDC`);
+    await expect(allocation).toContainText(
+      position ? "1 open position" : "No open positions",
+    );
+    await page.getByLabel("Venue", { exact: true }).selectOption(venue);
+    if (position) {
+      await expect(page.locator(".d-records tbody tr")).toHaveCount(1);
+      await expect(page.getByRole("tabpanel")).toContainText(position);
+    } else {
+      await expect(page.getByRole("tabpanel")).toContainText("No positions");
+    }
+    await expect(page.getByTestId("margin-committed")).toHaveText(
+      "2,600.00 USDC",
+    );
+  }
+  const amounts = await page
+    .locator(".d-margin-breakdown dd")
+    .allTextContents();
+  const sum = amounts.reduce(
+    (total, text) =>
+      total + Number(text.replaceAll(",", "").replace(" USDC", "")),
+    0,
+  );
+  expect(sum).toBe(2600);
+  await page.getByLabel("Venue", { exact: true }).selectOption("bulk");
+  await page.getByRole("button", { name: "Reduce", exact: true }).click();
+  await expect(page.getByRole("dialog")).toContainText("BULK");
+  await page.keyboard.press("Escape");
+  await page.goto("/demo?view=account&scenario=empty");
+  await expect(page.getByTestId("margin-committed")).toHaveText("0.00 USDC");
+  await expect(page.locator(".d-margin-breakdown dd")).toHaveText([
+    "0.00 USDC",
+    "0.00 USDC",
+    "0.00 USDC",
+  ]);
+  await expect(page.locator(".d-margin-breakdown")).not.toContainText(
+    "1 open position",
+  );
 });
 
 test("all five record tabs, keyboard navigation and URL restoration work", async ({
@@ -463,7 +610,7 @@ test("empty, stale and pending-deposit sample states remain distinguishable", as
   await expect(page.getByRole("tabpanel")).toContainText(
     "empty sample account",
   );
-  await page.getByLabel("Demo scenario").selectOption("stale");
+  await page.goto("/demo?scenario=stale");
   await expect(
     page.getByRole("button", { name: "Review buy order", exact: true }),
   ).toBeDisabled();
@@ -472,14 +619,14 @@ test("empty, stale and pending-deposit sample states remain distinguishable", as
   await expect(
     page.getByRole("button", { name: "Review buy order", exact: true }),
   ).toBeEnabled();
-  await page.getByLabel("Demo scenario").selectOption("deposit");
+  await page.goto("/demo?scenario=deposit");
   await page.getByRole("button", { name: "Account", exact: true }).click();
   await expect(page.locator(".d-account-context")).toContainText(
     "awaiting account credit",
   );
 });
 
-test("reset, feedback and modal keyboard behavior work without external writes", async ({
+test("funding dialogs keep prototype safeguards and keyboard behavior without external writes", async ({
   page,
 }) => {
   const writes: string[] = [];
@@ -492,21 +639,17 @@ test("reset, feedback and modal keyboard behavior work without external writes",
     )
       external.push(request.url());
   });
-  await page.goto("/demo?mode=auto&view=activity");
-  await page.getByRole("button", { name: "Give feedback" }).click();
+  await page.goto("/demo");
+  const deposit = page.getByRole("button", { name: "Deposit", exact: true });
+  await deposit.click();
+  await expect(page.getByRole("dialog")).toContainText(
+    "Demo only. Do not send funds.",
+  );
   await expect(
-    page.getByRole("dialog").getByRole("link", { name: "Open Cinder on X" }),
-  ).toHaveAttribute("href", "https://x.com/CinderExchange");
-  await page.keyboard.press("Escape");
-  await expect(
-    page.getByRole("button", { name: "Give feedback" }),
+    page.getByRole("button", { name: "Close dialog" }),
   ).toBeFocused();
-  await page.getByRole("button", { name: "Reset demo" }).click();
-  await page.getByRole("button", { name: "Reset sample account" }).click();
-  await expect(page).toHaveURL(/\/demo$/);
-  await expect(
-    page.getByRole("radio", { name: "Choose venue", exact: true }),
-  ).toBeChecked();
+  await page.keyboard.press("Escape");
+  await expect(deposit).toBeFocused();
   expect(writes).toEqual([]);
   expect(external).toEqual([]);
 });

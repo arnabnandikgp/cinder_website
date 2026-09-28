@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CandlestickChart, Minus, Plus, ScanLine } from "lucide-react";
+import { CandlestickChart, Info, Minus, Plus, ScanLine } from "lucide-react";
 import type { IChartApi, UTCTimestamp } from "lightweight-charts";
 import {
   candles,
@@ -238,6 +238,35 @@ function TradingChart({
           <span className="d-chart-zone">· UTC</span>
         </span>
         <div className="d-chart-tools">
+          <details
+            className="d-chart-credit"
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.preventDefault();
+                event.currentTarget.open = false;
+                event.currentTarget.querySelector("summary")?.focus();
+              }
+            }}
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget))
+                event.currentTarget.open = false;
+            }}
+          >
+            <summary aria-label="Chart attribution" title="Chart attribution">
+              <Info size={14} aria-hidden="true" />
+            </summary>
+            <div>
+              <p>TradingView Lightweight Charts™</p>
+              <p>Copyright (с) 2025 TradingView, Inc.</p>
+              <a
+                href="https://www.tradingview.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                TradingView
+              </a>
+            </div>
+          </details>
           <button
             aria-label="Zoom out chart"
             onClick={() => zoom(1.25)}
@@ -268,12 +297,14 @@ function TradingChart({
 export function MarketChart({
   market,
   venue,
+  canChooseVenue,
   leverage,
   onMarket,
   onVenue,
 }: {
   market: Market;
   venue: Venue;
+  canChooseVenue: boolean;
   leverage: string;
   onMarket: (value: Market) => void;
   onVenue: (value: Venue) => void;
@@ -342,18 +373,27 @@ export function MarketChart({
           </strong>
         </div>
         <div className="d-chart-source">
-          <label htmlFor="d-chart-source">Chart source</label>
-          <select
-            id="d-chart-source"
-            value={venue}
-            onChange={(e) => onVenue(e.target.value as Venue)}
-          >
-            {Object.entries(venues).map(([key, name]) => (
-              <option key={key} value={key}>
-                {name}
-              </option>
-            ))}
-          </select>
+          {canChooseVenue ? (
+            <>
+              <label htmlFor="d-chart-source">Chart source</label>
+              <select
+                id="d-chart-source"
+                value={venue}
+                onChange={(e) => onVenue(e.target.value as Venue)}
+              >
+                {Object.entries(venues).map(([key, name]) => (
+                  <option key={key} value={key}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </>
+          ) : (
+            <>
+              <span className="d-chart-source-label">Chart source</span>
+              <strong data-testid="manual-chart-source">{venues[venue]}</strong>
+            </>
+          )}
         </div>
       </div>
       <div className="d-chart-toolbar">
@@ -391,7 +431,11 @@ export function OrderBook({ market, venue }: { market: Market; venue: Venue }) {
   const buyShare = Math.round((buyTotal / (buyTotal + sellTotal)) * 100);
   const spread = book.asks[book.asks.length - 1].price - book.bids[0].price;
   return (
-    <section className="d-panel d-book" aria-labelledby="d-book-title">
+    <section
+      className="d-panel d-book"
+      aria-labelledby="d-book-title"
+      tabIndex={0}
+    >
       <div className="d-panel-title">
         <h2 id="d-book-title">Order book</h2>
         <span>{venues[venue]}</span>
