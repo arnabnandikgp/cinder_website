@@ -1,4 +1,5 @@
 @import url("../../cinder_design_system/docs/design-tokens.css");
+@import url("./product.css");
 
 /* The approved palette is extended only with neutral surfaces and cobalt tints. */
 :root {

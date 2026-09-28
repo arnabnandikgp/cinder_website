@@ -1,69 +1,59 @@
-import { ArrowDown, ArrowUpRight } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowRight,
+  ArrowUpRight,
+  ChartNoAxesCombined,
+  Layers3,
+  ListFilter,
+} from "lucide-react";
 import Image from "next/image";
+import tradePreview from "../../public/previews/cinder-trade.png";
+import Link from "next/link";
 import { Header } from "@/components/header";
 import { Brand, ExploreButton, Mark } from "@/components/ui";
-import {
-  AdvantageMini,
-  Fragmentation,
-  HeroNetwork,
-  PrivacyMap,
-  VisionNetwork,
-} from "@/components/diagrams";
+import { AdvantageMini, PrivacyMap } from "@/components/diagrams";
 import { site } from "@/lib/site";
-
-const advantages = [
-  {
-    title: "One connection. More markets.",
-    type: "liquidity" as const,
-    text: "Connect your strategy once. Cinder is being built to route orders to connected Solana perp markets through one interface, with each venue supplying its own liquidity.",
-  },
-  {
-    title: "Pool volume. Qualify together.",
-    type: "fees" as const,
-    text: "Cinder aims to combine qualifying volume at each venue for more competitive fee tiers under its rules. Routing also considers liquidity, price impact, funding, and execution quality to pursue better net execution.",
-  },
-  {
-    title: "Every position. One account view.",
-    type: "account" as const,
-    text: "Cinder’s planned account keeps an individual record of your orders and positions across connected venues. Execution uses separate venue-side accounts, while your Cinder account brings the activity into one view.",
-  },
-];
 
 const faqs = [
   {
     question: "What is Cinder?",
     answer:
-      "Cinder is building a prime broker layer for Solana perpetuals: one trader-facing account for access to connected venue liquidity, order routing, and account management.",
+      "Cinder is building a prime broker for Solana perpetuals. It brings trading, individual account records, and pooled fee economics into one workspace, while orders execute against connected venues’ liquidity.",
   },
   {
     question: "Is Cinder a new perp exchange?",
     answer:
-      "No. Cinder is designed to route orders to connected perp venues. Each venue continues to operate its own market and liquidity.",
+      "No. Cinder is a broker, not another matching engine. Connected venues provide the markets and liquidity; Cinder manages the trader-facing account and execution workflow.",
   },
   {
-    question: "How does one Cinder account work across venues?",
+    question: "Do I choose where my order executes?",
     answer:
-      "In the planned model, Cinder would keep an internal record of each trader’s orders and positions, while execution would use venue-side accounts. One Cinder account does not mean one external account spans every venue.",
+      "Yes. The initial direction is explicit venue selection. Optional automatic routing is a future capability as integrations expand, not a requirement to use the Cinder account.",
   },
   {
-    question: "How could Cinder improve trading fees?",
+    question: "Does one account mean one position across every venue?",
     answer:
-      "Cinder aims to aggregate qualifying activity at each connected venue so traders can pursue more competitive fee tiers. Eligibility and actual fees depend on each venue’s rules and the volume that qualifies.",
+      "No. Your Cinder account keeps your individual records together, while Cinder operates venue-side accounts for execution. Positions retain their venue identity. A unified view does not imply shared margin or interchangeable positions across venues.",
   },
   {
-    question: "How will Cinder choose a venue?",
+    question: "How does pooled volume help with fees?",
     answer:
-      "The routing goal is better net execution, considering available liquidity, fees, price impact, funding, and execution quality. No particular price, fee, or execution outcome is guaranteed.",
+      "Cinder combines qualifying volume through its account at each venue to pursue more competitive fee tiers. Eligibility, the effective trader fee, and any Cinder charges depend on the venue rules and the final pricing model. There is no universal lowest-fee guarantee.",
   },
   {
     question: "What remains private?",
     answer:
-      "Cinder is designed to handle individual account state and routing decisions confidentially inside an attested execution environment. Public visibility still depends on the selected venue’s execution and settlement design.",
+      "Cinder is designed to handle individual orders and account records inside an attested confidential environment, limiting ordinary operator and infrastructure-provider access. The executing venue still receives what it needs to execute, and deposits and payouts remain public.",
   },
   {
-    question: "Can the venue see my order?",
+    question: "What happens if normal service is unavailable?",
     answer:
-      "Yes. A selected venue receives the order and other information it needs to execute. Cinder aims to avoid exposing the trader’s complete Cinder portfolio or account history to that venue.",
+      "A separate recovery process is part of the design. Authorized recovery operators reconcile accounts and arrange claims, subject to access to venue funds. This is different from an unconditional, immediate self-service withdrawal during any outage.",
+  },
+  {
+    question: "Can I trade in the demo?",
+    answer:
+      "The demo is an interactive prototype with synthetic market data and sample account records. It does not connect a wallet, accept deposits, submit orders, or demonstrate live venue integrations. Auto-route is shown as a future concept.",
   },
 ];
 
@@ -72,7 +62,7 @@ export default function Home() {
     <>
       <Header />
       <main id="main">
-        <section className="hero" aria-labelledby="hero-title">
+        <section className="hero product-hero" aria-labelledby="hero-title">
           <div className="hero-atmosphere" aria-hidden="true">
             <Image
               src="/art/cobalt-architecture.png"
@@ -90,82 +80,137 @@ export default function Home() {
               </span>{" "}
               A PRIME BROKER FOR SOLANA PERPETUALS
             </div>
-            <div className="hero-grid">
-              <div className="hero-copy">
-                <h1 id="hero-title">
-                  One account
-                  <br />
-                  for <span>Solana perps.</span>
-                </h1>
+            <div className="product-hero-heading">
+              <h1 id="hero-title">
+                One account
+                <br />
+                for <span className="heading-accent">Solana perps.</span>
+              </h1>
+              <div>
                 <p className="hero-intro">
-                  Access connected perp venues through a single prime broker
-                  account. Cinder is building a simpler way to route orders,
-                  manage positions, and benefit from aggregated trading
-                  activity.
+                  Cinder is building a prime broker account for trading Solana
+                  perpetuals. Choose your venue, manage your positions, and
+                  benefit from pooled trading volume through one workspace.
                 </p>
                 <div className="hero-actions">
                   <ExploreButton />
-                  <a className="text-link" href="#privacy">
-                    Why privacy matters{" "}
-                    <ArrowDown size={15} aria-hidden="true" />
+                  <a className="text-link" href="#advantage">
+                    Meet the account <ArrowDown size={15} aria-hidden="true" />
                   </a>
                 </div>
               </div>
-              <HeroNetwork />
             </div>
+            <figure className="product-preview">
+              <Link
+                href="/demo"
+                className="product-preview-link"
+                aria-label="Explore the chart-first Cinder demo"
+              >
+                <Image
+                  src={tradePreview}
+                  alt="Cinder’s chart-first prototype, with a SOL chart, venue selection, order entry and personal positions. Trade, Account and Activity are available in the same workspace. Sample data only."
+                  sizes="(max-width: 800px) 100vw, 1280px"
+                  preload
+                />
+                <span className="preview-open">
+                  Explore the workspace{" "}
+                  <ArrowUpRight size={16} aria-hidden="true" />
+                </span>
+              </Link>
+            </figure>
           </div>
         </section>
 
         <section
-          className="section market-section"
-          id="market"
-          aria-labelledby="market-title"
-        >
-          <div className="container">
-            <div className="split-layout">
-              <div className="section-copy">
-                <h2 id="market-title">
-                  One market.
-                  <br />
-                  Too <span className="heading-accent">many accounts.</span>
-                </h2>
-                <p>
-                  Solana perp markets sit across independent venues. Trading on
-                  each one can mean another account, another collateral balance,
-                  and a different workflow.
-                </p>
-                <p>
-                  Fee tiers are calculated separately, while orders and
-                  positions become harder to see together. Scale and visibility
-                  fragment just when traders need a clearer picture.
-                </p>
-              </div>
-              <Fragmentation />
-            </div>
-          </div>
-        </section>
-
-        <section
-          className="section advantage-section"
+          className="section workspace-section"
           id="advantage"
           aria-labelledby="advantage-title"
         >
           <div className="container">
-            <div className="section-heading-row">
+            <div className="workspace-heading">
               <h2 id="advantage-title">
-                One account.
+                Your trading.
                 <br />
-                More <span className="heading-accent">connected trading.</span>
+                One <span className="heading-accent">connected workspace.</span>
               </h2>
+              <p>
+                Moving between venues should not mean rebuilding your trading
+                workflow. Cinder brings the trading screen, your individual
+                account, and the history behind every move into one place.
+              </p>
             </div>
-            <div className="advantage-grid">
-              {advantages.map((advantage) => (
-                <article className="advantage-card" key={advantage.title}>
-                  <AdvantageMini type={advantage.type} />
-                  <h3>{advantage.title}</h3>
-                  <p>{advantage.text}</p>
+            <div className="workspace-features">
+              {[
+                {
+                  name: "Trade",
+                  icon: ChartNoAxesCombined,
+                  heading: "Choose your venue. Place your trade.",
+                  text: "Analyse the market, set your order, and manage open positions from one trading screen. Choose the venue for each new trade without switching platforms.",
+                  href: "/demo",
+                },
+                {
+                  name: "Account",
+                  icon: Layers3,
+                  heading: "Your capital, with context.",
+                  text: "See your account equity alongside what is available to trade and withdraw. One account view, with the venue behind each position still visible.",
+                  href: "/demo?view=account",
+                },
+                {
+                  name: "Activity",
+                  icon: ListFilter,
+                  heading: "Know what changed. And why.",
+                  text: "Trace an order through its fills, separate trading fees from funding, and follow transfers. Your personal records, not a shared venue account’s entire history.",
+                  href: "/demo?view=activity",
+                },
+              ].map((item) => (
+                <article key={item.name}>
+                  <div className="workspace-feature-label">
+                    <item.icon size={20} aria-hidden="true" />
+                    <span>{item.name}</span>
+                  </div>
+                  <h3>{item.heading}</h3>
+                  <p>{item.text}</p>
+                  <Link href={item.href} className="text-link">
+                    Explore {item.name.toLowerCase()}{" "}
+                    <ArrowRight size={15} aria-hidden="true" />
+                  </Link>
                 </article>
               ))}
+            </div>
+          </div>
+        </section>
+
+        <section
+          className="section economics-section"
+          id="economics"
+          aria-labelledby="economics-title"
+        >
+          <div className="container split-layout">
+            <div className="section-copy">
+              <h2 id="economics-title">
+                Pooled volume.
+                <br />
+                <span className="heading-accent">More competitive fees.</span>
+              </h2>
+              <p>
+                Trading alone means qualifying for volume tiers alone. Cinder
+                brings qualifying activity together at each venue, creating the
+                potential for fee economics that are harder to reach
+                individually.
+              </p>
+              <p>
+                The goal is a better outcome for the trader. Actual pricing
+                depends on venue rules, qualifying volume, and the final Cinder
+                fee model.
+              </p>
+              <a className="text-link" href="#faq">
+                How fee aggregation works{" "}
+                <ArrowDown size={15} aria-hidden="true" />
+              </a>
+            </div>
+            <div className="economics-illustration">
+              <span className="editorial-label">SCALE AT THE VENUE LEVEL</span>
+              <AdvantageMini type="fees" />
             </div>
           </div>
         </section>
@@ -179,23 +224,22 @@ export default function Home() {
           <div className="container">
             <div className="privacy-heading">
               <h2 id="privacy-title">
-                Confidential order handling.
+                Confidential handling.
                 <br />
                 Built <span className="heading-accent">into the account.</span>
               </h2>
               <div>
                 <p>
-                  Cinder is designed to keep your individual account records
-                  inside its confidential runtime while sending executable
-                  orders to a selected venue. The aim is to make it harder to
-                  connect venue activity to your broader portfolio and strategy.
+                  Your individual orders, positions and account records are
+                  designed to stay inside Cinder’s confidential execution
+                  environment. Privacy is part of the brokerage account, not a
+                  separate trading mode.
                 </p>
                 <p>
-                  A trusted execution environment (TEE) isolates that processing
-                  from ordinary operators and infrastructure providers.
-                  Attestation lets the running code be checked. The venue still
-                  receives what it needs to execute, and public visibility
-                  depends on its execution and settlement design.
+                  A trusted execution environment (TEE) isolates sensitive
+                  processing from ordinary operators and infrastructure
+                  providers. The selected venue receives the order it needs to
+                  execute, rather than your complete Cinder account history.
                 </p>
               </div>
             </div>
@@ -209,58 +253,80 @@ export default function Home() {
           aria-labelledby="vision-title"
         >
           <div className="container">
-            <div className="split-layout">
-              <div className="section-copy">
-                <h2 id="vision-title">
-                  The larger vision:
-                  <br />a clearing layer for{" "}
-                  <span className="heading-accent">Solana perps.</span>
-                </h2>
-                <p>
-                  Cinder starts with the prime broker account: a simpler way to
-                  reach connected venues and manage the trading workflow.
-                </p>
-                <p>
-                  Deeper internal risk management and broader venue coverage are
-                  the next direction. They are not capabilities promised at
-                  launch.
-                </p>
-                <p>
-                  Over time, Cinder aims to become a clearing layer connecting
-                  traders and venues across Solana. This is an ambition, not a
-                  claim that Cinder currently guarantees settlement or manages
-                  defaults across venues.
-                </p>
-              </div>
-              <VisionNetwork />
+            <div className="workspace-heading">
+              <h2 id="vision-title">
+                A broader account layer
+                <br />
+                for <span className="heading-accent">Solana perps.</span>
+              </h2>
+              <p>
+                The prime broker account comes first. Broader venue access,
+                optional routing and deeper risk coordination build on that
+                foundation.
+              </p>
             </div>
-            <div className="vision-pillars">
+            <div className="product-roadmap">
               {[
                 {
-                  title: "Prime broker account",
-                  text: "A unified trader experience as venue integrations expand.",
+                  stage: "THE FOUNDATION",
+                  title: "A broker account, built around the trader.",
+                  text: "Venue-directed trading, individual account records, pooled fee economics, and confidential order handling.",
                 },
                 {
-                  title: "Deeper risk management",
-                  text: "Work toward a more coordinated view of positions and exposure.",
+                  stage: "AS CONNECTIONS EXPAND",
+                  title: "More venues. Optional routing.",
+                  text: "Keep choosing a venue yourself, or opt into routing for a new order as eligible integrations and execution tools develop.",
                 },
                 {
-                  title: "Future clearing layer",
-                  text: "Explore coordination of collateral and settlement across venues.",
+                  stage: "THE LONGER-TERM VISION",
+                  title: "A more coordinated clearing layer.",
+                  text: "Work toward deeper risk management and coordination of collateral and settlement. Not a claim of shared margin or settlement guarantees today.",
                 },
-              ].map((item, i) => (
-                <div key={item.title}>
-                  <span className="mono">0{i + 1}</span>
+              ].map((item) => (
+                <article key={item.stage}>
+                  <span className="editorial-label">{item.stage}</span>
                   <h3>{item.title}</h3>
                   <p>{item.text}</p>
-                </div>
+                </article>
               ))}
             </div>
-            <p className="vision-closing">
-              The prime broker account comes first.
-              <br />
-              <span>The broader clearing network is the destination.</span>
-            </p>
+          </div>
+        </section>
+
+        <section
+          className="article-section"
+          id="article"
+          aria-labelledby="article-title"
+        >
+          <div className="container">
+            <a
+              className="article-feature"
+              href={site.article}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Image
+                src="/art/cobalt-architecture.png"
+                alt=""
+                fill
+                sizes="(max-width: 800px) 100vw, 1280px"
+              />
+              <span className="article-scrim" aria-hidden="true" />
+              <span className="article-kicker">FROM CINDER · OUR THESIS</span>
+              <div className="article-feature-copy">
+                <h2 id="article-title">
+                  Introducing Cinder:
+                  <br />
+                  what happens between the venues?
+                </h2>
+                <span className="article-read">
+                  Read article <ArrowUpRight size={22} aria-hidden="true" />
+                </span>
+              </div>
+              <span className="article-platform">
+                THE STORY BEHIND THE ACCOUNT <span>READ ON X ↗</span>
+              </span>
+            </a>
           </div>
         </section>
 
@@ -298,23 +364,25 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="closing-section" aria-label="Cinder vision">
+        <section className="closing-section" aria-label="Explore Cinder">
           <div className="container closing-inner">
             <p>
-              One account.
+              Your next trading
               <br />
-              Connected markets.
+              workspace.
               <br />
-              <span>A better trading workflow.</span>
+              <span>Help shape it.</span>
             </p>
+            <Link className="button button-light" href="/demo">
+              Explore the demo <ArrowUpRight size={17} aria-hidden="true" />
+            </Link>
             <a
-              className="button button-light"
-              href={site.x}
+              href={site.contact}
+              className="closing-contact"
               target="_blank"
               rel="noopener noreferrer"
             >
-              Follow the development{" "}
-              <ArrowUpRight size={17} aria-hidden="true" />
+              Share your feedback <ArrowUpRight size={15} aria-hidden="true" />
             </a>
           </div>
           <Mark className="closing-watermark" />
@@ -325,7 +393,7 @@ export default function Home() {
           <div className="footer-main">
             <div>
               <Brand large />
-              <p>A prime broker layer for Solana perpetuals.</p>
+              <p>Prime brokerage for Solana perpetuals.</p>
             </div>
             <nav aria-label="Footer navigation">
               <a href={site.x} target="_blank" rel="noopener noreferrer">

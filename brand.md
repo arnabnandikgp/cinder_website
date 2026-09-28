@@ -2,7 +2,7 @@
 
 Source of truth: `cinder_design_system/` and its approved assets.
 
-- Cobalt: #0051FE. The only chromatic accent.
+- Cobalt: #0051FE. The brand accent. In the trading workspace, semantic green (#46D6A1) and red (#FF7085) distinguish bids/buys and asks/sells, respectively; they are not additional marketing accents.
 - Black: #0B0B0B. Charcoal: #1F1F1F. Dark surface: #252A2E.
 - Off white: #FAFAFB. Light gray: #F4F6F8. Graphite: #6B7280.
 - Direction: a private financial institution; precise, restrained, confident.

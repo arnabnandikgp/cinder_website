@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowUpRight, Menu, X } from "lucide-react";
 import { Brand } from "./ui";
-import { site } from "@/lib/site";
+import Link from "next/link";
 
 const links = [
   { label: "The account", href: "#advantage" },
@@ -112,14 +112,9 @@ export function Header() {
           />
         </nav>
         <div className="header-actions">
-          <a
-            className="header-contact"
-            href={site.contact}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Get in touch <ArrowUpRight size={15} aria-hidden="true" />
-          </a>
+          <Link className="header-contact" href="/demo">
+            Explore demo <ArrowUpRight size={15} aria-hidden="true" />
+          </Link>
           <button
             ref={toggle}
             className="menu-toggle"

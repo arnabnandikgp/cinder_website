@@ -1,11 +1,12 @@
 import Image from "next/image";
+import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import cinderMark from "../../public/brand/mark-dark.png";
 
 export function Brand({ large = false }: { large?: boolean }) {
   return (
-    <a
-      href="#"
+    <Link
+      href="/"
       className={`brand${large ? " brand-large" : ""}`}
       aria-label="Cinder home"
     >
@@ -25,15 +26,15 @@ export function Brand({ large = false }: { large?: boolean }) {
         sizes="105px"
         className="brand-wordmark"
       />
-    </a>
+    </Link>
   );
 }
 
 export function ExploreButton() {
   return (
-    <a className="button button-primary" href="#advantage">
-      Explore Cinder <ArrowUpRight size={17} aria-hidden="true" />
-    </a>
+    <Link className="button button-primary" href="/demo">
+      Explore the demo <ArrowUpRight size={17} aria-hidden="true" />
+    </Link>
   );
 }
 
