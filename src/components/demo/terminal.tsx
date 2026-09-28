@@ -2,15 +2,15 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import Link from "next/link";
 import {
-  ArrowLeft,
   ArrowUpRight,
-  CircleHelp,
   RotateCcw,
   MessageSquare,
   Info,
   LockKeyhole,
+  CandlestickChart,
+  WalletCards,
+  History,
 } from "lucide-react";
 import { Brand } from "@/components/ui";
 import { AccountOverview, ActivityView } from "./account-views";
@@ -30,6 +30,27 @@ import {
   type VenueScope,
   type View,
 } from "./data";
+
+const workspaceViews = [
+  {
+    value: "trade",
+    label: "Trade",
+    description: "Markets & orders",
+    icon: CandlestickChart,
+  },
+  {
+    value: "account",
+    label: "Account",
+    description: "Balances & positions",
+    icon: WalletCards,
+  },
+  {
+    value: "activity",
+    label: "Activity",
+    description: "Fills, fees & funding",
+    icon: History,
+  },
+] as const;
 
 export function Terminal() {
   const params = useSearchParams();
@@ -106,15 +127,6 @@ export function Terminal() {
   );
   return (
     <div className="demo">
-      <div className="d-demo-bar">
-        <Link href="/" className="d-back">
-          <ArrowLeft size={14} aria-hidden="true" /> About Cinder
-        </Link>
-        <button onClick={() => setDialog({ kind: "help" })}>
-          <CircleHelp size={15} aria-hidden="true" />
-          <span>About this demo</span>
-        </button>
-      </div>
       <main
         id="main"
         className="d-workspace"
@@ -124,13 +136,26 @@ export function Terminal() {
         <header className="d-header">
           <Brand />
           <nav aria-label="Workspace navigation">
-            {(["trade", "account", "activity"] as View[]).map((item) => (
+            {workspaceViews.map(({ value, label, description, icon: Icon }) => (
               <button
-                key={item}
-                aria-current={view === item ? "page" : undefined}
-                onClick={() => updateQuery({ view: item }, true)}
+                key={value}
+                aria-labelledby={`d-nav-${value}-label`}
+                aria-describedby={`d-nav-${value}-description`}
+                aria-current={view === value ? "page" : undefined}
+                onClick={() => updateQuery({ view: value }, true)}
               >
-                {item.charAt(0).toUpperCase() + item.slice(1)}
+                <Icon size={19} aria-hidden="true" />
+                <span className="d-nav-copy">
+                  <span id={`d-nav-${value}-label`} className="d-nav-label">
+                    {label}
+                  </span>
+                  <span
+                    id={`d-nav-${value}-description`}
+                    className="d-nav-description"
+                  >
+                    {description}
+                  </span>
+                </span>
               </button>
             ))}
           </nav>

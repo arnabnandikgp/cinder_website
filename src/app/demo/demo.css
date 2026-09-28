@@ -98,41 +98,17 @@
   white-space: nowrap;
   border: 0;
 }
-.d-demo-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 48px;
-  padding: 4px 28px;
-  gap: 16px;
-  border-bottom: 1px solid var(--d-line);
-  font-size: 12px;
-}
-.d-demo-bar button,
-.d-back {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.d-demo-bar button,
-.d-back {
-  color: var(--d-muted);
-  min-height: 40px;
-  background: none;
-}
 .d-workspace {
-  margin: 20px 24px 0;
-  border: 1px solid var(--d-line);
-  border-radius: 10px;
+  min-height: 100dvh;
   overflow: clip;
   background: var(--d-panel);
 }
 .d-header {
   display: flex;
   align-items: center;
-  gap: 40px;
-  padding: 0 24px;
-  min-height: 76px;
+  gap: 28px;
+  padding: 6px 24px;
+  min-height: 72px;
   border-bottom: 1px solid var(--d-line);
 }
 .d-header .brand-mark {
@@ -142,28 +118,54 @@
   width: 79px;
 }
 .d-header nav {
-  display: flex;
-  align-self: stretch;
-  gap: 28px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-self: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--d-control-line);
+  border-radius: 10px;
+  background: var(--d-bg);
 }
 .d-header nav button {
-  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   background: none;
-  padding: 12px 0;
-  color: var(--d-muted);
-  font-size: 14px;
-}
-.d-header nav button[aria-current="page"] {
+  padding: 8px 12px;
+  min-height: 48px;
+  border-radius: var(--d-radius);
+  text-align: left;
   color: var(--off-white);
 }
-.d-header nav button[aria-current="page"]::after {
-  content: "";
-  height: 2px;
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
+.d-header nav button > svg {
+  flex-shrink: 0;
+  color: var(--d-blue);
+}
+.d-nav-copy {
+  display: grid;
+  gap: 2px;
+}
+.d-nav-label {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.d-nav-description {
+  color: var(--d-muted);
+  font-size: 12px;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+.d-header nav button[aria-current="page"],
+.d-header nav button[aria-current="page"] :is(svg, .d-nav-description) {
+  color: var(--off-white);
+}
+.d-header nav button[aria-current="page"] {
   background: var(--cobalt);
+}
+.d-header nav button:focus-visible {
+  outline-offset: 1px;
 }
 .d-account-actions {
   display: flex;
@@ -1302,6 +1304,9 @@
   .demo tbody tr:hover {
     background: var(--d-raised);
   }
+  .d-header nav button:not([aria-current="page"]):hover {
+    background: var(--d-raised);
+  }
 }
 @media (prefers-reduced-motion: no-preference) {
   .demo button,
@@ -1315,7 +1320,6 @@
   }
 }
 @media (min-width: 1680px) {
-  .d-workspace,
   .d-review-tools {
     max-width: 1760px;
     margin-inline: auto;
@@ -1328,9 +1332,6 @@
   }
 }
 @media (max-width: 1180px) {
-  .d-workspace {
-    margin: 12px 12px 0;
-  }
   .d-trading-grid {
     grid-template-columns: minmax(0, 1fr) 284px;
   }
@@ -1373,31 +1374,125 @@
     gap: 16px;
   }
 }
-@media (max-width: 760px) {
-  .d-demo-bar {
-    flex-wrap: wrap;
-    padding: 8px 16px;
-    gap: 0 16px;
-  }
-  .d-demo-bar > button {
-    margin-left: auto;
-    font-size: 12px;
-  }
+/* The terminal owns the desktop viewport. Long panels scroll independently;
+   narrow or very short viewports retain natural document flow for readability. */
+@media (min-width: 1000px) and (min-height: 720px),
+  (min-width: 761px) and (min-height: 800px) {
   .d-workspace {
-    margin-inline: 8px;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
   }
+  .d-workspace > :is(header, footer, .d-context-strip, [role="status"]) {
+    flex-shrink: 0;
+  }
+  .d-trading-grid {
+    flex: 1;
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr) clamp(192px, 26dvh, 288px);
+    align-items: stretch;
+  }
+  .d-market,
+  .d-chart-frame,
+  .d-account-content {
+    min-height: 0;
+  }
+  .d-market > :not(.d-chart-frame),
+  .d-book > * {
+    flex-shrink: 0;
+  }
+  .d-market-heading {
+    padding: 12px;
+  }
+  .d-chart-legend {
+    padding-block: 8px 4px;
+  }
+  .d-ticket,
+  .d-book,
+  .d-account-content {
+    min-height: 0;
+    overflow: auto;
+    scrollbar-width: thin;
+  }
+  .d-account-content {
+    flex: 1;
+  }
+  .d-ticket .d-panel-title,
+  .d-book .d-panel-title {
+    min-height: 44px;
+    padding-block: 12px;
+  }
+  .d-ticket form {
+    padding: 12px;
+  }
+  .d-ticket :is(.d-field, .d-segments) {
+    margin-bottom: 12px;
+  }
+  .d-ticket :is(.d-field > label, .d-segments legend) {
+    margin-bottom: 4px;
+  }
+  .d-ticket-divider {
+    margin: 12px -12px;
+  }
+  .d-ticket-privacy {
+    margin-top: 12px;
+  }
+  .d-book-labels {
+    padding-block: 8px;
+  }
+  .d-book-row {
+    min-height: 20px;
+    padding-block: 1px;
+  }
+  .d-trading-grid > .d-records {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .d-trading-grid > .d-records > :not([role="tabpanel"]) {
+    flex-shrink: 0;
+  }
+  .d-trading-grid .d-records > [role="tabpanel"] {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    scrollbar-width: thin;
+  }
+  .d-workspace-footer {
+    padding-block: 8px;
+  }
+}
+@media (max-width: 1000px) {
   .d-header {
     flex-wrap: wrap;
     gap: 12px 24px;
-    padding: 16px 12px 0;
+    padding-block: 12px;
   }
   .d-header nav {
     order: 3;
     flex-basis: 100%;
-    gap: 32px;
+  }
+  .d-header nav button {
+    justify-content: center;
+  }
+}
+@media (max-width: 760px) {
+  .d-header {
+    padding-inline: 12px;
+  }
+  .d-header nav {
+    gap: 4px;
   }
   .d-header nav button {
     min-height: 44px;
+    padding-inline: 6px;
+    gap: 6px;
+  }
+  .d-nav-label {
+    font-size: 14px;
+  }
+  .d-nav-description {
+    display: none;
   }
   .d-account-actions .d-button {
     font-size: 12px;

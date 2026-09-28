@@ -21,14 +21,7 @@ export type DialogState =
   | { kind: "detail"; id: string }
   | { kind: "reduce"; market: Market }
   | {
-      kind:
-        | "cancel"
-        | "deposit"
-        | "withdraw"
-        | "route"
-        | "help"
-        | "reset"
-        | "feedback";
+      kind: "cancel" | "deposit" | "withdraw" | "route" | "reset" | "feedback";
     };
 
 export function DemoDialogs({
@@ -488,36 +481,5 @@ export function DemoDialogs({
         </p>
       </Modal>
     );
-  return (
-    <Modal title="Explore the Cinder account" onClose={onClose}>
-      <p className="d-dialog-intro">
-        This is an interactive product prototype, not a trading application. All
-        market and account data are synthetic.
-      </p>
-      <ol className="d-flow-list">
-        <li>
-          <strong>Trade:</strong> choose a market and venue, review an example
-          order, and inspect your records.
-        </li>
-        <li>
-          <strong>Account:</strong> understand the difference between equity,
-          trading capital, and withdrawable funds.
-        </li>
-        <li>
-          <strong>Activity:</strong> follow fills, fees, funding, transfers and
-          local drafts.
-        </li>
-      </ol>
-      <p className="d-dialog-intro">
-        Use Demo scenarios below the workspace to explore an empty account,
-        partial fill or stale data. The Auto-route selector illustrates a future
-        capability.
-      </p>
-      <p className="d-ticket-note">
-        No live integrations, wallet access, signatures, or network trading
-        calls. This demo cannot validate execution quality or financial risk
-        controls.
-      </p>
-    </Modal>
-  );
+  return null;
 }

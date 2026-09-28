@@ -1,6 +1,144 @@
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
+for (const width of [375, 768, 1001, 1280]) {
+  test(`workspace switcher is prominent and keyboard accessible at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/demo");
+    const navigation = page.getByRole("navigation", {
+      name: "Workspace navigation",
+    });
+    const trade = navigation.getByRole("button", {
+      name: "Trade",
+      exact: true,
+    });
+    const account = navigation.getByRole("button", {
+      name: "Account",
+      exact: true,
+    });
+    const activity = navigation.getByRole("button", {
+      name: "Activity",
+      exact: true,
+    });
+    await expect(trade).toHaveAttribute("aria-current", "page");
+    await expect(trade).toHaveCSS("background-color", "rgb(0, 81, 254)");
+    await expect(account).toHaveAccessibleDescription("Balances & positions");
+    await expect(activity).toHaveAccessibleDescription("Fills, fees & funding");
+    const actions = await page.locator(".d-account-actions").boundingBox();
+    const navBox = await navigation.boundingBox();
+    expect(
+      navBox!.y >= actions!.y + actions!.height ||
+        navBox!.x + navBox!.width <= actions!.x,
+    ).toBe(true);
+    for (const button of [trade, account, activity]) {
+      await expect(button).toBeInViewport();
+      const box = await button.boundingBox();
+      expect(box!.height).toBeGreaterThanOrEqual(44);
+      expect(box!.width).toBeGreaterThanOrEqual(44);
+    }
+    await trade.focus();
+    await page.keyboard.press("Tab");
+    await expect(account).toBeFocused();
+    await expect(account).toHaveCSS("outline-style", "solid");
+    await page.keyboard.press("Enter");
+    await expect(account).toHaveAttribute("aria-current", "page");
+    await expect(account).toHaveCSS("background-color", "rgb(0, 81, 254)");
+    await expect(trade).not.toHaveAttribute("aria-current", "page");
+    await page.keyboard.press("Tab");
+    await expect(activity).toBeFocused();
+    await page.keyboard.press("Space");
+    await expect(activity).toHaveAttribute("aria-current", "page");
+    await expect(page).toHaveURL(/view=activity/);
+    await page.goBack();
+    await expect(account).toHaveAttribute("aria-current", "page");
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  });
+}
+
+for (const [width, height] of [
+  [1280, 720],
+  [1440, 900],
+  [1920, 1080],
+]) {
+  test(`desktop workspace fills ${width}×${height} without outer margins`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height });
+    await page.goto("/demo");
+    await expect(page.locator(".d-tv-chart")).toHaveAttribute(
+      "data-chart-status",
+      "ready",
+    );
+    const workspace = page.getByTestId("demo-workspace");
+    const box = await workspace.boundingBox();
+    expect(box).toEqual({ x: 0, y: 0, width, height });
+    await expect(page.getByRole("link", { name: "About Cinder" })).toHaveCount(
+      0,
+    );
+    await expect(
+      page.getByRole("button", { name: "About this demo" }),
+    ).toHaveCount(0);
+    for (const selector of [
+      ".d-header",
+      ".d-market",
+      ".d-book",
+      ".d-ticket",
+      ".d-records",
+      ".d-workspace-footer",
+    ]) {
+      const panel = await page.locator(selector).boundingBox();
+      expect(panel!.y).toBeGreaterThanOrEqual(0);
+      expect(panel!.y + panel!.height).toBeLessThanOrEqual(height);
+    }
+    // Long forms and records remain reachable without scrolling the workspace out of view.
+    await page.getByRole("button", { name: "Review buy order" }).click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await page.keyboard.press("Escape");
+    expect(await page.evaluate(() => scrollY)).toBe(0);
+    await page.getByRole("tab", { name: "Trade history" }).click();
+    const lastFill = page.locator("#records-panel tbody tr").last();
+    await lastFill.scrollIntoViewIfNeeded();
+    await expect(lastFill).toBeInViewport();
+    expect(await page.evaluate(() => scrollY)).toBe(0);
+    for (const view of ["Account", "Activity"]) {
+      await page
+        .getByRole("navigation", { name: "Workspace navigation" })
+        .getByRole("button", { name: view, exact: true })
+        .click();
+      expect(await workspace.boundingBox()).toEqual({
+        x: 0,
+        y: 0,
+        width,
+        height,
+      });
+      await expect(page.locator(".d-workspace-footer")).toBeInViewport();
+    }
+  });
+}
+
+test("short tablet viewports keep natural scrolling and a readable chart", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 768, height: 640 });
+  await page.goto("/demo");
+  await expect(page.locator(".d-tv-chart")).toHaveAttribute(
+    "data-chart-status",
+    "ready",
+  );
+  const chart = await page.locator(".d-chart-frame").boundingBox();
+  expect(chart!.height).toBeGreaterThanOrEqual(300);
+  const workspace = await page.getByTestId("demo-workspace").boundingBox();
+  expect(workspace!.height).toBeGreaterThan(640);
+  await page.getByRole("button", { name: "Review buy order" }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+});
+
 test("order book depth accumulates outward on both sides of the spread", async ({
   page,
 }) => {
@@ -55,9 +193,7 @@ test("leverage and directional colors follow the order without executing it", as
   await expect(workspace).not.toContainText(
     /Sample account|Review example|Synthetic|Sample day/,
   );
-  await expect(page.locator(".d-demo-bar")).not.toContainText(
-    "Interactive prototype",
-  );
+  await expect(page.locator(".d-demo-bar")).toHaveCount(0);
   await expect(page.locator(".d-demo-disclosure")).toContainText("simulated");
 });
 
