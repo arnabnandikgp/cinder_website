@@ -23,6 +23,8 @@ export type Book = {
   asks: Level[];
   time: number;
   sourceTime?: string;
+  // Phoenix source time has one-second precision; slots order its snapshots.
+  slot?: number;
 };
 export type Ticker = {
   mark: number;
@@ -48,6 +50,10 @@ export const endpoints = {
   bulk: {
     rest: "https://mainnet-api1.bulk.trade/api/v1",
     ws: "wss://mainnet-ws1.bulk.trade",
+  },
+  phoenix: {
+    rest: "https://perp-api.phoenix.trade/v1",
+    ws: "wss://perp-api.phoenix.trade/v1/ws",
   },
 } as const;
 
@@ -104,6 +110,17 @@ export function historyUrl(
   end = Date.now(),
   count = 500,
 ) {
+  if (venue === "phoenix") {
+    const params = new URLSearchParams({
+      timeframe: interval,
+      startTime: String(end - intervals[interval] * 1000 * count),
+      endTime: String(end),
+      limit: String(Math.min(count, 2500)),
+      // Chart actual Phoenix trades, not opt-in external exchange backfills.
+      enableExternalSource: "false",
+    });
+    return `${endpoints.phoenix.rest}/candles/${market}?${params}`;
+  }
   const params = new URLSearchParams({
     symbol: symbol(venue, market),
     interval,
@@ -123,6 +140,26 @@ export function subscriptions(
   purpose: "chart" | "comparison" = "chart",
 ) {
   const s = symbol(venue, market);
+  if (venue === "phoenix") {
+    const book = {
+      type: "subscribe",
+      subscription: { channel: "l2Book", coin: s },
+    };
+    return purpose === "comparison"
+      ? [book]
+      : [
+          book,
+          { type: "subscribe", subscription: { channel: "market", symbol: s } },
+          {
+            type: "subscribe",
+            subscription: {
+              channel: "candles",
+              symbol: s,
+              timeframe: interval,
+            },
+          },
+        ];
+  }
   if (purpose === "comparison")
     return venue === "pacifica"
       ? [
@@ -166,11 +203,24 @@ export function parseCandles(
   value: unknown,
   interval: Interval,
   now = Date.now(),
+  venue?: LiveVenue,
 ): Candle[] {
   if (!Array.isArray(value)) return [];
   const result = new Map<number, Candle>();
   for (const item of value) {
-    const x = object(item);
+    const raw = object(item);
+    if (venue === "phoenix" && raw.externalSource) continue;
+    const x =
+      venue === "phoenix"
+        ? {
+            t: raw.time,
+            o: raw.open,
+            h: raw.high,
+            l: raw.low,
+            c: raw.close,
+            v: raw.volume,
+          }
+        : raw;
     const stamp = milliseconds(x.t);
     const time = Math.floor(stamp / 1000);
     const [open, high, low, close, volume] = [
@@ -197,8 +247,21 @@ export function parseCandles(
 export function parseBook(venue: LiveVenue, value: unknown): Book | null {
   const x = object(value);
   if (venue === "bulk" && x.updateType !== "snapshot") return null;
-  const levels = venue === "pacifica" ? x.l : x.levels;
+  // Phoenix L2 already materializes combined visible FIFO/spline liquidity.
+  // Never expand or add the optional raw spline regions to these levels.
+  const levels =
+    venue === "phoenix"
+      ? [x.bids, x.asks]
+      : venue === "pacifica"
+        ? x.l
+        : x.levels;
   const time = milliseconds(venue === "pacifica" ? x.t : x.timestamp);
+  const slot = numeric(x.slot);
+  if (
+    venue === "phoenix" &&
+    (!Number.isSafeInteger(slot) || slot < 0 || x.bypassExecutionBand === true)
+  )
+    return null;
   if (!Array.isArray(levels) || levels.length !== 2 || !Number.isFinite(time))
     return null;
   const sides: Level[][] = [];
@@ -208,8 +271,15 @@ export function parseBook(venue: LiveVenue, value: unknown): Book | null {
     let previous: number | undefined;
     for (const item of side) {
       const row = object(item);
-      const price = positive(venue === "pacifica" ? row.p : row.px);
-      const size = numeric(venue === "pacifica" ? row.a : row.sz);
+      const tuple = Array.isArray(item) ? item : [];
+      if (venue === "phoenix" && (!Array.isArray(item) || item.length !== 2))
+        return null;
+      const price = positive(
+        venue === "phoenix" ? tuple[0] : venue === "pacifica" ? row.p : row.px,
+      );
+      const size = numeric(
+        venue === "phoenix" ? tuple[1] : venue === "pacifica" ? row.a : row.sz,
+      );
       // Reject corrupt snapshots atomically; never expose a partially decoded book.
       if (
         !Number.isFinite(price) ||
@@ -236,22 +306,49 @@ export function parseBook(venue: LiveVenue, value: unknown): Book | null {
     asks,
     time,
     sourceTime: String(venue === "pacifica" ? x.t : x.timestamp),
+    ...(venue === "phoenix" ? { slot } : {}),
   };
 }
-export function parseTicker(venue: LiveVenue, value: unknown): Ticker | null {
+export function parseTicker(
+  venue: LiveVenue,
+  value: unknown,
+  receivedAt = Date.now(),
+): Ticker | null {
   const x = object(value);
-  const mark = positive(venue === "pacifica" ? x.mark : x.markPrice);
-  const time = milliseconds(x.timestamp);
+  const mark = positive(
+    venue === "phoenix"
+      ? x.markPx
+      : venue === "pacifica"
+        ? x.mark
+        : x.markPrice,
+  );
+  // Phoenix market frames carry no source time. Receipt time controls ticker
+  // health only; execution comparisons always use timestamped L2 frames.
+  const time = venue === "phoenix" ? receivedAt : milliseconds(x.timestamp);
   if (!Number.isFinite(mark) || !Number.isFinite(time)) return null;
-  const mid = positive(x.mid);
+  const mid = positive(venue === "phoenix" ? x.midPx : x.mid);
   const last = positive(x.lastPrice);
-  const yesterday = positive(x.yesterday_price);
+  const yesterday = positive(
+    venue === "phoenix" ? x.prevDayPx : x.yesterday_price,
+  );
   const change =
     venue === "bulk"
       ? numeric(x.priceChangePercent)
-      : (mid / yesterday - 1) * 100;
-  const volume = numeric(venue === "bulk" ? x.quoteVolume : x.volume_24h);
-  const oracle = positive(venue === "bulk" ? x.oraclePrice : x.oracle);
+      : ((venue === "phoenix" ? mark : mid) / yesterday - 1) * 100;
+  const volume = numeric(
+    venue === "phoenix"
+      ? x.dayNtlVlm
+      : venue === "bulk"
+        ? x.quoteVolume
+        : x.volume_24h,
+  );
+  const oracle = positive(
+    venue === "phoenix"
+      ? x.oraclePx
+      : venue === "bulk"
+        ? x.oraclePrice
+        : x.oracle,
+  );
   const funding = numeric(venue === "bulk" ? x.fundingRate : x.funding);
   const nextFunding = venue === "pacifica" ? numeric(x.next_funding) : NaN;
   return {
@@ -271,6 +368,29 @@ export function parseInfo(
   value: unknown,
   market: Market,
 ): MarketInfo | null {
+  if (venue === "phoenix") {
+    const x = object(value);
+    const decimals = numeric(x.baseLotsDecimals);
+    if (
+      x.symbol !== market ||
+      x.marketStatus !== "active" ||
+      !Number.isInteger(decimals) ||
+      decimals < 0 ||
+      decimals > 8 ||
+      !Array.isArray(x.leverageTiers)
+    )
+      return null;
+    // Rise uses USDC quote lots (six decimals). tickSize is quote lots per
+    // base lot, NOT a dollar increment: SOL 100 / 10^(6-2) = $0.01.
+    const tick = positive(x.tickSize) * 10 ** (decimals - 6);
+    const lot = 10 ** -decimals;
+    const maxLeverage = Math.max(
+      ...x.leverageTiers.map((tier) => positive(object(tier).maxLeverage)),
+    );
+    return [tick, lot, maxLeverage].every((n) => Number.isFinite(n) && n > 0)
+      ? { tick, lot, maxLeverage }
+      : null;
+  }
   const data = venue === "pacifica" ? object(value).data : value;
   if (!Array.isArray(data)) return null;
   const x = object(

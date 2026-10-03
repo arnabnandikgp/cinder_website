@@ -10,7 +10,7 @@ import type {
   Side,
 } from "./routing";
 
-export const comparisonVenues: LiveVenue[] = ["pacifica", "bulk"];
+export const comparisonVenues: LiveVenue[] = ["pacifica", "bulk", "phoenix"];
 // Conservative read-only preview policy, not a promise of executable prices.
 export const BOOK_MAX_AGE_MS = 2000;
 export const BOOK_MAX_SKEW_MS = 1000;
@@ -354,8 +354,8 @@ export function comparisonStatus(comparison: RouteComparison) {
   const fresh = live.observations.filter(
     (o) => !o.reason && comparison.input.allowed.includes(o.venue),
   ).length;
-  return fresh === 2
-    ? "Live books · 2 venues"
+  return fresh > 1
+    ? `Live books · ${fresh} venues`
     : fresh === 1
       ? "1 venue available · comparison limited"
       : "Waiting for fresh venue data";

@@ -129,6 +129,20 @@ export function MarketStatistics({
                 BULK funding rules ↗
               </a>
             </>
+          ) : venue === "phoenix" ? (
+            <>
+              <p>
+                Venue-reported funding rate, shown without an hourly conversion.
+                Funding is separate from Pro’s estimated entry cost.
+              </p>
+              <a
+                href="https://docs.phoenix.trade/phoenix/margin-and-risk/funding-rate"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Phoenix funding rules ↗
+              </a>
+            </>
           ) : (
             <p>Live funding data is not connected for this venue.</p>
           )}

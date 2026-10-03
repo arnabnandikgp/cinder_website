@@ -154,7 +154,7 @@ test("strategy menu is keyboard operable and both mode drafts survive round trip
   await page.getByLabel("Duration (minutes)", { exact: true }).fill("10");
   await page.getByRole("radio", { name: "Pro", exact: true }).check();
   await expect(page.getByRole("button", { name: /Smart route/ })).toContainText(
-    "2 included venues",
+    "3 included venues",
   );
   await expect(trigger).toHaveCount(0);
   await page.getByLabel("Order size", { exact: true }).fill("65");

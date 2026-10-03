@@ -458,7 +458,7 @@ export function ProWorkspace({
                 Negative reference cost is not guaranteed profit.
               </p>
               <p>
-                Same quantity on both venues; no extrapolated liquidity.
+                Same quantity across compared venues; no extrapolated liquidity.
                 Funding, exit costs, account discounts and Cinder pricing are
                 excluded. Differences under 0.5 bps or one cent are treated as
                 similar, not as a measured confidence interval.

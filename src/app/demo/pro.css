@@ -3,6 +3,7 @@
   --d-venue-pacifica: #91b3ff;
   --d-venue-bulk: #c5adff;
   --d-venue-velocity: #e9c278;
+  --d-venue-phoenix: #f5b580;
 }
 .d-pro-grid {
   grid-template-columns: minmax(0, 1fr) 328px;
@@ -123,6 +124,9 @@
 }
 .d-venue-velocity {
   --venue-color: var(--d-venue-velocity);
+}
+.d-venue-phoenix {
+  --venue-color: var(--d-venue-phoenix);
 }
 .d-venue-key {
   display: inline-flex;

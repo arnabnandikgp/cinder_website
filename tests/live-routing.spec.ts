@@ -43,7 +43,7 @@ const book = (mid = 86000, size = 1): Book => ({
 });
 function feeds(): ComparisonFeeds {
   return Object.fromEntries(
-    (["pacifica", "bulk"] as const).map((venue) => [
+    (["pacifica", "bulk", "phoenix"] as const).map((venue) => [
       venue,
       {
         ...new MarketFeed(venue, "BTC", "15m").getSnapshot(),

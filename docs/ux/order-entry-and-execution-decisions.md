@@ -24,7 +24,19 @@ This supersedes the earlier suggestion to replace the Standard/Pro switch with C
 
 ## Current local baseline
 
-The local working tree has a Standard venue chart and order book backed by public Pacifica and BULK data, and a Pro comparison using visible books and public base fee schedules. Other venue labels do not establish live data or trading integration support. Pro evaluates immediate market entries, not resting limits or scheduled strategies. Venue data availability does not prove execution availability.
+The local working tree has a Standard venue chart and order book backed by public Pacifica, BULK and Phoenix data, and a Pro comparison using visible books and public base fee schedules. Velocity remains an unsupported market-data preview. Pro evaluates immediate market entries, not resting limits or scheduled strategies. Venue data availability does not prove execution availability.
+
+### Phoenix public market-data integration
+
+- Direct browser REST/WS, no wallet, API key, signing or order submission. No Rise SDK runtime dependency is needed for this read-only adapter; its wire types and official docs are the protocol reference.
+- REST candles: `https://perp-api.phoenix.trade/v1/candles/{symbol}` with `timeframe`, millisecond bounds and `enableExternalSource=false`. Live `candles` subscriptions return `candle` frames with second timestamps. Both normalize to UTC candle seconds. History and live bars merge by time; external backfills are rejected.
+- Use the timestamped `l2Book` stream (`coin`), not the untimestamped `orderbook` channel, for both Standard and Pro. Books are complete, ordered visible snapshots with source seconds and Solana slots. Replace atomically and reject malformed/crossed levels, foreign symbols, time or slot regressions and execution-band bypasses. Visible combined FIFO/spline levels are consumed once; raw spline regions and hidden take amounts are not added.
+- Market stats expose mark, oracle, funding, 24h change and USD volume. Raw market frames have no source timestamp; receipt time is used for ticker display health only, never as evidence of Pro book freshness. Funding stays venue-labelled with no inferred hourly conversion and is excluded from entry-cost estimates.
+- Metadata is cached per market. Native `tickSize` is quote lots per base lot, not dollars. USDC quote lots use six decimals; SOL's observed `tickSize=100`, `baseLotsDecimals=2` means a $0.01 increment, while BTC's four base decimals mean $1. Limits remain illustrative in the ticket, not approved production risk controls.
+- Fee metadata comes from `/v1/view/exchange/market/{symbol}`. Observed `takerFee=0.00035` is a fraction (3.5 bps), despite the generated endpoint docs' percentage label. Read the active market's public fee; missing, expired, inactive or mismatched metadata cannot become zero fees. No pooled-volume or referral discount is assumed.
+- Phoenix joins Pacifica and BULK in route preferences, the same-quantity comparison, cost curves and saved receipts. Source/receipt freshness and skew gates remain conservative; Phoenix's second-resolution source clock can cause temporary alignment gaps. Do not relabel these estimates executable quotes. Public data integration does not implement brokerage, collateral movement, venue order placement or account-state syncing.
+
+References: [Rise SDK](https://github.com/Ellipsis-Labs/rise-public), [exchange feeds](https://docs.phoenix.trade/sdk/markets), [candles](https://docs.phoenix.trade/api/exchange/get-candles), [spline liquidity](https://docs.phoenix.trade/phoenix/matching-engine/spline-liquidity), [fees](https://docs.phoenix.trade/phoenix/matching-engine/fees). Regression coverage: `tests/phoenix.spec.ts`, alongside existing feed and routing suites.
 
 Order review and saved drafts are local interactions. Private account records are simulated; there is no live signing or order submission in this demo. Standard now includes Scale, Chase, TWAP, VWAP, Chase TWAP, Iceberg and Swarm previews. Historical cost charts and a dedicated depth comparison have not been added. These statements concern the local source, not the currently deployed website.
 

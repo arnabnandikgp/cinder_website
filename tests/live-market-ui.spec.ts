@@ -158,7 +158,7 @@ test("Standard streams venue data without resetting its chart and stays separate
   await expect(page.getByTestId("route-card")).toContainText(
     "Venue-only estimate",
   );
-  await expect.poll(() => sockets.filter((s) => !s.closed).length).toBe(2);
+  await expect.poll(() => sockets.filter((s) => !s.closed).length).toBe(3);
 });
 
 test("price chart separates volume, resets to recent candles and retains horizontal zoom when auto scaling", async ({

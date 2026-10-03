@@ -5,6 +5,7 @@ import type { StrategyPlan } from "./strategies";
 export const venues = {
   pacifica: "Pacifica",
   bulk: "BULK",
+  phoenix: "Phoenix",
   velocity: "Velocity",
 } as const;
 export type Venue = keyof typeof venues;

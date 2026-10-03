@@ -22,7 +22,7 @@ import { useMarketFeed } from "./market-data/use-market-feed";
 import { channelHealth } from "./market-data/feed";
 import { intervals, type Interval } from "./market-data/adapters";
 import { parseAmount, type RouteInput } from "./routing";
-import { compareLiveRoutes } from "./live-routing";
+import { compareLiveRoutes, comparisonVenues } from "./live-routing";
 import {
   pick,
   venues,
@@ -68,12 +68,12 @@ export function Terminal() {
   const mode = pick(params.get("mode"), ["manual", "auto"] as const, "manual");
   const venue = pick<Venue>(
     params.get("venue"),
-    ["pacifica", "bulk", "velocity"],
+    Object.keys(venues) as Venue[],
     "pacifica",
   );
   const autoChart = pick<Venue>(
     params.get("chart"),
-    ["pacifica", "bulk", "velocity"],
+    Object.keys(venues) as Venue[],
     venue,
   );
   const chart = mode === "auto" ? autoChart : venue;
@@ -97,9 +97,16 @@ export function Terminal() {
     "comparison",
   );
   const bulk = useMarketFeed("bulk", market, "15m", proEnabled, "comparison");
+  const phoenix = useMarketFeed(
+    "phoenix",
+    market,
+    "15m",
+    proEnabled,
+    "comparison",
+  );
   const scope = pick<VenueScope>(
     params.get("scope"),
-    ["all", "pacifica", "bulk", "velocity"],
+    ["all", ...(Object.keys(venues) as Venue[])],
     mode === "auto" ? "all" : venue,
   );
   const tab = pick<RecordTab>(
@@ -129,7 +136,7 @@ export function Terminal() {
   const [proVisited, setProVisited] = useState(mode === "auto");
   const ticket = mode === "auto" ? proTicket : standardTicket;
   const setTicket = mode === "auto" ? setProTicket : setStandardTicket;
-  const [allowed, setAllowed] = useState<Venue[]>(["pacifica", "bulk"]);
+  const [allowed, setAllowed] = useState<Venue[]>([...comparisonVenues]);
   const panel = pick(params.get("panel"), ["cost", "price"] as const, "cost");
   const routeInput: RouteInput = {
     market,
@@ -156,8 +163,8 @@ export function Terminal() {
           snapshot: "balanced",
           account: scenario,
         },
-        { pacifica, bulk },
-        Math.max(pacifica.now, bulk.now),
+        { pacifica, bulk, phoenix },
+        Math.max(pacifica.now, bulk.now, phoenix.now),
       ),
     [
       market,
@@ -169,6 +176,7 @@ export function Terminal() {
       scenario,
       pacifica,
       bulk,
+      phoenix,
     ],
   );
   const [cancel, setCancel] = useState<CancelState>("none");
@@ -332,6 +340,7 @@ export function Terminal() {
                   onRetry={() => {
                     pacifica.retry();
                     bulk.retry();
+                    phoenix.retry();
                   }}
                   onNotional={(value) =>
                     setProTicket((current) => ({
@@ -412,7 +421,11 @@ export function Terminal() {
                 onAllowed={() => setDialog({ kind: "route" })}
                 comparison={comparison}
                 refreshComparison={() =>
-                  compareLiveRoutes(routeInput, { pacifica, bulk }, Date.now())
+                  compareLiveRoutes(
+                    routeInput,
+                    { pacifica, bulk, phoenix },
+                    Date.now(),
+                  )
                 }
                 onCompare={() => {
                   updateQuery({ panel: "cost" });

@@ -454,6 +454,7 @@ test("margin breakdown reconciles with venue-scoped positions and empty accounts
     "0.00 USDC",
     "0.00 USDC",
     "0.00 USDC",
+    "0.00 USDC",
   ]);
   await expect(page.locator(".d-margin-breakdown")).not.toContainText(
     "1 open position",
@@ -540,6 +541,7 @@ test("Pro validates compared venues and tolerance before reviewing a local draft
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("checkbox", { name: "Pacifica" }).uncheck();
   await dialog.getByRole("checkbox", { name: "BULK" }).uncheck();
+  await dialog.getByRole("checkbox", { name: "Phoenix" }).uncheck();
   await dialog.getByRole("button", { name: "Save preferences" }).click();
   await expect(dialog.getByRole("alert")).toContainText("Choose at least one");
   await dialog.getByRole("checkbox", { name: "BULK" }).check();

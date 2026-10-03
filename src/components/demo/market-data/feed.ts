@@ -71,7 +71,7 @@ export function candleHealth(state: FeedState, interval: Interval): string {
   return last.partial ? "Partial candle" : "Live candles";
 }
 
-const metadata = new Map<LiveVenue, { data: unknown; at: number }>();
+const metadata = new Map<string, { data: unknown; at: number }>();
 
 // Read-only public feed. No keys, accounts, transactions or order endpoints.
 // One socket supplies chart, book and ticker; rendering is coalesced to 10 Hz.
@@ -244,7 +244,7 @@ export class MarketFeed {
     void this.loadInfo(venue, generation);
     if (this.purpose === "chart")
       void this.loadHistory(venue, generation, true);
-    else void this.loadFee(venue, generation);
+    if (this.purpose === "comparison") void this.loadFee(venue, generation);
     try {
       const ws = (this.socket = new WebSocket(endpoints[venue].ws));
       ws.onopen = () => {
@@ -328,16 +328,19 @@ export class MarketFeed {
   }
   private async loadInfo(venue: LiveVenue, generation: number) {
     try {
-      const cached = metadata.get(venue);
+      const key = venue === "phoenix" ? `${venue}:${this.market}` : venue;
+      const cached = metadata.get(key);
       const data =
         cached && Date.now() - cached.at < 300000
           ? cached.data
           : await this.get(
-              `${endpoints[venue].rest}/${venue === "pacifica" ? "info" : "exchangeInfo"}`,
+              venue === "phoenix"
+                ? feeUrl(venue, this.market)
+                : `${endpoints[venue].rest}/${venue === "pacifica" ? "info" : "exchangeInfo"}`,
               this.request!.signal,
             );
       if (!this.running || generation !== this.generation) return;
-      metadata.set(venue, { data, at: Date.now() });
+      metadata.set(key, { data, at: Date.now() });
       this.publish({ info: parseInfo(venue, data, this.market) });
     } catch {
       /* The chart remains usable without optional venue metadata. */
@@ -353,7 +356,10 @@ export class MarketFeed {
       return;
     }
     try {
-      const raw = await this.get(feeUrl(venue), this.request!.signal);
+      const raw = await this.get(
+        feeUrl(venue, this.market),
+        this.request!.signal,
+      );
       if (!this.running || generation !== this.generation) return;
       const fee = parseVenueFee(venue, this.market, raw, Date.now());
       if (!fee) throw new Error("Unrecognised venue fee schedule");
@@ -400,7 +406,7 @@ export class MarketFeed {
       const values = venue === "pacifica" ? object(data).data : data;
       if (!Array.isArray(values))
         throw new Error("Unexpected candle response. Retrying shortly.");
-      const bars = parseCandles(values, this.interval);
+      const bars = parseCandles(values, this.interval, Date.now(), venue);
       if (values.length && !bars.length)
         throw new Error("Invalid candle data. Retrying shortly.");
       this.canonical = mergeCandles(
@@ -412,7 +418,7 @@ export class MarketFeed {
         historyError: "",
         candles: this.combined(),
         // A historical fetch is not evidence that the forming candle is live.
-        ...(venue === "pacifica" &&
+        ...((venue === "pacifica" || venue === "phoenix") &&
         bars.at(-1)?.time ===
           Math.floor(Date.now() / (intervals[this.interval] * 1000)) *
             intervals[this.interval]
@@ -459,7 +465,12 @@ export class MarketFeed {
       data = object(message.data),
       s = symbol(venue, this.market);
     const now = Date.now();
-    if (message.channel === "error" || message.type === "error") {
+    if (
+      message.channel === "error" ||
+      message.type === "error" ||
+      message.type === "subscriptionError" ||
+      (message.channel === "subscriptionStatus" && message.status === "error")
+    ) {
       this.reconnect();
       return;
     }
@@ -470,13 +481,21 @@ export class MarketFeed {
             message.type === "l2Snapshot" &&
             object(data.book).symbol === s
           ? data.book
-          : null;
+          : venue === "phoenix" &&
+              message.channel === "l2Book" &&
+              message.coin === s
+            ? message
+            : null;
     if (bookValue) {
       const book = parseBook(venue, bookValue);
       if (
         book &&
         book.time <= now + 5000 &&
-        (!this.state.book || book.time >= this.state.book.time)
+        (!this.state.book ||
+          (book.time >= this.state.book.time &&
+            (book.slot === undefined ||
+              this.state.book.slot === undefined ||
+              book.slot >= this.state.book.slot)))
       ) {
         this.receivedAt = now;
         if (now - book.time < 10000) this.failures = 0;
@@ -492,9 +511,13 @@ export class MarketFeed {
             message.type === "ticker" &&
             object(data.ticker).symbol === s
           ? data.ticker
-          : null;
+          : venue === "phoenix" &&
+              message.channel === "market" &&
+              message.symbol === s
+            ? message
+            : null;
     if (tickerValue) {
-      const ticker = parseTicker(venue, tickerValue);
+      const ticker = parseTicker(venue, tickerValue, now);
       if (
         ticker &&
         ticker.time <= now + 5000 &&
@@ -502,6 +525,15 @@ export class MarketFeed {
       )
         this.publish({ ticker, tickerAt: now });
     }
+    if (
+      venue === "phoenix" &&
+      message.channel === "candle" &&
+      message.symbol === s &&
+      message.timeframe === this.interval
+    )
+      this.acceptCandles(
+        parseCandles([message.candle], this.interval, now, venue),
+      );
     if (
       venue === "pacifica" &&
       message.channel === "candle" &&

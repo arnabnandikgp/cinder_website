@@ -1,10 +1,4 @@
-import {
-  markets,
-  venues,
-  type Market,
-  type Scenario,
-  type Venue,
-} from "./data";
+import { markets, type Market, type Scenario, type Venue } from "./data";
 import type { LiveComparisonMeta } from "./live-routing";
 
 // Deliberately fictional pricing and liquidity. This module never contacts a
@@ -17,14 +11,14 @@ export const snapshotLabels = {
 } as const;
 export type Snapshot = keyof typeof snapshotLabels;
 export type Side = "Buy" | "Sell";
-export const venueKeys = Object.keys(venues) as Venue[];
+// Legacy synthetic scenarios never fabricate Phoenix pricing or liquidity.
+export const venueKeys = ["pacifica", "bulk", "velocity"] as const;
 export const CINDER_FEE_BPS = 0.6;
 export const SNAPSHOT_TIME = "12:00:00 UTC";
 export const MAX_CHART_NOTIONAL = 150_000;
 
-const fixtures: Record<
-  Venue,
-  { fee: number; depth: number[]; buy: number[]; sell: number[] }
+const fixtures: Partial<
+  Record<Venue, { fee: number; depth: number[]; buy: number[]; sell: number[] }>
 > = {
   pacifica: {
     fee: 2.8,
@@ -105,6 +99,7 @@ export function fixtureBook(
 ) {
   const reference = markets[market].price;
   const fixture = fixtures[venue];
+  if (!fixture) return [];
   const direction = side === "Buy" ? 1 : -1;
   const offsets = side === "Buy" ? fixture.buy : fixture.sell;
   return fixture.depth.map((depth, index) => ({
@@ -122,6 +117,8 @@ export function quoteVenue(
   quantity: number,
   snapshot: Snapshot,
 ): Quote | null {
+  const fixture = fixtures[venue];
+  if (!fixture) return null;
   if (!Number.isFinite(quantity) || quantity <= 0 || feedIssue(venue, snapshot))
     return null;
   let remaining = quantity;
@@ -137,7 +134,7 @@ export function quoteVenue(
   // Never compare a partial-size quote to another venue's complete-size quote.
   if (remaining > quantity * 1e-12) return null;
   const averageFill = notional / quantity;
-  const venueFee = (notional * fixtures[venue].fee) / 10_000;
+  const venueFee = (notional * fixture.fee) / 10_000;
   const cinderFee = (notional * CINDER_FEE_BPS) / 10_000;
   const totalFees = venueFee + cinderFee;
   const direction = side === "Buy" ? 1 : -1;

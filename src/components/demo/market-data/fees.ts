@@ -10,7 +10,9 @@ export type VenueFee = {
   label: string;
 };
 export const FEE_MAX_AGE_MS = 300_000;
-export function feeUrl(venue: LiveVenue) {
+export function feeUrl(venue: LiveVenue, market: Market = "SOL") {
+  if (venue === "phoenix")
+    return `${endpoints.phoenix.rest}/view/exchange/market/${market}`;
   return `${endpoints[venue].rest}/${venue === "pacifica" ? "info/fees" : "feeState"}`;
 }
 export function parseVenueFee(
@@ -27,6 +29,12 @@ export function parseVenueFee(
     const tier = data.data.find((row) => object(row).level === 0);
     takerBps = numeric(object(tier).taker_fee_rate) * 10_000;
     label = "Public tier 0";
+  } else if (venue === "phoenix") {
+    if (data.symbol !== market || data.marketStatus !== "active") return null;
+    // Observed API values are fractions (0.00035 = 3.5 bps), despite the
+    // generated endpoint docs describing them as percentages.
+    takerBps = numeric(data.takerFee) * 10_000;
+    label = "Public market fee";
   } else {
     if (!Array.isArray(data.scopes)) return null;
     const instrument = object(
@@ -59,5 +67,5 @@ export function parseVenueFee(
     !Number.isFinite(fetchedAt)
   )
     return null;
-  return { takerBps, fetchedAt, source: feeUrl(venue), label };
+  return { takerBps, fetchedAt, source: feeUrl(venue, market), label };
 }
