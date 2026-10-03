@@ -1,5 +1,10 @@
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { mockMarketData } from "./helpers/market-data";
+
+test.beforeEach(async ({ page }) => {
+  await mockMarketData(page, { stream: true });
+});
 
 for (const width of [375, 768, 1001, 1280]) {
   test(`workspace switcher is prominent and keyboard accessible at ${width}px`, async ({
@@ -167,6 +172,7 @@ test("order book depth accumulates outward on both sides of the spread", async (
 }) => {
   await page.setViewportSize({ width: 1440, height: 1100 });
   await page.goto("/demo");
+  await expect(page.locator(".d-bid")).toHaveCount(8);
   for (const [side, ascending] of [
     ["ask", false],
     ["bid", true],
@@ -318,7 +324,7 @@ for (const width of [375, 768, 1280, 1440]) {
       page.getByRole("heading", { name: "Cinder trading workspace" }),
     ).toBeAttached();
     await expect(
-      page.getByRole("radio", { name: "Choose venue", exact: true }),
+      page.getByRole("radio", { name: "Standard", exact: true }),
     ).toBeChecked();
     await expect(
       page.getByRole("button", { name: /account-first|hybrid/i }),
@@ -365,7 +371,8 @@ test("manual chart follows execution and auto-route allows an independent refere
   await page.getByRole("tab", { name: "Trade history", exact: true }).click();
   await expect(page.getByRole("tabpanel")).toContainText("FL-203");
   await expect(page.getByRole("tabpanel")).not.toContainText("FL-202");
-  await page.getByRole("radio", { name: "Auto-route", exact: true }).check();
+  await page.getByRole("radio", { name: "Pro", exact: true }).check();
+  await page.getByRole("tab", { name: "Price chart", exact: true }).click();
   await expect(page.getByLabel("Venue", { exact: true })).toHaveValue("all");
   await expect(page.getByLabel("Chart source")).toHaveValue("bulk");
   await page.getByLabel("Chart source").selectOption("velocity");
@@ -375,10 +382,10 @@ test("manual chart follows execution and auto-route allows an independent refere
     "SOL-velocity-15m",
   );
   await expect(page.getByLabel("Venue", { exact: true })).toHaveValue("all");
-  await expect(page.getByRole("tabpanel")).toContainText("FL-202");
+  await expect(page.locator("#records-panel")).toContainText("FL-202");
   await page.reload();
   await expect(page.getByLabel("Chart source")).toHaveValue("velocity");
-  await page.getByRole("radio", { name: "Choose venue", exact: true }).check();
+  await page.getByRole("radio", { name: "Standard", exact: true }).check();
   await expect(
     page.getByRole("combobox", { name: "Chart source" }),
   ).toHaveCount(0);
@@ -494,7 +501,7 @@ test("order validation, draft review and account-wide Activity remain coherent",
   });
   await review.click();
   const dialog = page.getByRole("dialog");
-  await expect(dialog).toContainText("Buy 3 SOL");
+  await expect(dialog).toContainText("Buy 3.00 USDC");
   await expect(dialog).toContainText("Not calculated");
   const audit = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
@@ -512,7 +519,7 @@ test("order validation, draft review and account-wide Activity remain coherent",
   await expect(page.locator(".d-events")).toContainText("DRAFT-1");
   await expect(page.locator(".d-events")).toContainText("Not submitted");
   await page.getByRole("button", { name: "DRAFT-1 · View details" }).click();
-  await expect(dialog).toContainText("Buy 3 SOL");
+  await expect(dialog).toContainText("Buy 3.00 USDC");
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Funding", exact: true }).click();
   await expect(page.locator(".d-events")).toContainText("−0.36 USDC");
@@ -521,34 +528,32 @@ test("order validation, draft review and account-wide Activity remain coherent",
   await expect(size).toHaveValue("3");
 });
 
-test("future routing validates allowed venues and market slippage without producing a route", async ({
+test("Pro validates compared venues and tolerance before reviewing a local draft", async ({
   page,
 }) => {
   await page.goto("/demo");
-  await page.getByRole("radio", { name: "Auto-route", exact: true }).check();
-  await expect(page.locator(".d-route-note")).toContainText("Future concept");
+  await page.getByRole("radio", { name: "Pro", exact: true }).check();
+  await expect(page.getByTestId("route-card")).toContainText(
+    "Venue-only estimate",
+  );
   await page.getByRole("button", { name: /Allowed venues/ }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("checkbox", { name: "Pacifica" }).uncheck();
   await dialog.getByRole("checkbox", { name: "BULK" }).uncheck();
   await dialog.getByRole("button", { name: "Save preferences" }).click();
   await expect(dialog.getByRole("alert")).toContainText("Choose at least one");
-  await dialog.getByRole("checkbox", { name: "Velocity" }).check();
+  await dialog.getByRole("checkbox", { name: "BULK" }).check();
   await dialog.getByRole("button", { name: "Save preferences" }).click();
-  await page.getByRole("radio", { name: "Market", exact: true }).check();
+  await page.getByLabel("Price tolerance").fill("");
+  await expect(
+    page.getByRole("button", { name: "Review buy order", exact: true }),
+  ).toBeDisabled();
+  await page.getByLabel("Price tolerance").fill("0.5");
   await page
     .getByRole("button", { name: "Review buy order", exact: true })
     .click();
-  await expect(page.getByLabel("Maximum slippage")).toHaveAttribute(
-    "aria-invalid",
-    "true",
-  );
-  await page.getByLabel("Maximum slippage").fill("0.5");
-  await page
-    .getByRole("button", { name: "Review buy order", exact: true })
-    .click();
-  await expect(dialog).toContainText("Velocity");
-  await expect(dialog).toContainText("Not calculated");
+  await expect(dialog).toContainText("BULK");
+  await expect(dialog).toContainText("Total estimated entry cost");
   await expect(dialog).toContainText("0.5%");
 });
 
@@ -651,5 +656,9 @@ test("funding dialogs keep prototype safeguards and keyboard behavior without ex
   await page.keyboard.press("Escape");
   await expect(deposit).toBeFocused();
   expect(writes).toEqual([]);
-  expect(external).toEqual([]);
+  expect(
+    external.every((url) =>
+      /^https:\/\/api\.pacifica\.fi\/api\/v1\/(info|kline)(\?|$)/.test(url),
+    ),
+  ).toBe(true);
 });

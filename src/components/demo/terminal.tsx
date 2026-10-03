@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   ArrowUpRight,
@@ -14,8 +14,15 @@ import { Brand } from "@/components/ui";
 import { AccountOverview, ActivityView } from "./account-views";
 import { DemoDialogs, type DialogState } from "./demo-dialogs";
 import { MarketChart, OrderBook } from "./market-chart";
-import { OrderTicket, initialTicket } from "./order-ticket";
+import { OrderTicket, initialTicket, type Ticket } from "./order-ticket";
+import { initialStrategy } from "./strategies";
 import { Records } from "./records";
+import { ProWorkspace } from "./pro-workspace";
+import { useMarketFeed } from "./market-data/use-market-feed";
+import { channelHealth } from "./market-data/feed";
+import { intervals, type Interval } from "./market-data/adapters";
+import { parseAmount, type RouteInput } from "./routing";
+import { compareLiveRoutes } from "./live-routing";
 import {
   pick,
   venues,
@@ -70,6 +77,26 @@ export function Terminal() {
     venue,
   );
   const chart = mode === "auto" ? autoChart : venue;
+  const interval = pick<Interval>(
+    params.get("interval"),
+    Object.keys(intervals) as Interval[],
+    "15m",
+  );
+  const live = useMarketFeed(
+    chart,
+    market,
+    interval,
+    view === "trade" && (mode === "manual" || params.get("panel") === "price"),
+  );
+  const proEnabled = mode === "auto" && view === "trade";
+  const pacifica = useMarketFeed(
+    "pacifica",
+    market,
+    "15m",
+    proEnabled,
+    "comparison",
+  );
+  const bulk = useMarketFeed("bulk", market, "15m", proEnabled, "comparison");
   const scope = pick<VenueScope>(
     params.get("scope"),
     ["all", "pacifica", "bulk", "velocity"],
@@ -90,12 +117,60 @@ export function Terminal() {
     ["all", "orders", "trades", "fees", "funding", "transfers", "drafts"],
     "all",
   );
-  const [ticket, setTicket] = useState(() =>
-    market === "BTC"
-      ? { ...initialTicket, size: "0.01", limit: "61750.00" }
-      : initialTicket,
+  const [standardTicket, setStandardTicket] = useState<Ticket>(() =>
+    market === "BTC" ? { ...initialTicket, limit: "61750.00" } : initialTicket,
   );
+  const [proTicket, setProTicket] = useState<Ticket>(() => ({
+    ...initialTicket,
+    type: "Market",
+    size: "10000",
+    slippage: "0.5",
+  }));
+  const [proVisited, setProVisited] = useState(mode === "auto");
+  const ticket = mode === "auto" ? proTicket : standardTicket;
+  const setTicket = mode === "auto" ? setProTicket : setStandardTicket;
   const [allowed, setAllowed] = useState<Venue[]>(["pacifica", "bulk"]);
+  const panel = pick(params.get("panel"), ["cost", "price"] as const, "cost");
+  const routeInput: RouteInput = {
+    market,
+    side: ticket.side === "Sell" ? "Sell" : "Buy",
+    quantity: NaN, // Derived from USDC at the comparison's shared live reference.
+    notional: parseAmount(ticket.size),
+    leverage: parseAmount(ticket.leverage),
+    slippage: parseAmount(ticket.slippage),
+    allowed,
+    snapshot: "balanced", // Legacy draft schema; live comparison never reads fixtures.
+    account: scenario,
+  };
+  const comparison = useMemo(
+    () =>
+      compareLiveRoutes(
+        {
+          market,
+          side: ticket.side === "Sell" ? "Sell" : "Buy",
+          quantity: NaN,
+          notional: parseAmount(ticket.size),
+          leverage: parseAmount(ticket.leverage),
+          slippage: parseAmount(ticket.slippage),
+          allowed,
+          snapshot: "balanced",
+          account: scenario,
+        },
+        { pacifica, bulk },
+        Math.max(pacifica.now, bulk.now),
+      ),
+    [
+      market,
+      ticket.side,
+      ticket.size,
+      ticket.leverage,
+      ticket.slippage,
+      allowed,
+      scenario,
+      pacifica,
+      bulk,
+    ],
+  );
   const [cancel, setCancel] = useState<CancelState>("none");
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [dialog, setDialog] = useState<DialogState | null>(null);
@@ -106,6 +181,14 @@ export function Terminal() {
     // Only share navigation/context, never amounts, draft contents or personal data.
     if (push) window.history.pushState(null, "", `/demo?${next}`);
     else window.history.replaceState(null, "", `/demo?${next}`);
+  }
+  function changeMarket(value: Market) {
+    updateQuery({ market: value });
+    setStandardTicket((current) => ({
+      ...current,
+      limit: value === "SOL" ? "151.50" : "61750.00",
+      strategyConfig: { ...initialStrategy },
+    }));
   }
   const actions = {
     onCancel: () => setDialog({ kind: "cancel" }),
@@ -187,12 +270,19 @@ export function Terminal() {
           </span>
           <span>
             Execution:{" "}
-            <b>{mode === "auto" ? "Auto-route concept" : venues[venue]}</b>
+            <b>{mode === "auto" ? "Pro · compare venues" : venues[venue]}</b>
           </span>
           <span>
-            Reference: <b>{venues[chart]}</b>
+            Reference:{" "}
+            <b>
+              {mode === "auto" && panel === "cost"
+                ? "Live venue books"
+                : venues[chart]}
+            </b>
           </span>
-          <span className="d-context-demo">Your positions. Your account.</span>
+          <span className="d-context-demo">
+            Public market data · simulated account · no live trading
+          </span>
         </div>
         {notice && (
           <div className="d-feedback-note" role="status">
@@ -224,29 +314,55 @@ export function Terminal() {
         {view === "trade" ? (
           <>
             <h1 className="d-sr-only">Cinder trading workspace</h1>
-            <div className="d-trading-grid">
-              <MarketChart
-                market={market}
-                venue={chart}
-                canChooseVenue={mode === "auto"}
-                leverage={ticket.leverage}
-                onMarket={(value) => {
-                  updateQuery({ market: value });
-                  setTicket((current) => ({
-                    ...current,
-                    size: value === "SOL" ? "2" : "0.01",
-                    limit: value === "SOL" ? "151.50" : "61750.00",
-                  }));
-                }}
-                onVenue={(value) => {
-                  updateQuery({ chart: value });
-                  setNotice(
-                    "Chart reference updated. Execution and account records are unchanged.",
-                  );
-                }}
-              />
-              <OrderBook market={market} venue={chart} />
+            <div
+              className={`d-trading-grid${mode === "auto" ? " d-pro-grid" : ""}`}
+            >
+              {mode === "auto" ? (
+                <ProWorkspace
+                  comparison={comparison}
+                  chartVenue={chart}
+                  leverage={ticket.leverage}
+                  panel={panel}
+                  onPanel={(value) => updateQuery({ panel: value })}
+                  onMarket={changeMarket}
+                  onChartVenue={(value) => updateQuery({ chart: value })}
+                  live={live}
+                  interval={interval}
+                  onInterval={(value) => updateQuery({ interval: value })}
+                  onRetry={() => {
+                    pacifica.retry();
+                    bulk.retry();
+                  }}
+                  onNotional={(value) =>
+                    setProTicket((current) => ({
+                      ...current,
+                      size: String(value),
+                    }))
+                  }
+                />
+              ) : (
+                <>
+                  <MarketChart
+                    market={market}
+                    venue={chart}
+                    canChooseVenue={false}
+                    leverage={ticket.leverage}
+                    onMarket={changeMarket}
+                    onVenue={(value) => {
+                      updateQuery({ chart: value });
+                      setNotice(
+                        "Chart reference updated. Execution and account records are unchanged.",
+                      );
+                    }}
+                    live={live}
+                    liveInterval={interval}
+                    onInterval={(value) => updateQuery({ interval: value })}
+                  />
+                  <OrderBook market={market} venue={chart} live={live} />
+                </>
+              )}
               <OrderTicket
+                key={`${mode}-${venue}-${market}`}
                 market={market}
                 mode={mode}
                 venue={venue}
@@ -254,17 +370,38 @@ export function Terminal() {
                 scenario={scenario}
                 ticket={ticket}
                 onTicket={setTicket}
+                marketPrice={
+                  channelHealth(live, "ticker") === "Live"
+                    ? live.ticker?.mark
+                    : undefined
+                }
+                bookPrices={
+                  channelHealth(live, "book") === "Live" &&
+                  live.book?.bids.length &&
+                  live.book.asks.length
+                    ? {
+                        bid: live.book.bids[0].price,
+                        ask: live.book.asks[0].price,
+                      }
+                    : undefined
+                }
                 onMode={(value) => {
+                  if (value === "auto" && !proVisited) {
+                    setProTicket((current) => ({
+                      ...current,
+                      side: standardTicket.side,
+                      size: standardTicket.size,
+                      leverage: standardTicket.leverage,
+                      slippage: standardTicket.slippage || "0.5",
+                    }));
+                    setProVisited(true);
+                  }
                   updateQuery({
                     mode: value,
                     scope: value === "auto" ? "all" : venue,
                     chart: value === "auto" ? chart : venue,
                   });
-                  setNotice(
-                    value === "auto"
-                      ? "Auto-route selected. Choose your chart source independently."
-                      : "Chart and order book now follow your execution venue.",
-                  );
+                  setNotice("");
                 }}
                 onVenue={(value) => {
                   updateQuery({ venue: value, scope: value, chart: value });
@@ -273,6 +410,21 @@ export function Terminal() {
                   );
                 }}
                 onAllowed={() => setDialog({ kind: "route" })}
+                comparison={comparison}
+                refreshComparison={() =>
+                  compareLiveRoutes(routeInput, { pacifica, bulk }, Date.now())
+                }
+                onCompare={() => {
+                  updateQuery({ panel: "cost" });
+                  requestAnimationFrame(() =>
+                    requestAnimationFrame(() => {
+                      const table =
+                        document.getElementById("d-route-comparison");
+                      table?.focus({ preventScroll: true });
+                      table?.scrollIntoView({ block: "nearest" });
+                    }),
+                  );
+                }}
                 onReview={(draft) => setDialog({ kind: "review", draft })}
               />
               {records}
@@ -313,7 +465,7 @@ export function Terminal() {
           onAllowed={(values) => {
             setAllowed(values);
             setDialog(null);
-            setNotice("Allowed sample venues saved for future-route drafts.");
+            setNotice("Allowed venues updated. Route estimates recalculated.");
           }}
           onCancel={() => {
             setCancel("requested");

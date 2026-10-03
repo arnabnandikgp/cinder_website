@@ -15,6 +15,7 @@ import {
   markets,
   marginByVenue,
   number,
+  usdcSize,
   signed,
   venues,
   type CancelState,
@@ -226,8 +227,8 @@ export function ActivityView({
   const draftEvents: Event[] = [...drafts].reverse().map((draft) => ({
     id: draft.id,
     category: "drafts",
-    title: "Order draft saved",
-    detail: `${markets[draft.market].symbol} · ${draft.mode === "auto" ? `Auto-route concept: ${draft.allowed.map((v) => venues[v]).join(", ")}` : venues[draft.venue]} · ${draft.side} ${draft.size} ${draft.market}`,
+    title: draft.strategy ? `${draft.type} plan saved` : "Order draft saved",
+    detail: `${markets[draft.market].symbol} · ${draft.mode === "auto" ? `Pro route: ${venues[draft.venue]}` : venues[draft.venue]} · ${draft.side} ${usdcSize(Number(draft.size))}`,
     time: "This session",
     amount: "Not submitted",
     order: draft.id,

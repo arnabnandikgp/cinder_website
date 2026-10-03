@@ -3,10 +3,13 @@
 import { useState, type FormEvent } from "react";
 import { Check, Info } from "lucide-react";
 import { DetailList, Modal } from "./controls";
+import { RouteReceiptDetails } from "./route-card";
+import { StrategyPlanView } from "./strategy-controls";
 import {
   fillsFor,
   markets,
   number,
+  usdcSize,
   venues,
   type CancelState,
   type Draft,
@@ -49,7 +52,9 @@ export function DemoDialogs({
   const [selected, setSelected] = useState(allowed);
   const [error, setError] = useState("");
   const [amount, setAmount] = useState(
-    dialog.kind === "reduce" ? String(markets[dialog.market].size / 2) : "100",
+    dialog.kind === "reduce"
+      ? String((markets[dialog.market].size * markets[dialog.market].price) / 2)
+      : "100",
   );
   const [preview, setPreview] = useState(false);
   const filled = scenario === "partial" ? 2 : 0;
@@ -95,40 +100,71 @@ export function DemoDialogs({
   if (dialog.kind === "review") {
     const d = dialog.draft;
     return (
-      <Modal title="Review order" onClose={onClose}>
+      <Modal
+        title={d.strategy ? "Review strategy plan" : "Review order"}
+        onClose={onClose}
+      >
         <p className="d-dialog-intro">
-          Check your instruction. Saving creates a local draft, not an order.
+          {d.strategy
+            ? "Inspect your plan. Saving keeps it locally; no strategy starts and no orders are submitted."
+            : "Check your instruction. Saving creates a local draft, not an order."}
         </p>
         <DetailList
           rows={[
             ["Market", markets[d.market].symbol],
-            ["Direction / size", `${d.side} ${d.size} ${d.market}`],
+            ["Direction / size", `${d.side} ${usdcSize(Number(d.size))}`],
             ["Order type", d.type],
             ["Leverage preference", `${d.leverage}x`],
-            [
-              d.type === "Limit" ? "Limit price" : "Maximum slippage",
-              d.type === "Limit"
-                ? `${number(Number(d.limit))} USD`
-                : `${d.slippage}%`,
-            ],
+            ...(!d.strategy
+              ? ([
+                  [
+                    d.type === "Limit"
+                      ? "Limit price"
+                      : d.mode === "auto"
+                        ? "Price tolerance"
+                        : "Maximum slippage",
+                    d.type === "Limit"
+                      ? `${number(Number(d.limit))} USD`
+                      : `${d.slippage}%`,
+                  ],
+                ] as [string, string][])
+              : []),
+            ...(d.tif
+              ? ([["Time in force", d.tif === "ALO" ? "Post-only" : d.tif]] as [
+                  string,
+                  string,
+                ][])
+              : []),
+            ...(d.reduceOnly
+              ? ([
+                  [
+                    "Reduce only",
+                    "Requested · customer position check not performed",
+                  ],
+                ] as [string, string][])
+              : []),
             [
               "Execution",
               d.mode === "manual"
                 ? venues[d.venue]
-                : "Auto-route · Future concept",
+                : `Pro · ${venues[d.venue]}`,
             ],
             ...(d.mode === "auto"
               ? ([
                   [
-                    "Allowed sample venues",
+                    "Compared venues",
                     d.allowed.map((v) => venues[v]).join(", "),
                   ],
-                  ["Selected destination", "Not calculated"],
                 ] as [string, string][])
               : []),
-            ["Margin, fees and eligibility", "Not calculated"],
+            [
+              "Margin and eligibility",
+              d.route ? "Illustrative budget check only" : "Not calculated",
+            ],
           ]}
         />
+        {d.strategy && <StrategyPlanView plan={d.strategy} />}
+        {d.route && <RouteReceiptDetails route={d.route} />}
         <div className="d-notice">
           <Info size={16} aria-hidden="true" />
           <p>
@@ -138,38 +174,42 @@ export function DemoDialogs({
           </p>
         </div>
         <button className="d-button d-primary d-wide" onClick={() => onSave(d)}>
-          Save example draft
+          {d.strategy ? "Save local plan" : "Save example draft"}
         </button>
       </Modal>
     );
   }
   if (dialog.kind === "route")
     return (
-      <Modal title="Auto-route preferences" onClose={onClose}>
-        <span className="d-concept">Future concept · No executable quote</span>
+      <Modal title="Route preferences" onClose={onClose}>
+        <span className="d-concept">
+          Public market estimates · No live trading
+        </span>
         <p className="d-dialog-intro">
-          A future router would compare eligible liquidity, fees and price
-          impact, subject to account capital and risk constraints. The objective
-          is estimated execution cost, not simply the lowest headline fee.
+          Compare the same order quantity using live visible books and public
+          venue fees. Cinder pricing is not included. Incomplete or stale data
+          cannot establish a cheaper venue.
         </p>
         <fieldset className="d-checks">
-          <legend>Allowed sample venues</legend>
-          {Object.entries(venues).map(([key, name]) => (
-            <label key={key}>
-              <input
-                type="checkbox"
-                checked={selected.includes(key as Venue)}
-                onChange={(e) =>
-                  setSelected(
-                    e.target.checked
-                      ? [...selected, key as Venue]
-                      : selected.filter((v) => v !== key),
-                  )
-                }
-              />
-              {name}
-            </label>
-          ))}
+          <legend>Venues to compare</legend>
+          {Object.entries(venues)
+            .filter(([key]) => key !== "velocity")
+            .map(([key, name]) => (
+              <label key={key}>
+                <input
+                  type="checkbox"
+                  checked={selected.includes(key as Venue)}
+                  onChange={(e) =>
+                    setSelected(
+                      e.target.checked
+                        ? [...selected, key as Venue]
+                        : selected.filter((v) => v !== key),
+                    )
+                  }
+                />
+                {name}
+              </label>
+            ))}
         </fieldset>
         {error && (
           <p className="d-error" role="alert">
@@ -177,14 +217,15 @@ export function DemoDialogs({
           </p>
         )}
         <p className="d-dialog-intro">
-          Sample venues are not a list of live integrations. These preferences
-          apply only to the new draft; they do not change your chart.
+          These preferences apply to new drafts, not existing positions. Public
+          data access does not imply a trading integration. Hiding a curve does
+          not exclude a venue.
         </p>
         <button
           className="d-button d-primary d-wide"
           onClick={() => {
             if (!selected.length) {
-              setError("Choose at least one sample venue.");
+              setError("Choose at least one venue.");
               return;
             }
             onAllowed(selected);
@@ -243,8 +284,11 @@ export function DemoDialogs({
             ["Venue", venues[dialog.venue]],
           ]}
         />
-        <form onSubmit={(e) => validateAmount(e, item.size)} noValidate>
-          {amountField("Reduction size", dialog.market)}
+        <form
+          onSubmit={(e) => validateAmount(e, item.size * item.price)}
+          noValidate
+        >
+          {amountField("Reduction size", "USDC")}
           <button className="d-button d-primary d-wide" type="submit">
             Preview reduction
           </button>
@@ -256,7 +300,7 @@ export function DemoDialogs({
               <strong>
                 Remaining:{" "}
                 {number(
-                  item.size - Number(amount),
+                  item.size - Number(amount) / item.price,
                   dialog.market === "SOL" ? 2 : 4,
                 )}{" "}
                 {dialog.market}
@@ -269,6 +313,7 @@ export function DemoDialogs({
           </div>
         )}
         <p className="d-ticket-note">
+          Sizing uses the illustrative mark of {number(item.price)} USD.
           Customer-level exit protection, execution and fees are not modelled.
         </p>
       </Modal>
@@ -354,24 +399,48 @@ export function DemoDialogs({
               ["Leverage preference", `${draft.leverage}x`],
               [
                 "Instruction",
-                `${draft.side} ${draft.size} ${draft.market} · ${draft.type}`,
+                `${draft.side} ${usdcSize(Number(draft.size))} · ${draft.type}`,
               ],
-              [
-                draft.type === "Limit" ? "Limit" : "Maximum slippage",
-                draft.type === "Limit"
-                  ? `${draft.limit} USD`
-                  : `${draft.slippage}%`,
-              ],
+              ...(!draft.strategy
+                ? ([
+                    [
+                      draft.type === "Limit"
+                        ? "Limit"
+                        : draft.mode === "auto"
+                          ? "Price tolerance"
+                          : "Maximum slippage",
+                      draft.type === "Limit"
+                        ? `${draft.limit} USD`
+                        : `${draft.slippage}%`,
+                    ],
+                  ] as [string, string][])
+                : []),
+              ...(draft.tif
+                ? ([
+                    [
+                      "Time in force",
+                      draft.tif === "ALO" ? "Post-only" : draft.tif,
+                    ],
+                  ] as [string, string][])
+                : []),
+              ...(draft.reduceOnly
+                ? ([
+                    [
+                      "Reduce only",
+                      "Requested · customer position check not performed",
+                    ],
+                  ] as [string, string][])
+                : []),
               [
                 "Execution",
                 draft.mode === "manual"
                   ? venues[draft.venue]
-                  : "Auto-route · Future concept",
+                  : `Pro · ${venues[draft.venue]}`,
               ],
               ...(draft.mode === "auto"
                 ? ([
                     [
-                      "Allowed sample venues",
+                      "Compared venues",
                       draft.allowed.map((v) => venues[v]).join(", "),
                     ],
                   ] as [string, string][])
@@ -435,6 +504,8 @@ export function DemoDialogs({
             )}
           </>
         )}
+        {draft?.route && <RouteReceiptDetails route={draft.route} />}
+        {draft?.strategy && <StrategyPlanView plan={draft.strategy} />}
         <p className="d-ticket-note">
           Illustrative records only. Drafts remain in this tab until you reload.
         </p>

@@ -1,0 +1,170 @@
+# Cinder order entry and execution decisions
+
+Updated 3 October 2026. For the founder, frontend developer and backend implementation owner.
+
+This document records the direction for Cinder's Standard and Pro trading experiences, the advanced strategy previews implemented locally in `/demo`, and the execution requirements that must be resolved before those controls can place real orders. It is a product and engineering handoff, not a claim of implemented trading capabilities or deployment status.
+
+The central decision is to keep venue selection, execution strategy and customer risk distinct. Standard makes the chosen venue prominent. Pro compares eligible venues for an immediate entry. Advanced strategies describe how an order is worked; they are not alternatives to routing.
+
+## Decision status
+
+| Item                                                                           | Status                                                                            |
+| ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------- |
+| Chart-first Standard, with Account and Activity as separate top-level views    | Established product direction                                                     |
+| Keep Standard and Pro as distinct experiences                                  | Latest founder direction; retain for this iteration                               |
+| Full-width execution-venue dropdown above Standard order controls              | Implemented in the local demo; sticky within the desktop ticket                   |
+| Market and Limit tabs higher in the ticket                                     | Implemented above direction and size                                              |
+| Advanced strategy options may be explored in the demo without live submission  | Seven configurable local previews, review and saved Activity receipts implemented |
+| Call the strategy menu Advanced rather than Pro                                | Implemented, to avoid two meanings of Pro                                         |
+| Keep the present Pro comparison and route estimate                             | Founder direction; do not replace it with a fixed venue picker                    |
+| Cost history and optional visible depth                                        | Recommended extensions; not approval to start a persistent collector              |
+| Exact customer margin policy, strategy semantics and production support matrix | Unresolved backend decisions                                                      |
+
+This supersedes the earlier suggestion to replace the Standard/Pro switch with Choose venue/Smart route for the next UI iteration. The conceptual separation between routing and strategy remains. It also permits explicitly identified strategy previews in the demo despite the earlier research documents' stricter rule against displaying unconfirmed order types. Production capability gating remains required.
+
+## Current local baseline
+
+The local working tree has a Standard venue chart and order book backed by public Pacifica and BULK data, and a Pro comparison using visible books and public base fee schedules. Other venue labels do not establish live data or trading integration support. Pro evaluates immediate market entries, not resting limits or scheduled strategies. Venue data availability does not prove execution availability.
+
+Order review and saved drafts are local interactions. Private account records are simulated; there is no live signing or order submission in this demo. Standard now includes Scale, Chase, TWAP, VWAP, Chase TWAP, Iceberg and Swarm previews. Historical cost charts and a dedicated depth comparison have not been added. These statements concern the local source, not the currently deployed website.
+
+Relevant implementation: `src/components/demo/order-ticket.tsx`, `strategy-controls.tsx`, `strategies.ts`, `terminal.tsx`, `demo-dialogs.tsx`, `pro-workspace.tsx`, `live-routing.ts`, `route-card.tsx` and `market-data/`; styling in `src/app/demo/order-entry.css`.
+
+### Implemented preview boundaries
+
+- The margin row displays **Cross** as a static demo label, without a margin-mode selector. Customer margin policy remains a backend decision; the label does not imply cross-venue offsets. Requested leverage is retained in the draft but does not produce a margin or liquidation estimate.
+- Standard price shortcuts use a fresh visible book. All order size fields use USDC notional exposure, including advanced allocations, Iceberg displayed size, and reduction previews. This is not margin or a guaranteed fee-inclusive spend. Venue and market changes preserve the entered USDC amount; live reference prices never overwrite it. Position and venue book quantities remain base-denominated.
+- Standard and Pro retain separate draft state. First entry into Pro carries over side, USDC size and requested leverage; subsequent switches preserve each mode's edits. Changing the market resets price and strategy parameters, not the USDC amount. Strategy types currently share a parameter object, not independent per-strategy drafts. Pro converts the USDC intent once per comparison at the shared live midpoint, using USD/USDC parity for this preview, then compares the same base quantity on every venue. Reviews freeze the intent, derived quantity and reference; leverage never multiplies the exposure.
+- Scale allocates a linear price ladder with an end/start size-weight ratio. Timed previews allocate slices from offset zero at the chosen interval. VWAP uses an explicitly labelled synthetic volume profile, not collected venue-volume history. Optional size variation is deterministic; it does not randomize timing.
+- Iceberg shows displayed portions and a possible final remainder, without predicting when they fill. Chase describes a bounded parent intent, not an actual repricing worker or live queue position. Swarm displays paced clips, not evidence of reduced impact.
+- Preview arithmetic conserves USDC notional at eight-decimal precision. Production must derive each child quantity from its applicable price and venue lot size; a Scale ladder allocates USDC amounts, not equal base quantities at different prices. The eight-decimal preview is not a token transfer precision rule. UI bounds (up to 100 Scale/Swarm children, up to 200 timed slices/iceberg portions, and 24 hours for timed plans) protect the prototype; they are not venue rules or approved production limits. Tick/lot rounding, minimum notionals, customer positions and margin are not checked.
+- Limit, Scale and Iceberg expose draft time-in-force preferences; Iceberg excludes IOC. Reduce-only is a requested intent, not a validated customer position check. Other strategy semantics in the table below remain backend decisions, including Chase expiry and actual post-only behaviour.
+- **Preview plan → Save local plan** freezes the reviewed parameters and allocation into an Activity receipt marked **Not submitted**. No children enter Open orders, no fills or fees are manufactured, and a refresh clears the in-memory plans.
+
+Regression coverage lives in `tests/order-entry.spec.ts` and `tests/strategy-plans.spec.ts`: all seven plan/save flows, total-size conservation, invalid inputs, fixed receipts, independent modes, venue/chart sync, keyboard menu behaviour, and accessibility at 375/768/1280/1440 px. Existing Standard and Pro suites continue to cover market feeds and route estimates.
+
+## Standard ticket layout
+
+Keep the Standard/Pro switch as the workspace mode control. Inside the Standard ticket, the first form control should be a full-width execution-venue dropdown. It stays above the margin/leverage row and every order-type form.
+
+Suggested order:
+
+1. Execution venue, for example **Pacifica**, with a persistent label and dropdown affordance.
+2. Customer-applicable margin mode and requested leverage.
+3. **Market / Limit / Advanced** tabs, with the active strategy name replacing Advanced after selection and the menu remaining accessible.
+4. Buy/Long and Sell/Short.
+5. Available collateral and the customer's position in this venue and contract, when known.
+6. Type-specific inputs, size with explicit units, optional size slider and applicable protection controls.
+7. Order or strategy preview and the review action.
+
+Market has size and execution protection inputs. Limit puts price above size, with side-aware Bid/Ask and Mid shortcuts drawn from a fresh book, not an unlabeled mark-price substitute. Strategy selection changes the fields, not the execution venue.
+
+Keep the venue header visible while scrolling a tall ticket where the layout permits. The review receipt must repeat venue and contract identity; do not rely on a header that is no longer visible in a modal.
+
+### Venue and mode changes
+
+Changing the Standard venue must synchronize the chart and book, invalidate prior reviews, refresh applicable limits and capabilities, and revalidate inputs. Preserve harmless intent such as side and USDC notional where possible; do not silently retain an invalid leverage, price increment or unsupported strategy. A selected type that is unavailable on the new venue needs an explanation rather than silent substitution.
+
+A price shortcut is a deliberate one-time action, not permission to keep moving a user's limit price. Changing sizing units must preserve the intended exposure and disclose the conversion reference.
+
+Preserve separate Standard and Pro draft state. Switching back must not overwrite a Standard limit or strategy plan with Pro's Market settings. Require a new review after consequential changes.
+
+## Pro ticket and workspace
+
+Keep the current cost-versus-size analysis, comparison table and entry estimate. In the same top-of-ticket position occupied by Standard's venue dropdown, show **Smart route** and a count of included venues. Opening it edits the permitted venue set, not a single forced destination.
+
+Show **Estimated destination: BULK**, for example, in the route result. Distinguish included venues from venues currently eligible at this size; fresh books, complete visible depth and public fees are only the current analytical checks. Production eligibility also needs customer risk, venue collateral and order support.
+
+Keep Pro Market-only for this iteration. The Advanced previews live in Standard first. Future strategies may use either a fixed venue or routing, but this requires an explicit routing policy and must not be inferred from showing an Advanced menu.
+
+During editing, the estimate may change with market data. On review, freeze the displayed inputs, timestamps and fee basis. Before future submission, the backend must revalidate and either respect the authorized bounds or request a revised review. A frozen preview is not an executable quote.
+
+## Margin and venue identity
+
+A prominent venue selector helps identify execution context. It does not prove that customer losses are isolated to that venue or that venue-native margin controls map directly to a customer's Cinder account.
+
+Use three separate concepts:
+
+- **Execution venue:** where this order is sent.
+- **Customer margin policy:** which part of this customer's collateral supports the exposure and how liquidation is determined.
+- **External venue margin arrangement:** how Cinder's own omnibus account or account tree is margined by the venue.
+
+The customer-facing margin policy must come from Cinder. Do not copy the third concept into the UI as if it were the second.
+
+### Proposed labels pending backend confirmation
+
+If the approved customer policy is cross margin within a venue-scoped allocation, use **Cross · Pacifica**, not an unqualified Cross. Suggested explanation: “Shares margin across your Pacifica positions. Does not provide margin offsets against positions on other venues.” This text is conditional on the actual policy; it is not an established architecture fact.
+
+If that policy is unresolved, use an explicitly illustrative margin preview or leave the setting unavailable. Do not add a working-looking Cross/Isolated switch merely to match a reference screenshot. Isolation is a financial guarantee about scope that needs implementation evidence.
+
+In Pro, associate any margin estimate with the estimated destination. Before a destination exists, do not imply a universal cross-margin pool. Show requested leverage separately from eligible leverage limits.
+
+A user changing leverage must not directly mutate a shared venue-account setting that changes another customer's risk. Similarly, reduce-only must be checked against the individual customer's position; a native reduce-only flag against net omnibus exposure is not sufficient to establish the correct customer result.
+
+## Advanced strategy previews
+
+Use one compact **Strategy preview** indicator in the Advanced form and an explicit local-plan outcome at review. Avoid a large repeating disclaimer, but do not label a local plan running, submitted or filled. A user should be able to explore the intended workflow without mistaking a product concept for an available execution service.
+
+| Strategy   | Inputs to explore                                                                          | Honest local preview                                                                                            | Backend decision required                                                                                           |
+| ---------- | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Scale      | Total size, start/end price, number of orders, size distribution, relevant time in force   | Limit ladder with levels, quantities and allocated total                                                        | Tick/lot rounding, minimum child size, margin reservation, partial batch failure and cancellation scope             |
+| Chase      | Total size, maximum chase price/distance, duration or expiry, breach action                | Initial intended resting price and explicit chasing boundary                                                    | Repricing cadence, post-only behaviour, queue effects, partial fills and cancel/replace races                       |
+| TWAP       | Total size, duration, interval or slice count, price protection, optional randomization    | Planned schedule and size per slice                                                                             | Missed slices, catch-up policy, price pauses, expiry and execution ownership                                        |
+| VWAP       | Total size, duration, declared volume profile, price protection                            | Illustrative allocation schedule only when a labelled profile exists; otherwise inputs and unavailable schedule | Source and quality of volume history, benchmark, prediction model, live adaptation and participation limits         |
+| Chase TWAP | TWAP schedule plus passive chasing and explicit catch-up policy                            | Schedule with passive and possible catch-up phases                                                              | Conditions permitting taker execution, aggregate protection, deadlines and maker/taker costs                        |
+| Iceberg    | Total size, limit price, displayed portion, relevant time in force, optional randomization | Displayed portion and planned replenishments                                                                    | Native versus synthetic implementation, replenishment trigger, queue priority, partial fills and total exposure cap |
+| Swarm      | Total size, number of clips, pace, price protection, optional randomization                | Clip schedule and estimated duration, not predicted fills                                                       | Rate limits, in-flight exposure, stop conditions and whether actual impact improves                                 |
+
+These are proposed Cinder controls, not promises of parity with Hyperlink or native API support across venues. Do not copy reference-product duration bounds, leverage limits, fee discounts or privacy badges without establishing Cinder's semantics.
+
+Validate inputs and conserve the intended total in previews. Label any schedule fixture or randomized preview as illustrative. Do not manufacture future fill prices, guaranteed maker execution, liquidation values or savings. Book-walking VWAP is an estimated average fill today; it is not a VWAP scheduling algorithm.
+
+## Backend execution contract
+
+The implementation owner should define and version these requirements before a preview can submit orders:
+
+1. **Capabilities:** per venue and market, distinguish available public data, native order primitives, Cinder-managed strategies and unsupported combinations. Include margin modes, leverage bounds, tick/lot sizes, minimums, time-in-force and trigger sources.
+2. **Customer intent and authorization:** a durable parent instruction identifies customer, market, side, target quantity or notional semantics, strategy, venue scope, risk scope, expiry and price limits. Prevent duplicates with stable identifiers. Keep customer instructions separate from external omnibus orders.
+3. **Lifecycle:** track acceptance, working quantity, partial fills, cancellation requested, confirmed cancellation, completion and uncertain outcomes. Acknowledgement is not a fill. Query/reconcile uncertain results before resubmitting.
+4. **Execution ownership:** decide whether the venue or Cinder runs a strategy. Cinder-managed execution needs a durable worker outside the browser and beyond a single short-lived web request. Closing a tab must not silently terminate a live strategy. Restart behaviour must be explicit.
+5. **Risk and reservation:** reserve against the customer's obligations, enforce the aggregate parent budget across all in-flight children, and check destination collateral before routing. Account for working orders, fees and protective orders. Cross-venue capital movement is a separate authorized operation.
+6. **Strategy safety:** specify scheduling, allowed lateness, partial-fill allocation, cancel/replace sequencing, retry limits, price-bound enforcement, pause/cancel semantics, kill switches and behaviour during venue outages. Pausing new submissions must not be confused with cancelling resting children.
+7. **Omnibus allocation:** deterministically attribute fills, fees and funding to customers, enforce customer-specific reduce-only, address self-trade prevention and net external exposure, and prevent one customer's control changes from altering another's entitlement or risk unexpectedly.
+8. **Economics:** use applicable customer pricing, actual venue tier and maker/taker outcomes. Separate venue expense, customer charge and retained Cinder revenue. Current public base-fee estimates do not establish production customer pricing.
+9. **Confidentiality:** protect parent instructions and account records in the intended execution boundary. Native venue algorithms may reveal a parent amount to that venue; synthetic child orders may reduce that disclosure but do not establish unobservable activity. Keep that distinction explicit.
+10. **Observability and recovery:** preserve parent/child identifiers, source timestamps, decisions, acknowledgements and reconciled outcomes. Give customers their own progress and receipts without exposing other customers or leaking confidential plans into ordinary logs.
+
+For future routed strategies, choose explicitly between one venue for the whole parent and per-child routing. Per-child routing can create positions across multiple venues, needs available margin at each, and must be visible to the customer. It is not implicit permission to migrate existing positions. A reduce/close operation must reduce the relevant existing exposure rather than open an opposite position elsewhere.
+
+## Analytical views
+
+Retain **Cost versus size** as Pro's default. Consider **Cost history** next, using a fixed analysis size and direction independently of the current ticket. It describes historical estimates, not completed executions. Preserve missing intervals, alignment rules and fee provenance. The supplied handoff's recordings are not a live archive. Browser-session collection is possible without a data service; persistent shared history requires a separately authorized collector and storage design.
+
+Keep **Visible depth** as a secondary view. Use consistent units and price reference, display each feed's coverage, and stop curves at observed levels. More returned levels do not establish a more liquid venue. Insufficient captured depth means the full-size estimate is unavailable, not that the venue has no more liquidity. Do not interpolate missing levels or rank a single complete estimate as proven cheapest across unavailable alternatives.
+
+Do not extend the current immediate-entry cost metric unchanged to passive or scheduled strategies. Future execution depends on replenishment, queue position, price movement and maker/taker outcomes. Funding remains separate unless an explicit holding-period model is introduced.
+
+## Activity and order records
+
+Keep Positions, Open orders, Trade history, Order history and Funding history. A strategy should have one parent record with expandable children rather than flooding the primary view with every slice. Show total target, filled and remaining quantity, average fill, actual charges, venue allocation and current state.
+
+The top-level Activity timeline should explain important transitions: plan saved, parent accepted, paused, partially filled, cancelled or completed. In the demo, saved plans stay local and non-executing. Future pause/cancel actions must state whether resting orders remain and cannot reverse already completed fills.
+
+## Acceptance checks
+
+- Venue identity remains visible and is repeated in every Standard preview, including advanced strategies.
+- Market/Limit/Advanced are prominent and keyboard accessible; only relevant inputs appear.
+- Standard venue changes synchronize chart and book without silently changing intended exposure.
+- Standard and Pro drafts remain independent; switching modes does not lose an advanced plan.
+- Pro retains the existing analytical workspace and exposes permitted venues separately from its estimated destination.
+- A trader can explain the difference between execution venue, customer margin and cross-venue offsets.
+- No unknown risk model is presented as supported Cross or Isolated behaviour.
+- Each strategy validates its parameters and explains its planned action without inventing execution outcomes.
+- Preview/save actions perform no signing, venue writes, collateral movement or unattended execution.
+- Existing live data, reduced-motion, mobile, accessibility and data-quality tests remain intact.
+
+## References and unresolved signoff
+
+Internal context: [product brief](../planned-product.md), [capability map](capability-map.md), [retail workflows](workflows-and-tests.md), [Pro research handoff](../Cinder_Pro_ImplementationHandoff.md) and [PMF and revenue model](../strategy/cinder-pmf-and-revenue-model.md). Earlier documents preserve historical decisions; this document governs the current local order-ticket iteration and its production requirements, not the backend's existing implementation.
+
+The next backend handoff should confirm the customer margin boundary, per-venue execution capabilities, strategy ownership, authorization model, native versus synthetic reduce-only mapping, actual customer fees and lifecycle event contract. Exact algorithm parameters, all-venue strategy availability and cross-venue risk offsets remain unresolved. UI preview approval is not production execution approval.

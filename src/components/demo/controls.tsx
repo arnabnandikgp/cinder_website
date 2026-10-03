@@ -1,22 +1,38 @@
 "use client";
 
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 import { X, Inbox } from "lucide-react";
+
+const subscribeReady = () => () => {};
+const clientReady = () => true;
+const serverReady = () => false;
+// Prerendered form controls must not accept edits before their handlers exist.
+export function useClientReady() {
+  return useSyncExternalStore(subscribeReady, clientReady, serverReady);
+}
 
 export function Segments<T extends string>({
   label,
   value,
   options,
   onChange,
+  disabled = false,
 }: {
   label: string;
   value: T;
   options: { value: T; label: string }[];
   onChange: (value: T) => void;
+  disabled?: boolean;
 }) {
   const name = useId();
   return (
-    <fieldset className="d-segments">
+    <fieldset className="d-segments" disabled={disabled}>
       <legend>{label}</legend>
       <div>
         {options.map((option) => (

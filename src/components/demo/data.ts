@@ -1,4 +1,7 @@
-// Synthetic, customer-scoped fixtures only. No venue API, fee schedule, or risk model.
+import type { RouteReceipt } from "./routing";
+import type { StrategyPlan } from "./strategies";
+
+// Synthetic, customer-scoped fixtures only. No venue API or production risk model.
 export const venues = {
   pacifica: "Pacifica",
   bulk: "BULK",
@@ -65,13 +68,19 @@ export type Draft = {
   market: Market;
   side: string;
   type: string;
+  // Requested notional exposure, not base quantity or collateral.
   size: string;
+  sizeUnit: "USDC";
   limit: string;
   slippage: string;
   leverage: string;
   mode: "manual" | "auto";
   venue: Venue;
   allowed: Venue[];
+  route?: RouteReceipt;
+  reduceOnly?: boolean;
+  tif?: string;
+  strategy?: StrategyPlan;
 };
 export type Fill = {
   id: string;
@@ -159,6 +168,14 @@ export function number(value: number, decimals = 2) {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   }).format(value);
+}
+export function usdcSize(value: number) {
+  if (!Number.isFinite(value)) return "—";
+  if (value > 0 && value < 1e-8) return "<0.00000001 USDC";
+  return `${new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 8,
+  }).format(value === 0 ? 0 : value)} USDC`;
 }
 export function signed(value: number) {
   return `${value >= 0 ? "+" : "−"}${number(Math.abs(value))}`;

@@ -16,5 +16,6 @@ export const site = {
   x: "https://x.com/CinderExchange",
   github: "https://github.com/arnabnandikgp/cinder",
   contact: "https://x.com/CinderExchange",
+  docs: "https://docs.cinder.exchange",
   article: "https://x.com/CinderExchange/status/2104439873029685347",
 };

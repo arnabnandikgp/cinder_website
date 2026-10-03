@@ -1,0 +1,529 @@
+/* Order entry shares the terminal's existing surfaces and semantic colors. */
+.d-ticket-v2 .d-mode-switch {
+  padding: 4px var(--d-pad) 0;
+  border-bottom: 1px solid var(--d-line);
+}
+.d-ticket-v2 .d-mode-switch .d-segments {
+  margin-bottom: 0;
+}
+.d-ticket-v2 .d-mode-switch legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  clip-path: inset(50%);
+  overflow: hidden;
+}
+.d-ticket-v2 .d-mode-switch label {
+  min-height: 40px;
+  font-size: 14px;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--d-muted);
+}
+.d-ticket-v2 .d-mode-switch .d-segments > div {
+  padding: 0;
+  gap: 0;
+  background: transparent;
+}
+.d-ticket-v2 .d-mode-switch label.is-selected {
+  color: var(--off-white);
+  box-shadow: inset 0 -2px var(--cobalt);
+}
+.d-ticket-v2 form {
+  display: block;
+  padding: var(--d-pad);
+  padding-top: 0;
+}
+.d-ticket-v2 .d-venue-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--d-panel);
+  padding: 12px 0 8px;
+  margin-bottom: 4px;
+}
+.d-ticket-v2 .d-venue-header .d-field {
+  margin: 0;
+}
+.d-ticket-v2 .d-venue-header select {
+  width: 100%;
+  min-height: 40px;
+  font-size: 15px;
+  font-weight: 500;
+  background-color: var(--d-raised);
+  border-color: var(--d-line);
+}
+.d-ticket-v2 .d-venue-header select:hover {
+  border-color: var(--d-control-line);
+}
+.demo .d-route-scope {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 12px;
+  color: var(--d-blue);
+  background: var(--d-input);
+  border: 1px solid var(--d-line);
+  border-radius: var(--d-radius);
+  text-align: left;
+}
+.d-route-scope > span {
+  flex: 1;
+}
+.d-route-scope strong,
+.d-route-scope small {
+  display: block;
+}
+.d-route-scope strong {
+  font-size: 15px;
+  color: var(--off-white);
+}
+.d-route-scope small {
+  font-size: 12px;
+  color: var(--d-muted);
+  margin-top: 2px;
+}
+.d-risk-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--d-gap);
+  align-items: start;
+  margin-bottom: 4px;
+}
+.d-margin-context {
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: default;
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--d-line);
+  border-radius: var(--d-radius);
+  color: var(--off-white);
+  font-size: 15px;
+  font-weight: 600;
+}
+.d-ticket-v2 .d-leverage-control {
+  display: block;
+  grid-column: auto;
+  position: relative;
+  padding: 0;
+}
+.d-ticket-v2 .d-leverage-control > label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  clip-path: inset(50%);
+  overflow: hidden;
+}
+.d-ticket-v2 .d-leverage-control select {
+  min-width: 0;
+  width: 100%;
+  min-height: 36px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--off-white);
+  background-color: transparent;
+  border-color: var(--d-line);
+  padding: 6px 32px 6px 12px;
+}
+.d-order-types {
+  position: relative;
+  margin-bottom: 12px;
+}
+.d-order-type-row {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 0;
+  border-bottom: 1px solid var(--d-line);
+}
+.d-ticket-v2 .d-order-type-row .d-segments {
+  margin: 0;
+}
+.d-order-type-row legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  clip-path: inset(50%);
+  overflow: hidden;
+}
+.d-order-type-row .d-segments > div {
+  padding: 0;
+  background: none;
+  gap: 0;
+}
+.d-ticket-v2 .d-order-type-row label,
+.demo .d-advanced-trigger {
+  min-height: 40px;
+  border-radius: 0;
+  font-size: 14px;
+  font-weight: 500;
+  background: none;
+  color: var(--d-muted);
+  box-shadow: none;
+}
+.demo .d-advanced-trigger {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  white-space: nowrap;
+}
+.d-advanced-trigger svg,
+.d-route-scope > svg {
+  flex-shrink: 0;
+}
+.d-ticket-v2 .d-order-type-row label.is-selected,
+.demo .d-advanced-trigger.is-selected {
+  color: var(--off-white);
+  box-shadow: inset 0 -2px var(--d-blue);
+}
+.d-strategy-menu {
+  position: absolute;
+  z-index: 20;
+  inset: calc(100% + 4px) 0 auto;
+  border: 1px solid var(--d-control-line);
+  border-radius: var(--d-radius);
+  background: var(--d-raised);
+  padding: 6px;
+  margin-top: 0;
+  max-height: min(380px, 50dvh);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 28%);
+}
+.demo .d-strategy-menu button {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 12px;
+  padding: 12px;
+  min-height: 56px;
+  background: none;
+  border-radius: 4px;
+  text-align: left;
+}
+.d-strategy-menu svg {
+  flex-shrink: 0;
+  color: var(--d-blue);
+}
+.d-strategy-menu strong,
+.d-strategy-menu small {
+  display: block;
+}
+.d-strategy-menu strong {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--off-white);
+}
+.d-strategy-menu small {
+  font-size: 12px;
+  color: var(--d-muted);
+  line-height: 1.4;
+  margin-top: 2px;
+}
+.demo .d-strategy-menu button:is(:hover, [aria-checked="true"]) {
+  background: var(--d-input);
+}
+.d-ticket-v2 .d-segments label {
+  min-height: 40px;
+}
+.d-ticket-v2 form > .d-segments legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  clip-path: inset(50%);
+  overflow: hidden;
+}
+.d-ticket-v2 form > .d-segments > div {
+  padding: 0;
+  gap: 8px;
+  background: transparent;
+}
+.d-ticket-v2 form > .d-segments label {
+  border: 1px solid var(--d-line);
+  border-radius: var(--d-radius);
+  font-size: 14px;
+  background: transparent;
+}
+.d-ticket-v2 form > .d-segments label.is-selected:has(input[value="Buy"]) {
+  background: var(--d-buy-tint);
+  border-color: var(--d-positive);
+  box-shadow: none;
+}
+.d-ticket-v2 form > .d-segments label.is-selected:has(input[value="Sell"]) {
+  background: var(--d-sell-tint);
+  border-color: var(--d-negative);
+  box-shadow: none;
+}
+.d-ticket-v2 .d-field-inline {
+  position: relative;
+}
+.d-ticket-v2 .d-field-inline > label {
+  position: absolute;
+  z-index: 1;
+  inset: 0 auto auto 12px;
+  height: 44px;
+  align-items: center;
+  color: var(--d-muted);
+  font-size: 13px;
+  pointer-events: none;
+  margin: 0;
+}
+.d-ticket-v2 .d-field-inline .d-amount-input input {
+  padding-left: 90px;
+  text-align: right;
+  font-size: 16px;
+}
+.d-ticket-v2 .d-field-inline.d-field-slippage .d-amount-input input {
+  padding-left: 132px;
+  padding-right: 32px !important;
+}
+.d-ticket-v2 .d-field-inline.d-field-size .d-amount-input input {
+  padding-right: 100px !important;
+}
+.d-ticket-v2 .d-amount-input > select {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  width: 80px;
+  min-height: 32px;
+  height: 32px;
+  padding: 4px 26px 4px 10px;
+  font-size: 13px;
+  border: 0;
+  background-color: var(--d-raised);
+}
+.d-ticket-v2 .d-amount-input > span {
+  font-size: 13px;
+}
+.d-ticket-v2 input[type="text"]:hover {
+  border-color: var(--d-control-line);
+}
+.d-ticket-v2 .d-pro-order-type {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 40px;
+  border-bottom: 1px solid var(--d-line);
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+}
+.d-ticket-v2 .d-pro-order-type > span:first-child {
+  display: none;
+}
+.demo .d-trade-submit.d-buy-action:hover {
+  background: var(--d-positive);
+}
+.demo .d-trade-submit.d-sell-action:hover {
+  background: var(--d-negative);
+}
+.d-ticket-v2 .d-pro-order-type strong {
+  font-size: 15px;
+}
+.d-ticket-v2 .d-pro-order-type > span:last-child {
+  font-size: 12px;
+}
+.d-price-field {
+  margin-bottom: 12px;
+}
+.d-ticket-v2 .d-price-field .d-field {
+  margin-bottom: 4px;
+}
+.d-price-shortcuts {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.demo .d-price-shortcuts button {
+  min-height: 28px;
+  min-width: 40px;
+  padding: 4px 8px;
+  background: transparent;
+  color: var(--d-muted);
+  border-radius: 4px;
+}
+.d-price-shortcuts > span {
+  margin-left: auto;
+  color: var(--d-muted);
+  font-size: 12px;
+}
+.d-size-field {
+  margin-bottom: 12px;
+}
+.d-ticket-v2 .d-size-field .d-field {
+  margin-bottom: 4px;
+}
+.d-sizing-reference {
+  font-size: 12px;
+  margin-top: 8px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.d-strategy-fields {
+  border-top: 1px solid var(--d-line);
+  padding-top: 12px;
+}
+.d-strategy-caption {
+  margin-bottom: 12px;
+}
+.d-strategy-caption > span {
+  display: inline-block;
+  color: var(--d-blue);
+  font-size: 12px;
+  padding: 0;
+  background: transparent;
+}
+.d-strategy-caption p {
+  margin-top: 6px;
+  font-size: 12px;
+}
+.d-input-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+.d-input-pair .d-field {
+  min-width: 0;
+}
+.d-ticket-v2 .d-input-pair input {
+  text-align: right;
+  font-size: 15px;
+}
+.d-field-help {
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 6px 0 12px;
+}
+.d-ticket-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.d-ticket-check input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--cobalt);
+}
+.d-order-modifiers {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.d-tif-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--d-muted);
+}
+.d-tif-control select {
+  min-height: 32px;
+  padding: 4px 28px 4px 10px;
+  font-size: 12px;
+  border-color: transparent;
+  background-color: transparent;
+}
+.d-plan-empty {
+  padding: 12px;
+  border: 1px dashed var(--d-control-line);
+  border-radius: var(--d-radius);
+  font-size: 12px;
+  margin-bottom: 16px;
+}
+.d-strategy-plan {
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--d-line);
+  border-radius: 0;
+  padding: 16px 0 0;
+  margin-bottom: 16px;
+}
+.d-plan-heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 4px;
+}
+.d-plan-heading strong {
+  font-size: 14px;
+}
+.d-plan-heading span {
+  font-size: 12px;
+  color: var(--d-muted);
+}
+.d-strategy-plan > p {
+  font-size: 12px;
+  margin-top: 8px;
+}
+.d-plan-bars {
+  height: 40px;
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+  margin-top: 16px;
+}
+.d-plan-bars > span {
+  flex: 1;
+  min-width: 0;
+  background: var(--d-blue);
+  opacity: 0.8;
+  border-radius: 2px 2px 0 0;
+}
+.d-strategy-plan .d-detail-list {
+  margin-bottom: 8px;
+}
+.d-strategy-plan summary {
+  min-height: 40px;
+  padding-block: 10px;
+  cursor: pointer;
+  color: var(--d-blue);
+  font-size: 12px;
+}
+.d-plan-table {
+  overflow: auto;
+  max-height: 240px;
+  position: relative;
+  scrollbar-width: thin;
+}
+.d-plan-table :is(th, td) {
+  padding: 8px;
+}
+.d-strategy-plan .d-field-help {
+  margin-bottom: 0;
+}
+@media (max-width: 767px) {
+  .d-ticket-v2 .d-venue-header {
+    position: static;
+  }
+  .d-ticket-v2 form {
+    display: block;
+  }
+  .d-ticket-v2 .d-field input {
+    font-size: 16px;
+  }
+  .demo .d-price-shortcuts button,
+  .d-ticket-v2 .d-tif-control select,
+  .d-ticket-v2 .d-risk-controls select,
+  .d-ticket-v2 .d-margin-context {
+    min-height: 40px;
+  }
+  .d-ticket-v2 .d-amount-input > select {
+    inset: 2px 4px auto auto;
+    min-height: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+}

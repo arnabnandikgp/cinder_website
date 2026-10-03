@@ -3,22 +3,25 @@ import { Suspense } from "react";
 import { Terminal } from "@/components/demo/terminal";
 import Loading from "./loading";
 import "./demo.css";
+import "./pro.css";
+import "./market-data.css";
+import "./order-entry.css";
 
 export const metadata: Metadata = {
   title: "Cinder | Interactive trading demo",
   description:
-    "Explore the Cinder chart-first account prototype. Synthetic market data and sample records only. No wallet connection or live trading.",
+    "Explore Cinder with live Pacifica and BULK market data and venue-fee entry comparisons. Account records are simulated. No wallet connection or live trading.",
   robots: { index: false, follow: true },
   alternates: { canonical: "/demo" },
   openGraph: {
     title: "Cinder | Explore the trading account",
     description:
-      "An interactive product prototype. Sample data, no live trading.",
+      "Live venue market data, a simulated account and no live trading.",
   },
   twitter: {
     title: "Cinder | Explore the trading account",
     description:
-      "An interactive product prototype. Sample data, no live trading.",
+      "Live venue market data, a simulated account and no live trading.",
   },
 };
 

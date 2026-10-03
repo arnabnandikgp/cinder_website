@@ -185,6 +185,31 @@ test("mobile navigation closes on selection and Escape", async ({ page }) => {
   ).toBeHidden();
 });
 
+for (const width of [375, 921, 1024, 1280]) {
+  test(`Docs is available in the landing header at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    if (width <= 920)
+      await page.getByRole("button", { name: "Open navigation" }).click();
+    const nav = page.getByRole("navigation", {
+      name: width <= 920 ? "Mobile navigation" : "Main navigation",
+      exact: true,
+    });
+    const docs = nav.getByRole("link", { name: "Docs", exact: true });
+    await expect(docs).toBeVisible();
+    await expect(docs).toHaveAttribute("href", "https://docs.cinder.exchange");
+    await expect(docs).toHaveAttribute("rel", "noopener noreferrer");
+    await expect(docs).not.toHaveAttribute("aria-current");
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  });
+}
+
 test("navigation dot is absent at the hero and follows section visits", async ({
   page,
 }) => {

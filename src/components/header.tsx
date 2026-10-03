@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowUpRight, Menu, X } from "lucide-react";
 import { Brand } from "./ui";
 import Link from "next/link";
+import { site } from "@/lib/site";
 
 const links = [
   { label: "The account", href: "#advantage" },
@@ -105,6 +106,9 @@ export function Header() {
               {link.label}
             </a>
           ))}
+          <a href={site.docs} target="_blank" rel="noopener noreferrer">
+            Docs
+          </a>
           <span
             className={`nav-indicator${activeHref ? " is-visible" : ""}`}
             aria-hidden="true"
@@ -143,6 +147,14 @@ export function Header() {
             {link.label}
           </a>
         ))}
+        <a
+          href={site.docs}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => setOpen(false)}
+        >
+          Docs
+        </a>
       </nav>
     </header>
   );
