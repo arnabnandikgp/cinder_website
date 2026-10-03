@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { chooseVenue } from "./helpers/venue-select";
 import AxeBuilder from "@axe-core/playwright";
 import { bars, bookMessage, mockMarketData } from "./helpers/market-data";
 
@@ -59,9 +60,7 @@ test("oracle, funding and quote volume follow the execution venue with no additi
       .find((s) => !s.closed)!
       .messages.filter((m) => m.method === "subscribe"),
   ).toHaveLength(3);
-  await page
-    .getByLabel("Execution venue", { exact: true })
-    .selectOption("bulk");
+  await chooseVenue(page, "Execution venue", "bulk");
   await expect(page.getByTestId("market-oracle")).toHaveText("152.90");
   await expect(page.getByTestId("market-funding")).toHaveText("+0.01%");
   await expect(page.getByTestId("market-volume")).toHaveText("$234.6M");
@@ -142,9 +141,7 @@ test("Standard streams venue data without resetting its chart and stays separate
   await expect(chart).toHaveAttribute("data-chart-instance", instance!);
   await expect(chart).toHaveAttribute("data-chart-visible-from", zoomedFrom!);
   await expect(chart).toHaveAttribute("data-chart-visible-to", zoomedTo!);
-  await page
-    .getByLabel("Execution venue", { exact: true })
-    .selectOption("bulk");
+  await chooseVenue(page, "Execution venue", "bulk");
   await expect(chart).toHaveAttribute("data-chart-key", "SOL-bulk-15m");
   await expect(page.getByTestId("market-mark")).toHaveText("153.00");
   await expect.poll(() => initialSocket.closed).toBe(true);
@@ -246,9 +243,7 @@ test("price chart separates volume, resets to recent candles and retains horizon
     "data-chart-visible-from",
     initialFrom!,
   );
-  await page
-    .getByLabel("Execution venue", { exact: true })
-    .selectOption("bulk");
+  await chooseVenue(page, "Execution venue", "bulk");
   await expect(chart).toHaveAttribute("data-chart-key", "SOL-bulk-5m");
   await expect(chart).toHaveAttribute("data-last-close", "153");
   await expect(chart).toHaveAttribute("data-chart-visible-from", initialFrom!);
@@ -319,9 +314,7 @@ test("history failures and unsupported venues do not fall back to fixtures", asy
   await expect(
     page.getByRole("button", { name: "Retry market data", exact: true }),
   ).toBeVisible();
-  await page
-    .getByLabel("Execution venue", { exact: true })
-    .selectOption("velocity");
+  await chooseVenue(page, "Execution venue", "velocity");
   await expect(page.getByTestId("book-status")).toHaveText("Unavailable");
   await expect(
     page.getByText("Live data is not connected for this venue."),

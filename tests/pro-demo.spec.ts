@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { chooseVenue } from "./helpers/venue-select";
 import AxeBuilder from "@axe-core/playwright";
 import { bookMessage, mockMarketData } from "./helpers/market-data";
 
@@ -66,7 +67,7 @@ test("visibility does not change routing and Standard retains its instruction", 
 }) => {
   await page.goto("/demo");
   await expect(page.getByTestId("book-status")).toHaveText("Live");
-  await page.getByLabel("Execution venue").selectOption("bulk");
+  await chooseVenue(page, "Execution venue", "bulk");
   await expect(page).toHaveURL(/venue=bulk/);
   await page.getByLabel("Order size", { exact: true }).fill("10000");
   await page.getByRole("radio", { name: "Pro", exact: true }).check();
@@ -79,7 +80,10 @@ test("visibility does not change routing and Standard retains its instruction", 
   await page.getByRole("button", { name: "Save preferences" }).click();
   await expect(page.getByTestId("recommended-venue")).toHaveText("BULK");
   await page.getByRole("radio", { name: "Standard", exact: true }).check();
-  await expect(page.getByLabel("Execution venue")).toHaveValue("bulk");
+  await expect(page.getByLabel("Execution venue")).toHaveAttribute(
+    "data-value",
+    "bulk",
+  );
   await expect(page.getByLabel("Order size", { exact: true })).toHaveValue(
     "10000",
   );
@@ -125,7 +129,7 @@ test("price chart remains independent and view comparison restores the cost tabl
   await expect(
     page.getByRole("tab", { name: "Price chart", exact: true }),
   ).toBeFocused();
-  await page.getByLabel("Chart source").selectOption("bulk");
+  await chooseVenue(page, "Chart source", "bulk");
   await expect(page.locator(".d-tv-chart")).toHaveAttribute(
     "data-chart-key",
     "SOL-bulk-15m",

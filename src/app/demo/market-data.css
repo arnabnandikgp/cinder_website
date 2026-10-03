@@ -240,9 +240,6 @@
 .d-feed-detail[open] summary {
   color: var(--d-blue);
 }
-.d-context-demo {
-  display: block;
-}
 .d-feed-caption button,
 .d-use-mark {
   border: 0;

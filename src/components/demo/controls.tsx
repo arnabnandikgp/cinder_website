@@ -111,10 +111,12 @@ export function Modal({
   title,
   children,
   onClose,
+  eyebrow = "CINDER / DEMO",
 }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
+  eyebrow?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const id = useId();
@@ -139,7 +141,7 @@ export function Modal({
     >
       <div className="d-dialog-head">
         <div>
-          <span className="d-overline">CINDER / DEMO</span>
+          <span className="d-overline">{eyebrow}</span>
           <h2 id={id}>{title}</h2>
         </div>
         <button

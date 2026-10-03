@@ -175,6 +175,14 @@ The top-level Activity timeline should explain important transitions: plan saved
 - Preview/save actions perform no signing, venue writes, collateral movement or unattended execution.
 - Existing live data, reduced-motion, mobile, accessibility and data-quality tests remain intact.
 
+## Terminal chrome and connect-only wallet
+
+- Standard execution uses a branded, keyboard-accessible venue list. Changing venue silently synchronizes the chart, book and record filter; it does not alter positions or the draft's intended size.
+- The compact ticker shows the asset icon, USDC pair, requested leverage and venue emblem. Public-feed freshness remains available through a small status indicator and the existing feed details. The redundant workspace/execution/reference strip is removed.
+- Header controls run left to right: Cinder account balance, Deposit, Withdraw, wallet. The balance remains illustrative Cinder account equity, not funds discovered in the connected wallet. Deposit and Withdraw retain their non-executing preview dialogs.
+- Wallet discovery and connection use [Wallet Standard](https://github.com/wallet-standard/wallet-standard), with a custom Cinder picker rather than a wallet-adapter UI. This pass uses the small registry/features packages directly: it needs no RPC client or full transaction framework. Only `standard:connect`, `standard:events` and optional `standard:disconnect` are used. No signatures, sign-in, transactions, auto-connect or address persistence are enabled. Account changes, user rejection, wallet removal and cancellation of pending UI requests are handled.
+- Market asset SVGs are vendored from the logo URLs in Phoenix's public SOL/BTC market metadata. Venue SVGs reuse the project's existing approved video asset set; the terminal does not hotlink the logos.
+
 ## References and unresolved signoff
 
 Internal context: [product brief](../planned-product.md), [capability map](capability-map.md), [retail workflows](workflows-and-tests.md), [Pro research handoff](../Cinder_Pro_ImplementationHandoff.md) and [PMF and revenue model](../strategy/cinder-pmf-and-revenue-model.md). Earlier documents preserve historical decisions; this document governs the current local order-ticket iteration and its production requirements, not the backend's existing implementation.

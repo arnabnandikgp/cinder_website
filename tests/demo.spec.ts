@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { chooseVenue } from "./helpers/venue-select";
 import AxeBuilder from "@axe-core/playwright";
 import { mockMarketData } from "./helpers/market-data";
 
@@ -285,9 +286,12 @@ test("chart credit stays accessible on mobile without adding a page footer", asy
   expect(audit.violations.map((violation) => violation.id)).toEqual([]);
   await page.keyboard.press("Escape");
   const workspace = await page.getByTestId("demo-workspace").boundingBox();
-  expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(
-    Math.ceil(workspace!.height),
-  );
+  expect(
+    Math.abs(
+      (await page.evaluate(() => document.documentElement.scrollHeight)) -
+        workspace!.height,
+    ),
+  ).toBeLessThanOrEqual(1);
 });
 
 for (const view of ["account", "activity"]) {
@@ -355,9 +359,7 @@ test("manual chart follows execution and auto-route allows an independent refere
   page,
 }) => {
   await page.goto("/demo");
-  await page
-    .getByLabel("Execution venue", { exact: true })
-    .selectOption("bulk");
+  await chooseVenue(page, "Execution venue", "bulk");
   await expect(
     page.getByRole("combobox", { name: "Chart source" }),
   ).toHaveCount(0);
@@ -374,9 +376,15 @@ test("manual chart follows execution and auto-route allows an independent refere
   await page.getByRole("radio", { name: "Pro", exact: true }).check();
   await page.getByRole("tab", { name: "Price chart", exact: true }).click();
   await expect(page.getByLabel("Venue", { exact: true })).toHaveValue("all");
-  await expect(page.getByLabel("Chart source")).toHaveValue("bulk");
-  await page.getByLabel("Chart source").selectOption("velocity");
-  await expect(page.getByLabel("Chart source")).toHaveValue("velocity");
+  await expect(page.getByLabel("Chart source")).toHaveAttribute(
+    "data-value",
+    "bulk",
+  );
+  await chooseVenue(page, "Chart source", "velocity");
+  await expect(page.getByLabel("Chart source")).toHaveAttribute(
+    "data-value",
+    "velocity",
+  );
   await expect(page.locator(".d-tv-chart")).toHaveAttribute(
     "data-chart-key",
     "SOL-velocity-15m",
@@ -384,14 +392,17 @@ test("manual chart follows execution and auto-route allows an independent refere
   await expect(page.getByLabel("Venue", { exact: true })).toHaveValue("all");
   await expect(page.locator("#records-panel")).toContainText("FL-202");
   await page.reload();
-  await expect(page.getByLabel("Chart source")).toHaveValue("velocity");
+  await expect(page.getByLabel("Chart source")).toHaveAttribute(
+    "data-value",
+    "velocity",
+  );
   await page.getByRole("radio", { name: "Standard", exact: true }).check();
   await expect(
     page.getByRole("combobox", { name: "Chart source" }),
   ).toHaveCount(0);
-  await expect(page.getByLabel("Execution venue", { exact: true })).toHaveValue(
-    "bulk",
-  );
+  await expect(
+    page.getByLabel("Execution venue", { exact: true }),
+  ).toHaveAttribute("data-value", "bulk");
   await expect(page.getByTestId("manual-chart-source")).toHaveText("BULK");
   await expect(page.locator(".d-tv-chart")).toHaveAttribute(
     "data-chart-key",

@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { ArrowRight, ChevronDown, LockKeyhole, Route } from "lucide-react";
 import { DetailList, Segments, useClientReady } from "./controls";
 import { RouteCard } from "./route-card";
+import { VenueSelect } from "./venue-select";
 import { parseAmount, type RouteComparison } from "./routing";
 import {
   OrderTypes,
@@ -20,7 +21,6 @@ import {
 import {
   markets,
   usdcSize,
-  venues,
   type Draft,
   type Market,
   type Scenario,
@@ -254,22 +254,16 @@ export function OrderTicket({
           {mode === "manual" ? (
             <div className="d-field">
               <label htmlFor="d-execution-venue">Execution venue</label>
-              <select
+              <VenueSelect
                 id="d-execution-venue"
+                label="Execution venue"
                 disabled={!ready}
                 value={venue}
-                onChange={(e) => {
+                onChange={(value) => {
                   setErrors({});
-                  onVenue(e.target.value as Venue);
+                  onVenue(value);
                 }}
-              >
-                {Object.entries(venues).map(([key, label]) => (
-                  <option key={key} value={key}>
-                    {label}
-                    {key === "velocity" ? " · preview only" : ""}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
           ) : (
             <button

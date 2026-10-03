@@ -4,8 +4,8 @@ import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   ArrowUpRight,
+  ArrowDownLeft,
   Info,
-  LockKeyhole,
   CandlestickChart,
   WalletCards,
   History,
@@ -18,6 +18,7 @@ import { OrderTicket, initialTicket, type Ticket } from "./order-ticket";
 import { initialStrategy } from "./strategies";
 import { Records } from "./records";
 import { ProWorkspace } from "./pro-workspace";
+import { WalletConnect } from "./wallet-connect";
 import { useMarketFeed } from "./market-data/use-market-feed";
 import { channelHealth } from "./market-data/feed";
 import { intervals, type Interval } from "./market-data/adapters";
@@ -25,6 +26,7 @@ import { parseAmount, type RouteInput } from "./routing";
 import { compareLiveRoutes, comparisonVenues } from "./live-routing";
 import {
   pick,
+  number,
   venues,
   type CancelState,
   type Draft,
@@ -251,15 +253,22 @@ export function Terminal() {
             ))}
           </nav>
           <div className="d-account-actions">
-            <span className="d-sample-account">
-              <LockKeyhole size={13} aria-hidden="true" />
-              Your account
-            </span>
             <button
-              className="d-button"
+              className="d-header-balance"
+              title="Illustrative Cinder account equity, not your wallet balance"
+              aria-label="View account balance (simulated)"
+              onClick={() => updateQuery({ view: "account" }, true)}
+            >
+              <span>Balance</span>
+              <strong>
+                {number(scenario === "empty" ? 0 : 12024)} <small>USDC</small>
+              </strong>
+            </button>
+            <button
+              className="d-button d-header-deposit"
               onClick={() => setDialog({ kind: "deposit" })}
             >
-              Deposit
+              <ArrowDownLeft size={15} aria-hidden="true" /> Deposit
             </button>
             <button
               className="d-button"
@@ -267,31 +276,9 @@ export function Terminal() {
             >
               Withdraw <ArrowUpRight size={14} aria-hidden="true" />
             </button>
+            <WalletConnect />
           </div>
         </header>
-        <div className="d-context-strip">
-          <span>
-            <i />
-            {scenario === "stale"
-              ? "Last-known account snapshot"
-              : "Trading workspace"}
-          </span>
-          <span>
-            Execution:{" "}
-            <b>{mode === "auto" ? "Pro · compare venues" : venues[venue]}</b>
-          </span>
-          <span>
-            Reference:{" "}
-            <b>
-              {mode === "auto" && panel === "cost"
-                ? "Live venue books"
-                : venues[chart]}
-            </b>
-          </span>
-          <span className="d-context-demo">
-            Public market data · simulated account · no live trading
-          </span>
-        </div>
         {notice && (
           <div className="d-feedback-note" role="status">
             <CheckMessage text={notice} />
@@ -414,9 +401,7 @@ export function Terminal() {
                 }}
                 onVenue={(value) => {
                   updateQuery({ venue: value, scope: value, chart: value });
-                  setNotice(
-                    "Execution venue, chart and record filter updated. Existing positions are unchanged.",
-                  );
+                  setNotice("");
                 }}
                 onAllowed={() => setDialog({ kind: "route" })}
                 comparison={comparison}

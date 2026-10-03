@@ -185,16 +185,12 @@
   gap: 8px;
   margin-left: auto;
 }
-.d-sample-account,
 .d-private-label {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   color: var(--d-muted);
   font-size: 12px;
-}
-.d-sample-account {
-  margin-right: 12px;
 }
 .d-button {
   display: inline-flex;
@@ -214,33 +210,6 @@
 }
 .d-wide {
   width: 100%;
-}
-.d-context-strip {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 24px;
-  min-height: 28px;
-  padding: 4px 20px;
-  background: var(--d-bg);
-  border-bottom: 1px solid var(--d-line);
-  font-size: 12px;
-  color: var(--d-muted);
-}
-.d-context-strip b {
-  color: var(--off-white);
-  font-weight: 400;
-}
-.d-context-strip i {
-  display: inline-block;
-  width: 5px;
-  height: 5px;
-  margin-right: 8px;
-  background: var(--d-blue);
-  border-radius: 50%;
-}
-.d-context-demo {
-  margin-left: auto;
 }
 .d-trading-grid {
   display: grid;
@@ -1405,12 +1374,6 @@
     gap: 28px;
     padding-inline: 16px;
   }
-  .d-sample-account {
-    display: none;
-  }
-  .d-context-demo {
-    display: none;
-  }
   .d-market-heading {
     gap: 16px;
     flex-wrap: wrap;
@@ -1437,7 +1400,7 @@
     display: flex;
     flex-direction: column;
   }
-  .d-workspace > :is(header, .d-context-strip, [role="status"]) {
+  .d-workspace > :is(header, [role="status"]) {
     flex-shrink: 0;
   }
   .d-trading-grid {
@@ -1569,14 +1532,6 @@
   }
   .d-header .brand-wordmark {
     width: 68px;
-  }
-  .d-context-strip {
-    padding: 10px 12px;
-    gap: 8px 16px;
-    font-size: 12px;
-  }
-  .d-context-strip > span:first-child {
-    flex-basis: 100%;
   }
   .d-trading-grid {
     grid-template-columns: minmax(0, 1fr);

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { chooseVenue } from "./helpers/venue-select";
 import AxeBuilder from "@axe-core/playwright";
 import { mockMarketData } from "./helpers/market-data";
 import { strategies, type Strategy } from "../src/components/demo/strategies";
@@ -31,7 +32,7 @@ test("venue-first ticket has prominent types, live price shortcuts and a static 
   expect(
     Number(await page.getByLabel("Limit price", { exact: true }).inputValue()),
   ).toBeGreaterThan(bid);
-  await page.getByLabel("Execution venue").selectOption("bulk");
+  await chooseVenue(page, "Execution venue", "bulk");
   await expect(page.getByTestId("manual-chart-source")).toHaveText("BULK");
   const margin = page.locator(".d-margin-context");
   await expect(margin).toHaveText("Cross");
@@ -46,7 +47,7 @@ test("venue-first ticket has prominent types, live price shortcuts and a static 
     "USDC",
   );
   await page.getByLabel("Order size", { exact: true }).fill("306");
-  await page.getByLabel("Execution venue").selectOption("pacifica");
+  await chooseVenue(page, "Execution venue", "pacifica");
   await expect(page.getByLabel("Order size", { exact: true })).toHaveValue(
     "306",
   );
@@ -191,7 +192,7 @@ for (const market of ["SOL", "BTC"]) {
       .fill(market === "SOL" ? "200" : "85000");
     await page.getByLabel("Leverage", { exact: true }).selectOption("5");
     await expect(size).toHaveValue("1000.25");
-    await page.getByLabel("Execution venue").selectOption("bulk");
+    await chooseVenue(page, "Execution venue", "bulk");
     await expect(size).toHaveValue("1000.25");
     await page
       .getByRole("button", { name: "Review buy order", exact: true })

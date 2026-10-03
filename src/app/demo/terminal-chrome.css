@@ -1,0 +1,397 @@
+/* Quiet terminal chrome, using Cinder's existing financial palette. */
+.d-header {
+  gap: 24px;
+}
+.d-header nav button {
+  padding-inline: 12px;
+}
+.d-account-actions {
+  gap: 8px;
+  white-space: nowrap;
+}
+.d-header-balance {
+  display: grid;
+  align-content: center;
+  min-height: 44px;
+  padding: 0 16px 0 0;
+  margin-right: 4px;
+  border-right: 1px solid var(--d-line) !important;
+  color: var(--off-white);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.d-header-balance > span {
+  font-size: 12px;
+  color: var(--d-muted);
+}
+.d-header-balance strong {
+  font-size: 14px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.d-header-balance small {
+  font-size: 12px;
+  color: var(--d-muted);
+  margin-left: 2px;
+}
+.d-account-actions .d-button {
+  min-height: 40px;
+  padding-inline: 12px;
+  font-weight: 500;
+  background: transparent;
+  border: 1px solid var(--d-line);
+}
+.d-account-actions .d-header-deposit {
+  border-color: var(--d-control-line);
+  background: var(--d-raised);
+}
+.demo .d-wallet-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 14px;
+  margin-left: 4px;
+  border: 1px solid var(--cobalt);
+  border-radius: 24px;
+  background: var(--cobalt-tint);
+  color: var(--off-white);
+  cursor: pointer;
+}
+.d-wallet-button > svg:first-child {
+  color: var(--d-blue);
+}
+.d-wallet-button img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+.demo .d-wallet-button[data-connected="true"] {
+  border-color: var(--d-control-line);
+  background: var(--d-raised);
+}
+.d-wallet-note {
+  margin-bottom: 24px;
+  font-size: 13px;
+}
+.d-account-actions .d-dialog {
+  white-space: normal;
+}
+.d-wallet-list {
+  display: grid;
+  gap: 8px;
+}
+.d-wallet-list button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 12px 16px;
+  background: var(--d-raised);
+  color: var(--off-white);
+  border-radius: var(--d-radius);
+  text-align: left;
+  cursor: pointer;
+}
+.d-wallet-list button > span {
+  flex: 1;
+  font-size: 15px;
+}
+.d-wallet-list small {
+  color: var(--d-blue);
+  font-size: 12px;
+}
+.d-wallet-empty {
+  padding: 24px 16px;
+  border: 1px solid var(--d-line);
+  border-radius: var(--d-radius);
+}
+.d-wallet-empty > svg {
+  color: var(--d-blue);
+  margin-bottom: 12px;
+}
+.d-wallet-empty h3 {
+  margin-bottom: 8px;
+}
+.d-wallet-empty > div {
+  display: flex;
+  gap: 24px;
+  margin-top: 16px;
+}
+.d-wallet-empty a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--d-blue);
+  min-height: 40px;
+}
+.d-wallet-session > div:first-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.d-wallet-session > div:first-child > span {
+  margin-left: auto;
+  color: var(--d-positive);
+  font-size: 12px;
+}
+.d-wallet-session code {
+  display: block;
+  padding: 16px;
+  background: var(--d-input);
+  border-radius: var(--d-radius);
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+.d-wallet-session-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+.demo .d-wallet-error {
+  color: var(--d-error);
+  margin-top: 16px;
+}
+
+/* Branded, keyboard-accessible choices without native <option> image quirks. */
+.d-venue-select {
+  position: relative;
+  min-width: 0;
+}
+.demo .d-venue-trigger {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--d-line);
+  border-radius: var(--d-radius);
+  background: var(--d-raised);
+  color: var(--off-white);
+  font-size: 15px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+.d-venue-trigger > span {
+  flex: 1;
+}
+.d-venue-trigger > svg {
+  flex-shrink: 0;
+  color: var(--d-muted);
+}
+.d-venue-icon {
+  flex-shrink: 0;
+  object-fit: contain;
+  border-radius: 4px;
+}
+.d-venue-options {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  inset-inline: 0;
+  min-width: 160px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid var(--d-control-line);
+  border-radius: var(--d-radius);
+  background: var(--d-raised);
+}
+.d-venue-options button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px;
+  border-radius: 4px;
+  color: var(--off-white);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+.d-venue-options button > span {
+  flex: 1;
+}
+.d-venue-options small {
+  display: block;
+  font-size: 12px;
+  color: var(--d-muted);
+}
+.d-venue-options button[data-active="true"] {
+  background: var(--d-control-line);
+}
+.d-venue-options button > svg {
+  color: var(--d-blue);
+}
+.d-venue-select-compact .d-venue-trigger {
+  min-height: 40px;
+  padding: 4px 8px;
+  gap: 6px;
+  background: transparent;
+  border-color: transparent;
+  font-size: 13px;
+}
+.d-venue-select-compact .d-venue-options {
+  left: auto;
+}
+
+/* Pair, leverage and venue share one baseline; health is a small status dot. */
+.d-instrument {
+  gap: 8px;
+  white-space: nowrap;
+}
+.d-asset-icon {
+  flex-shrink: 0;
+  object-fit: contain;
+}
+.d-instrument-line {
+  gap: 8px;
+}
+.demo .d-instrument select {
+  min-height: 40px;
+  padding-right: 24px;
+  background-position: right 2px center;
+  font-size: 20px;
+  letter-spacing: -0.3px;
+}
+.d-leverage-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 2px 6px;
+  font-size: 13px;
+  border: 1px solid var(--d-control-line);
+  background: transparent;
+}
+.d-market-venue {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding-left: 8px;
+  margin-left: 4px;
+  border-left: 1px solid var(--d-line);
+  min-height: 24px;
+}
+.d-ticker-health {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--d-muted);
+}
+.d-ticker-health[data-health="Live"] {
+  background: var(--d-positive);
+}
+.d-ticker-health[data-health="Stale"] {
+  background: var(--d-venue-velocity);
+}
+.d-market[data-live="true"] .d-market-heading {
+  gap: 4px 12px;
+  padding: 8px 12px;
+}
+.d-market[data-live="true"] .d-instrument {
+  grid-column: 1;
+  grid-row: 1;
+}
+.d-market[data-live="true"] .d-chart-source {
+  grid-column: 2;
+  grid-row: 1;
+  padding-left: 0;
+  gap: 4px;
+}
+@container (min-width: 720px) {
+  .d-market[data-live="true"] .d-market-heading {
+    grid-template-columns: 268px minmax(0, 1fr);
+  }
+  .d-market[data-live="true"] .d-chart-source {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .d-market[data-live="true"] .d-live-stats {
+    grid-row: 1;
+  }
+  .d-market[data-live="true"] .d-chart-source + .d-live-stats {
+    grid-row: 1 / 3;
+  }
+}
+@media (hover: hover) {
+  .d-account-actions .d-button:hover,
+  .d-wallet-list button:hover {
+    background: var(--d-input);
+  }
+  .demo .d-wallet-button:hover,
+  .demo .d-venue-trigger:hover {
+    border-color: var(--d-blue);
+  }
+  .d-header-balance:hover strong {
+    color: var(--d-blue);
+  }
+}
+@media (max-width: 1180px) and (min-width: 1001px) {
+  .d-header {
+    padding-inline: 12px;
+    gap: 12px;
+  }
+  .d-header nav {
+    gap: 4px;
+  }
+  .d-header nav button {
+    padding-inline: 8px;
+    gap: 6px;
+  }
+  .d-header-balance {
+    padding-right: 8px;
+    margin-right: 0;
+  }
+}
+@media (max-width: 760px) {
+  .d-header {
+    gap: 8px;
+  }
+  .d-account-actions {
+    width: 100%;
+    margin-left: 0;
+    gap: 6px;
+  }
+  .d-header-balance {
+    padding-right: 8px;
+    margin-right: auto;
+  }
+  .d-header-balance strong {
+    font-size: 13px;
+  }
+  .d-account-actions .d-button {
+    min-height: 44px;
+    padding-inline: 8px;
+    gap: 4px;
+  }
+  .d-account-actions .d-button svg {
+    display: none;
+  }
+  .demo .d-wallet-button {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 8px;
+    margin-left: 0;
+  }
+  .d-wallet-button > span,
+  .d-wallet-button > svg:last-child {
+    display: none;
+  }
+  .d-asset-icon {
+    width: 28px;
+    height: 28px;
+  }
+  .demo .d-instrument select {
+    font-size: 18px;
+  }
+}

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { chooseVenue } from "./helpers/venue-select";
 import AxeBuilder from "@axe-core/playwright";
 import {
   bookMessage,
@@ -213,7 +214,10 @@ test("Standard Phoenix switches markets and intervals with live chart, depth and
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/demo?venue=phoenix");
-  await expect(page.getByLabel("Execution venue")).toHaveValue("phoenix");
+  await expect(page.getByLabel("Execution venue")).toHaveAttribute(
+    "data-value",
+    "phoenix",
+  );
   await expect(page.getByTestId("manual-chart-source")).toHaveText("Phoenix");
   await expect(page.getByTestId("book-status")).toHaveText("Live");
   await expect(page.locator(".d-tv-chart")).toHaveAttribute(
@@ -267,7 +271,7 @@ test("Pro shows three curves, independent Phoenix chart and honest depth limits"
     "3 included venues",
   );
   await page.getByRole("tab", { name: "Price chart", exact: true }).click();
-  await page.getByLabel("Chart source").selectOption("phoenix");
+  await chooseVenue(page, "Chart source", "phoenix");
   await expect(page.locator(".d-tv-chart")).toHaveAttribute(
     "data-chart-key",
     "SOL-phoenix-15m",

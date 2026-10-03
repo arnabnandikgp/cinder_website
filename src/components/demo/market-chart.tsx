@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { CandlestickChart, Info, Minus, Plus, RotateCcw } from "lucide-react";
 import type { IChartApi, ISeriesApi, UTCTimestamp } from "lightweight-charts";
 import { displayBook, precision, type Interval } from "./market-data/adapters";
 import { candleHealth, channelHealth } from "./market-data/feed";
 import type { LiveMarket } from "./market-data/use-market-feed";
 import { MarketStatistics } from "./market-statistics";
+import { VenueIcon, VenueSelect } from "./venue-select";
 import {
   candles,
   markets,
@@ -500,9 +502,14 @@ export function MarketChart({
     >
       <div className="d-market-heading">
         <div className="d-instrument">
-          <span className="d-token" aria-hidden="true">
-            {market === "SOL" ? "S" : "₿"}
-          </span>
+          <Image
+            className="d-asset-icon"
+            src={`/brand/assets/${market.toLowerCase()}.svg`}
+            width={32}
+            height={32}
+            alt=""
+            unoptimized
+          />
           <div>
             <div className="d-instrument-line">
               <label className="d-sr-only" htmlFor="d-market">
@@ -513,9 +520,9 @@ export function MarketChart({
                 value={market}
                 onChange={(e) => onMarket(e.target.value as Market)}
               >
-                {Object.entries(markets).map(([key, item]) => (
+                {Object.keys(markets).map((key) => (
                   <option key={key} value={key}>
-                    {item.symbol}
+                    {key}-USDC
                   </option>
                 ))}
               </select>
@@ -526,8 +533,32 @@ export function MarketChart({
               >
                 {leverage}x
               </span>
+              {!canChooseVenue && (
+                <span
+                  className="d-market-venue"
+                  title={`${venues[venue]}${live ? ` · ${channelHealth(live, "ticker")}` : ""}`}
+                >
+                  <VenueIcon venue={venue} size={20} />
+                  <strong
+                    className="d-sr-only"
+                    data-testid="manual-chart-source"
+                  >
+                    {venues[venue]}
+                  </strong>
+                  {live && (
+                    <span
+                      className="d-ticker-health"
+                      data-testid="ticker-status"
+                      data-health={channelHealth(live, "ticker")}
+                    >
+                      <span className="d-sr-only">
+                        {channelHealth(live, "ticker")}
+                      </span>
+                    </span>
+                  )}
+                </span>
+              )}
             </div>
-            <span>{markets[market].name} perpetual</span>
           </div>
         </div>
         {!live && (
@@ -552,38 +583,28 @@ export function MarketChart({
             </div>
           </>
         )}
-        <div className="d-chart-source">
-          {live && (
-            <span
-              className="d-stat-health"
-              data-testid="ticker-status"
-              data-health={channelHealth(live, "ticker")}
-            >
-              {channelHealth(live, "ticker")}
-            </span>
-          )}
-          {canChooseVenue ? (
-            <>
-              <label htmlFor="d-chart-source">Chart source</label>
-              <select
-                id="d-chart-source"
-                value={venue}
-                onChange={(e) => onVenue(e.target.value as Venue)}
+        {canChooseVenue && (
+          <div className="d-chart-source">
+            {live && (
+              <span
+                className="d-ticker-health"
+                data-testid="ticker-status"
+                data-health={channelHealth(live, "ticker")}
               >
-                {Object.entries(venues).map(([key, name]) => (
-                  <option key={key} value={key}>
-                    {name}
-                  </option>
-                ))}
-              </select>
-            </>
-          ) : (
-            <>
-              <span className="d-chart-source-label">Chart source</span>
-              <strong data-testid="manual-chart-source">{venues[venue]}</strong>
-            </>
-          )}
-        </div>
+                <span className="d-sr-only">
+                  {channelHealth(live, "ticker")}
+                </span>
+              </span>
+            )}
+            <VenueSelect
+              id="d-chart-source"
+              label="Chart source"
+              compact
+              value={venue}
+              onChange={onVenue}
+            />
+          </div>
+        )}
         {live && <MarketStatistics venue={venue} live={live} tick={tick} />}
       </div>
       <div className="d-chart-toolbar">
@@ -631,7 +652,7 @@ export function MarketChart({
             <div className="d-feed-caption">
               <p>
                 {live.connection === "unsupported"
-                  ? "Select Pacifica or BULK for live markets."
+                  ? "Select Pacifica, BULK or Phoenix for live markets."
                   : chartHealth === "Partial candle"
                     ? "Observed trades · first candle incomplete until venue history catches up."
                     : chartHealth === "Delayed candles"

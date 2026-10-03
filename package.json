@@ -13,6 +13,9 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
+    "@wallet-standard/app": "^1.1.1",
+    "@wallet-standard/base": "^1.1.1",
+    "@wallet-standard/features": "^1.1.1",
     "geist": "^1.7.2",
     "lightweight-charts": "^5.2.0",
     "lucide-react": "^0.577.0",
