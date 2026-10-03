@@ -44,8 +44,9 @@ test("Pro compares exact sizes, changes direction and excludes stale venues", as
     true;
   await page.getByLabel("Order size", { exact: true }).fill("10000");
   await expect(page.getByTestId("recommended-venue")).toHaveText("Pacifica");
-  await expect(page.getByTestId("route-row-bulk")).toContainText("Stale book");
+  await expect(page.getByTestId("route-row-bulk")).toContainText("Delayed");
   await expect(page.getByTestId("curve-bulk")).toHaveCount(0);
+  await expect(page.getByTestId("delayed-curve-bulk")).toHaveCount(1);
   await expect(page.locator(".d-route-saving")).toHaveCount(0);
   marketData.sockets.find((s) => s.venue === "bulk" && !s.closed)!.paused =
     false;
@@ -235,8 +236,84 @@ test("out-of-sync books withhold rankings and neither chart nor ticket uses fixt
     "Waiting for aligned books",
   );
   await expect(page.getByTestId("recommended-venue")).toHaveText("No estimate");
-  await expect(page.locator(".d-cost-line")).toHaveCount(0);
+  await expect(page.locator(".d-cost-line:not(.is-delayed)")).toHaveCount(0);
+  await expect(page.locator(".d-plot-caption")).toContainText(
+    "excluded from recommendation",
+  );
   await expect(page.locator(".d-cost-heading")).not.toContainText("NaN");
+});
+
+test("mixed feed cadence and Pacifica source lag do not blank healthy comparisons", async ({
+  page,
+}) => {
+  await page.unrouteAll({ behavior: "wait" });
+  marketData = await mockMarketData(page, {
+    stream: true,
+    phoenix: true,
+    bookCadenceMs: { phoenix: 1500 },
+    sourceLagMs: { pacifica: 1400 },
+  });
+  await page.goto("/demo?mode=auto");
+  await expect(page.getByTestId("comparison-status")).toContainText(
+    "Live books",
+  );
+  // Cover several whole-second boundaries and independently arriving frames.
+  const deadline = Date.now() + 4000;
+  while (Date.now() < deadline) {
+    const state = await page.evaluate(() => ({
+      status: document.querySelector("[data-testid=comparison-status]")
+        ?.textContent,
+      curves: document.querySelectorAll(".d-cost-line:not(.is-delayed)").length,
+      rows: [
+        ...document.querySelectorAll(
+          "[data-testid^=route-row-] strong.d-venue-key",
+        ),
+      ].map((el) => el.textContent),
+    }));
+    expect(state.status).toContain("Live books");
+    expect(state.curves).toBeGreaterThanOrEqual(2);
+    expect(state.rows).toEqual(["Pacifica", "BULK", "Phoenix"]);
+    await page.waitForTimeout(100);
+  }
+});
+
+test("a quiet Phoenix remains visibly delayed without entering recommendations, then expires and recovers", async ({
+  page,
+}) => {
+  await page.unrouteAll({ behavior: "wait" });
+  marketData = await mockMarketData(page, { stream: true, phoenix: true });
+  await page.goto("/demo?mode=auto");
+  await expect(page.getByTestId("comparison-status")).toContainText(
+    "Live books · 3 venues",
+  );
+  const socket = marketData.sockets.find(
+    (s) => s.venue === "phoenix" && !s.closed,
+  )!;
+  socket.paused = true;
+  await expect(page.getByTestId("route-row-phoenix")).toContainText("Delayed", {
+    timeout: 4000,
+  });
+  await expect(page.getByTestId("delayed-curve-phoenix")).toHaveCount(1);
+  await expect(page.getByTestId("comparison-status")).toContainText(
+    "Live books · 2 venues",
+  );
+  await expect(page.getByTestId("route-row-phoenix")).not.toHaveClass(
+    /d-best-row/,
+  );
+  await expect(page.getByTestId("route-row-phoenix")).toContainText("$");
+  await expect(page.getByTestId("delayed-curve-phoenix")).toHaveCount(0, {
+    timeout: 11000,
+  });
+  await expect(page.getByTestId("route-row-phoenix")).toContainText(
+    "Stale book",
+  );
+  await expect(page.getByTestId("curve-pacifica")).toHaveCount(1);
+  await expect(page.getByTestId("curve-bulk")).toHaveCount(1);
+  socket.paused = false;
+  await expect(page.getByTestId("curve-phoenix")).toHaveCount(1);
+  await expect(page.getByTestId("route-row-phoenix")).not.toContainText(
+    "Delayed",
+  );
 });
 
 for (const [width, height] of [

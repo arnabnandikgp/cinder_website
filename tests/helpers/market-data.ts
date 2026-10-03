@@ -96,6 +96,8 @@ export async function mockMarketData(
     failFees?: boolean;
     // Older two-venue scenarios deliberately model Phoenix as unavailable.
     phoenix?: boolean;
+    bookCadenceMs?: Partial<Record<TestVenue, number>>;
+    sourceLagMs?: Partial<Record<TestVenue, number>>;
   } = {},
 ) {
   const sockets: {
@@ -227,14 +229,20 @@ export async function mockMarketData(
           if (!record.paused)
             socket.send(
               JSON.stringify(
-                bookMessage(venue, market, price, Date.now(), deep),
+                bookMessage(
+                  venue,
+                  market,
+                  price,
+                  Date.now() - (options.sourceLagMs?.[venue] ?? 0),
+                  deep,
+                ),
               ),
             );
         };
         send();
         if (options.stream) {
           clearInterval(stream);
-          stream = setInterval(send, 250);
+          stream = setInterval(send, options.bookCadenceMs?.[venue] ?? 250);
         }
       };
       socket.onMessage((raw) => {

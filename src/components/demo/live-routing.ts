@@ -1,6 +1,10 @@
 import { venues } from "./data";
 import type { Book, LiveVenue } from "./market-data/adapters";
-import type { FeedState } from "./market-data/feed";
+import {
+  COMPARISON_HISTORY_MS,
+  type BookObservation,
+  type FeedState,
+} from "./market-data/feed";
 import { FEE_MAX_AGE_MS, type VenueFee } from "./market-data/fees";
 import type {
   Candidate,
@@ -20,6 +24,7 @@ export type Curve = {
   venue: LiveVenue;
   capacity: number;
   points: { notional: number; cost: number }[];
+  delayed?: boolean;
 };
 export type Observation = {
   venue: LiveVenue;
@@ -40,6 +45,10 @@ export type LiveComparisonMeta = {
   observations: Observation[];
   curves: Curve[];
   chartMax: number;
+  // Read-only observations retained for visual continuity. Never candidates
+  // for ranking, savings, route selection or order review.
+  delayedQuotes: Partial<Record<LiveVenue, Quote>>;
+  displayReference: number;
 };
 export type ComparisonFeeds = Record<LiveVenue, FeedState>;
 
@@ -63,7 +72,11 @@ function validBook(book: Book) {
   );
 }
 
-export function bookIssue(feed: FeedState, now: number): string | null {
+export function bookIssue(
+  feed: FeedState,
+  now: number,
+  maxAge = BOOK_MAX_AGE_MS,
+): string | null {
   if (feed.connection === "offline") return "Offline · waiting for connection";
   if (feed.connection === "reconnecting") return "Reconnecting to venue";
   if (feed.connection === "unsupported") return "Live data unavailable";
@@ -77,11 +90,77 @@ export function bookIssue(feed: FeedState, now: number): string | null {
   )
     return "Timestamp ahead of clock";
   if (
-    now - feed.book.time > BOOK_MAX_AGE_MS ||
-    now - feed.bookAt > BOOK_MAX_AGE_MS
+    now - feed.book.time > maxAge + (feed.book.timePrecisionMs ?? 1) - 1 ||
+    now - feed.bookAt > maxAge
   )
     return "Stale book · comparison paused";
   return null;
+}
+
+function validFee(fee: VenueFee | null, now: number): fee is VenueFee {
+  return Boolean(
+    fee &&
+    Number.isFinite(fee.fetchedAt) &&
+    now - fee.fetchedAt <= FEE_MAX_AGE_MS &&
+    fee.fetchedAt <= now + FUTURE_TOLERANCE_MS &&
+    Number.isFinite(fee.takerBps) &&
+    fee.takerBps >= 0 &&
+    fee.takerBps <= 100,
+  );
+}
+
+function compatible(a: BookObservation, b: BookObservation) {
+  // Phoenix stamps whole seconds. Compare the timestamp intervals without
+  // pretending that its source clock has millisecond precision.
+  const sourceGap = Math.max(
+    a.book.time - (b.book.time + (b.book.timePrecisionMs ?? 1) - 1),
+    b.book.time - (a.book.time + (a.book.timePrecisionMs ?? 1) - 1),
+  );
+  return (
+    sourceGap <= BOOK_MAX_SKEW_MS &&
+    Math.abs(a.receivedAt - b.receivedAt) <= BOOK_MAX_SKEW_MS
+  );
+}
+
+// Select the largest pairwise-aligned cohort, then the newest conservative
+// receive watermark. A slower venue must not veto two healthy venues. Looking
+// back a few accepted frames avoids racing three independently arriving feeds.
+export function alignedBooks(
+  options: Partial<Record<LiveVenue, BookObservation[]>>,
+) {
+  let best: Partial<Record<LiveVenue, BookObservation>> = {};
+  let count = 0,
+    watermark = 0,
+    sum = 0;
+  function visit(index: number, chosen: typeof best) {
+    const values = Object.values(chosen) as BookObservation[];
+    if (index === comparisonVenues.length) {
+      const nextWatermark = values.length
+        ? Math.min(...values.map((o) => o.receivedAt))
+        : 0;
+      const nextSum = values.reduce((total, o) => total + o.receivedAt, 0);
+      if (
+        values.length > count ||
+        (values.length === count &&
+          (nextWatermark > watermark ||
+            (nextWatermark === watermark && nextSum > sum)))
+      ) {
+        best = chosen;
+        count = values.length;
+        watermark = nextWatermark;
+        sum = nextSum;
+      }
+      return;
+    }
+    const venue = comparisonVenues[index];
+    for (const observation of options[venue] ?? []) {
+      if (values.every((o) => compatible(o, observation)))
+        visit(index + 1, { ...chosen, [venue]: observation });
+    }
+    visit(index + 1, chosen);
+  }
+  visit(0, {});
+  return best;
 }
 
 export function walkBook(
@@ -142,16 +221,7 @@ export function compareLiveRoutes(
     const feed = feeds[venue];
     const fee = feed.fee ?? null;
     let reason = bookIssue(feed, now);
-    if (
-      !reason &&
-      (!fee ||
-        !Number.isFinite(fee.fetchedAt) ||
-        now - fee.fetchedAt > FEE_MAX_AGE_MS ||
-        fee.fetchedAt > now + FUTURE_TOLERANCE_MS ||
-        !Number.isFinite(fee.takerBps) ||
-        fee.takerBps < 0 ||
-        fee.takerBps > 100)
-    )
+    if (!reason && !validFee(fee, now))
       reason =
         feed.feeError || (fee ? "Fee schedule expired" : "Loading venue fees");
     return {
@@ -168,25 +238,49 @@ export function compareLiveRoutes(
   const fresh = observations.filter(
     (o) => !o.reason && input.allowed.includes(o.venue),
   );
-  const skew = (key: "sourceAt" | "receivedAt") =>
-    fresh.length > 1
-      ? Math.max(...fresh.map((o) => o[key])) -
-        Math.min(...fresh.map((o) => o[key]))
-      : 0;
+  const options = Object.fromEntries(
+    fresh.map((o) => {
+      const feed = feeds[o.venue];
+      const latest = { book: feed.book!, receivedAt: feed.bookAt };
+      const history = (feed.books ?? []).filter(
+        (old) =>
+          old.book !== latest.book &&
+          !bookIssue({ ...feed, book: old.book, bookAt: old.receivedAt }, now),
+      );
+      return [o.venue, [...history.slice(-23), latest].reverse()];
+    }),
+  );
+  let selected = alignedBooks(options);
+  const selectedCount = Object.keys(selected).length;
   const alignmentReason =
-    skew("sourceAt") > BOOK_MAX_SKEW_MS || skew("receivedAt") > BOOK_MAX_SKEW_MS
+    fresh.length > 1 && selectedCount < 2
       ? "Books out of sync · waiting for aligned updates"
       : null;
-  const aligned = fresh.length > 1 && !alignmentReason;
+  if (alignmentReason) selected = {};
+  for (const observation of fresh) {
+    const chosen = selected[observation.venue];
+    if (!chosen)
+      observation.reason = "Books out of sync · waiting for aligned updates";
+    else {
+      observation.sourceAt = chosen.book.time;
+      observation.receivedAt = chosen.receivedAt;
+      observation.sourceTime = chosen.book.sourceTime;
+      observation.bidLevels = chosen.book.bids.length;
+      observation.askLevels = chosen.book.asks.length;
+    }
+  }
+  const comparable = observations.filter(
+    (o) => !o.reason && input.allowed.includes(o.venue),
+  );
+  const aligned = comparable.length > 1;
   // Freeze one reference for this entire calculation. Same quantity on every
   // venue. No fallback to the old fictional market prices on feed failure.
-  const reference =
-    fresh.length && !alignmentReason
-      ? fresh.reduce((sum, o) => {
-          const book = feeds[o.venue].book!;
-          return sum + (book.bids[0].price + book.asks[0].price) / 2;
-        }, 0) / fresh.length
-      : NaN;
+  const reference = comparable.length
+    ? comparable.reduce((sum, o) => {
+        const book = selected[o.venue]!.book;
+        return sum + (book.bids[0].price + book.asks[0].price) / 2;
+      }, 0) / comparable.length
+    : NaN;
   if (input.notional !== undefined) {
     // One USDC exposure becomes the same base quantity for every candidate.
     // Never treat the entered USDC value as SOL/BTC or apply leverage to it.
@@ -210,7 +304,7 @@ export function compareLiveRoutes(
     const quote = !reason
       ? walkBook(
           venue,
-          feeds[venue].book!,
+          selected[venue]!.book,
           input.side,
           input.quantity,
           reference,
@@ -273,12 +367,53 @@ export function compareLiveRoutes(
       : ranked.length === 1
         ? "Only one complete estimate is available. This does not establish a cheaper venue."
         : `Lowest estimated entry cost using visible books and public venue fees. ${venues[ranked[1].venue]} is the next comparable venue.`;
-  const capacities = fresh.map(
-    (o) =>
-      (input.side === "Buy"
-        ? feeds[o.venue].book!.asks
-        : feeds[o.venue].book!.bids
-      ).reduce((sum, l) => sum + l.size, 0) * reference,
+  const displayBooks: Partial<Record<LiveVenue, Book>> = {};
+  for (const o of observations) {
+    if (!input.allowed.includes(o.venue)) continue;
+    if (!o.reason) displayBooks[o.venue] = selected[o.venue]!.book;
+    else if (
+      (o.reason.startsWith("Stale book") ||
+        o.reason.startsWith("Books out of sync")) &&
+      // Relax age ONLY for explicitly delayed, non-actionable presentation.
+      !bookIssue(feeds[o.venue], now, COMPARISON_HISTORY_MS) &&
+      validFee(o.fee, now)
+    )
+      displayBooks[o.venue] = feeds[o.venue].book!;
+  }
+  const displayValues = Object.values(displayBooks) as Book[];
+  const displayReference = Number.isFinite(reference)
+    ? reference
+    : displayValues.length
+      ? displayValues.reduce(
+          (sum, b) => sum + (b.bids[0].price + b.asks[0].price) / 2,
+          0,
+        ) / displayValues.length
+      : NaN;
+  const displayQuantity =
+    input.notional !== undefined
+      ? input.notional / displayReference
+      : input.quantity;
+  const delayedQuotes: LiveComparisonMeta["delayedQuotes"] = {};
+  for (const o of observations) {
+    const book = displayBooks[o.venue];
+    if (book && o.reason) {
+      const quote = walkBook(
+        o.venue,
+        book,
+        input.side,
+        displayQuantity,
+        displayReference,
+        o.fee!.takerBps,
+      );
+      if (quote) delayedQuotes[o.venue] = quote;
+    }
+  }
+  const capacities = Object.values(displayBooks).map(
+    (book) =>
+      (input.side === "Buy" ? book!.asks : book!.bids).reduce(
+        (sum, l) => sum + l.size,
+        0,
+      ) * displayReference,
   );
   const maxCapacity = Math.max(0, ...capacities.filter(Number.isFinite));
   // Keep small books legible instead of drawing a few pixels on a fixed $150k axis.
@@ -293,21 +428,17 @@ export function compareLiveRoutes(
   const chartMax = Math.ceil(targetMax / magnitude / 0.5) * magnitude * 0.5;
   const curves: Curve[] = comparisonVenues.map((venue) => {
     const observation = observations.find((o) => o.venue === venue)!;
-    if (
-      observation.reason ||
-      alignmentReason ||
-      !input.allowed.includes(venue) ||
-      !Number.isFinite(reference)
-    )
+    if (!displayBooks[venue] || !Number.isFinite(displayReference))
       return { venue, capacity: 0, points: [] };
-    const book = feeds[venue].book!;
+    const book = displayBooks[venue]!;
     const levels = input.side === "Buy" ? book.asks : book.bids;
-    const capacity = levels.reduce((sum, l) => sum + l.size, 0) * reference;
+    const capacity =
+      levels.reduce((sum, l) => sum + l.size, 0) * displayReference;
     const end = Math.min(capacity, chartMax);
     const sizes = [
       ...Array.from({ length: 121 }, (_, i) => Math.max(1e-8, (end * i) / 120)),
       end,
-      input.quantity * reference,
+      displayQuantity * displayReference,
     ];
     const points = [
       ...new Set(sizes.filter((n) => Number.isFinite(n) && n > 0 && n <= end)),
@@ -318,13 +449,13 @@ export function compareLiveRoutes(
           venue,
           book,
           input.side,
-          notional / reference,
-          reference,
+          notional / displayReference,
+          displayReference,
           observation.fee!.takerBps,
         );
         return q ? [{ notional, cost: q.costBps }] : [];
       });
-    return { venue, capacity, points };
+    return { venue, capacity, points, delayed: Boolean(observation.reason) };
   });
   return {
     input,
@@ -335,7 +466,9 @@ export function compareLiveRoutes(
     savings,
     explanation,
     live: {
-      asOf: fresh.length ? Math.min(...fresh.map((o) => o.sourceAt)) : 0,
+      asOf: comparable.length
+        ? Math.min(...comparable.map((o) => o.sourceAt))
+        : 0,
       now,
       aligned,
       alignmentReason,
@@ -343,6 +476,8 @@ export function compareLiveRoutes(
       observations,
       curves,
       chartMax,
+      delayedQuotes,
+      displayReference,
     },
   };
 }

@@ -23,6 +23,8 @@ export type Book = {
   asks: Level[];
   time: number;
   sourceTime?: string;
+  // Resolution of the source clock, not extra network-latency allowance.
+  timePrecisionMs?: 1000;
   // Phoenix source time has one-second precision; slots order its snapshots.
   slot?: number;
 };
@@ -306,7 +308,7 @@ export function parseBook(venue: LiveVenue, value: unknown): Book | null {
     asks,
     time,
     sourceTime: String(venue === "pacifica" ? x.t : x.timestamp),
-    ...(venue === "phoenix" ? { slot } : {}),
+    ...(venue === "phoenix" ? { slot, timePrecisionMs: 1000 as const } : {}),
   };
 }
 export function parseTicker(

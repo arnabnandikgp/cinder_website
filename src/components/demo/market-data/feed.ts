@@ -22,6 +22,8 @@ import {
   type Ticker,
 } from "./adapters";
 
+export type BookObservation = { book: Book; receivedAt: number };
+export const COMPARISON_HISTORY_MS = 10000;
 export type FeedState = {
   connection:
     "connecting" | "connected" | "reconnecting" | "offline" | "unsupported";
@@ -32,6 +34,9 @@ export type FeedState = {
   history: "loading" | "ready" | "error";
   historyError: string;
   bookAt: number;
+  // Bounded, accepted observations for cross-feed alignment. Chart feeds do
+  // not retain depth history. Reconnects always start a new observation window.
+  books?: BookObservation[];
   tickerAt: number;
   candleAt: number;
   now: number;
@@ -113,6 +118,7 @@ export class MarketFeed {
       history: "loading",
       historyError: "",
       bookAt: 0,
+      books: [],
       tickerAt: 0,
       candleAt: 0,
       now: 0,
@@ -235,6 +241,7 @@ export class MarketFeed {
     this.publish({
       connection: this.openedAt ? "reconnecting" : "connecting",
       bookAt: 0,
+      books: [],
       tickerAt: 0,
       candleAt: 0,
     });
@@ -499,7 +506,16 @@ export class MarketFeed {
       ) {
         this.receivedAt = now;
         if (now - book.time < 10000) this.failures = 0;
-        this.publish({ book, bookAt: now });
+        const books =
+          this.purpose === "comparison"
+            ? [
+                ...(this.state.books ?? []).filter(
+                  (o) => now - o.receivedAt <= COMPARISON_HISTORY_MS,
+                ),
+                { book, receivedAt: now },
+              ].slice(-128)
+            : [];
+        this.publish({ book, bookAt: now, books });
       }
     }
     const tickerValue =

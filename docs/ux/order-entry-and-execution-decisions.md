@@ -1,6 +1,6 @@
 # Cinder order entry and execution decisions
 
-Updated 3 October 2026. For the founder, frontend developer and backend implementation owner.
+Updated 4 October 2026. For the founder, frontend developer and backend implementation owner.
 
 This document records the direction for Cinder's Standard and Pro trading experiences, the advanced strategy previews implemented locally in `/demo`, and the execution requirements that must be resolved before those controls can place real orders. It is a product and engineering handoff, not a claim of implemented trading capabilities or deployment status.
 
@@ -34,7 +34,30 @@ The local working tree has a Standard venue chart and order book backed by publi
 - Market stats expose mark, oracle, funding, 24h change and USD volume. Raw market frames have no source timestamp; receipt time is used for ticker display health only, never as evidence of Pro book freshness. Funding stays venue-labelled with no inferred hourly conversion and is excluded from entry-cost estimates.
 - Metadata is cached per market. Native `tickSize` is quote lots per base lot, not dollars. USDC quote lots use six decimals; SOL's observed `tickSize=100`, `baseLotsDecimals=2` means a $0.01 increment, while BTC's four base decimals mean $1. Limits remain illustrative in the ticket, not approved production risk controls.
 - Fee metadata comes from `/v1/view/exchange/market/{symbol}`. Observed `takerFee=0.00035` is a fraction (3.5 bps), despite the generated endpoint docs' percentage label. Read the active market's public fee; missing, expired, inactive or mismatched metadata cannot become zero fees. No pooled-volume or referral discount is assumed.
-- Phoenix joins Pacifica and BULK in route preferences, the same-quantity comparison, cost curves and saved receipts. Source/receipt freshness and skew gates remain conservative; Phoenix's second-resolution source clock can cause temporary alignment gaps. Do not relabel these estimates executable quotes. Public data integration does not implement brokerage, collateral movement, venue order placement or account-state syncing.
+- Phoenix joins Pacifica and BULK in route preferences, the same-quantity comparison, cost curves and saved receipts. Source/receipt freshness and skew gates use the comparison policy below. Do not relabel these estimates executable quotes. Public data integration does not implement brokerage, collateral movement, venue order placement or account-state syncing.
+
+### Pro comparison continuity and freshness
+
+The live diagnostic on 4 October reproduced global blanking in 70 of 191 post-warm-up samples: latest-only source/receipt skew invalidated every venue. Pacifica/BULK delivered books approximately every 200–250ms, Pacifica source age occasionally reached 1.4s, and Phoenix delivered less frequently, with an observed gap above 5s. These are observations from one short session, not service-level guarantees.
+
+A follow-up live session after this change had no fully blank plots in 194 post-warm-up samples: 132 had three fresh curves, 60 had two, and two had one. Delayed observations remained labelled and excluded. Genuine feed interruptions can still limit or halt recommendations; preserving the plot does not remove that constraint.
+
+- Comparison feeds retain accepted L2 observations in memory, bounded to 128 frames and 10 seconds per feed. Chart feeds do not retain depth history. Reconnection clears the window.
+- Ranking uses the largest pairwise-aligned cohort of fresh observations, breaking coverage ties by the newest minimum receive timestamp. It can select a slightly older accepted frame instead of racing independently arriving latest frames. A third venue outside that cohort cannot veto an aligned pair.
+- Fresh ranking still requires receipt age at most 2s and source/receipt alignment within 1s. Whole-second Phoenix source timestamps represent a one-second interval, not millisecond precision: source age permits that quantization, while receipt age remains capped at 2s. Every selected book, timestamp and fee is validated. Source/receipt ages in the expanded methodology refer to the actual selected snapshots.
+- Delayed or unaligned observations may remain in the chart/table for at most 10s since receipt, with a dashed curve and an explicit delayed label. Their costs are recomputed for the same displayed quantity/reference, but they **never enter rankings, savings, route recommendations or review**. The reference can be labelled last-observed when no current cohort exists; the actionable reference remains unavailable. Offline/reconnecting feeds, invalid books/timestamps, missing/expired fees and excluded venues cannot get a delayed display fallback.
+- Venue row order is stable. Curve visibility remains presentation-only. No fictional prices, added depth, order execution, automatic collateral movement or guarantees are introduced.
+- Order review recalculates against current feed states and wall-clock time; a displayed observation is not authority to submit an order. Production must repeat validation server-side against destination state and enforce the customer's actual price bound.
+
+### Customer slippage control
+
+Slippage is adverse fill-price movement relative to an explicitly identified decision/reference price. Estimated average slippage and the worst permitted fill price are distinct; fees are separate. A 0.5% price tolerance at a $120 reference gives a maximum buy price of $120.60 or minimum sell price of $119.40 before fees. It is a price guard, not a promise that the order fills.
+
+The demo's Standard maximum-slippage and Pro price-tolerance fields are local preview controls, not live venue enforcement. Production should expose one consistent maximum-slippage control, show its derived price bound, record the reference, expiry and customer intent, and preserve that bound across route selection. Round buy caps down and sell floors up to permissible venue ticks. Never silently widen tolerance or rebase an authorized order to a new price.
+
+Pacifica accepts `slippage_percent` as a decimal percentage string (`"0.5"`); BULK's market action accepts optional `slippage` in basis points (`50` = 0.5%, absent uses the market default); Phoenix Rise builds a market IOC packet with `priceLimitUsd` and minimum-fill controls. Native reference-price conventions and partial-fill behaviour need integration tests; sending the same percentage blindly is not proof of a common customer price bound. Where appropriate, use an explicit price-limited IOC rather than relying on a venue's default market-order protection.
+
+References: [Pacifica market-order request](https://docs.pacifica.fi/api-documentation/api/websocket/trading-operations/create-market-order), [BULK official action schema](https://docs.bulk.trade/api-reference/openapi.yaml), [BULK time-in-force](https://docs.bulk.trade/bulk-exchange/Order-Types), [Phoenix Rise order-packet builder](https://github.com/Ellipsis-Labs/rise-public/blob/master/ts/src/orderPackets.ts). This records backend requirements; it does not add order submission to the demo.
 
 References: [Rise SDK](https://github.com/Ellipsis-Labs/rise-public), [exchange feeds](https://docs.phoenix.trade/sdk/markets), [candles](https://docs.phoenix.trade/api/exchange/get-candles), [spline liquidity](https://docs.phoenix.trade/phoenix/matching-engine/spline-liquidity), [fees](https://docs.phoenix.trade/phoenix/matching-engine/fees). Regression coverage: `tests/phoenix.spec.ts`, alongside existing feed and routing suites.
 

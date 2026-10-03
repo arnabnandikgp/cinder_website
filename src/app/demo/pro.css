@@ -179,11 +179,14 @@ button.d-venue-key {
   stroke-width: 2;
   vector-effect: non-scaling-stroke;
 }
-.d-cost-line.d-venue-bulk {
-  stroke-dasharray: 7 3;
+.d-cost-line.is-delayed {
+  stroke-dasharray: 3 5;
+  stroke-opacity: 0.6;
 }
-.d-cost-line.d-venue-velocity {
-  stroke-dasharray: 2 3;
+.d-delayed-label,
+.d-delayed-row td:not(:first-child),
+.d-delayed-row td:last-child strong {
+  color: var(--d-muted);
 }
 .d-order-marker {
   stroke: var(--off-white);

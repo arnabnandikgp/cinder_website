@@ -4,6 +4,7 @@ import {
   walkBook,
   BOOK_MAX_AGE_MS,
   BOOK_MAX_SKEW_MS,
+  alignedBooks,
   type ComparisonFeeds,
 } from "../src/components/demo/live-routing";
 import { MarketFeed } from "../src/components/demo/market-data/feed";
@@ -252,14 +253,14 @@ test("stale receipt/source, future times, malformed books and missing/expired fe
     const result = compareLiveRoutes(input, f, now);
     expect(result.ranked).toHaveLength(1);
     expect(result.savings).toBeNull();
-    expect(result.live!.curves.find((c) => c.venue === "bulk")!.points).toEqual(
-      [],
-    );
+    const curve = result.live!.curves.find((c) => c.venue === "bulk")!;
+    // Delayed data can be visibly retained, never ranked as current.
+    expect(curve.points.length === 0 || curve.delayed).toBeTruthy();
     expect(result.explanation).toContain("does not establish a cheaper venue");
   }
 });
 
-test("source or receipt skew withholds both estimates, curves and the reference", () => {
+test("unaligned books withhold rankings and only retain labelled, non-actionable observations", () => {
   for (const key of ["source", "receipt"]) {
     const f = feeds();
     if (key === "source") f.bulk.book!.time -= BOOK_MAX_SKEW_MS + 1;
@@ -268,8 +269,145 @@ test("source or receipt skew withholds both estimates, curves and the reference"
     expect(result.best).toBeNull();
     expect(Number.isNaN(result.reference)).toBe(true);
     expect(result.live?.alignmentReason).toContain("out of sync");
-    expect(result.live!.curves.every((c) => !c.points.length)).toBe(true);
+    expect(
+      result.live!.curves.every((c) => !c.points.length || c.delayed),
+    ).toBe(true);
+    expect(result.live?.delayedQuotes.bulk).toBeDefined();
+    expect(result.savings).toBeNull();
   }
+});
+
+test("a delayed third venue cannot veto an aligned pair", () => {
+  const f = feeds();
+  f.phoenix.book!.time -= 1500;
+  f.phoenix.bookAt -= 1500;
+  const result = compareLiveRoutes(
+    { ...input, allowed: ["pacifica", "bulk", "phoenix"] },
+    f,
+    now,
+  );
+  expect(result.ranked.map((q) => q.venue).sort()).toEqual([
+    "bulk",
+    "pacifica",
+  ]);
+  expect(result.live?.aligned).toBe(true);
+  expect(result.reference).toBe(86010);
+  expect(
+    result.candidates.find((c) => c.venue === "phoenix")?.quote,
+  ).toBeNull();
+  expect(result.live?.delayedQuotes.phoenix).toBeDefined();
+  expect(result.live?.curves.find((c) => c.venue === "phoenix")?.delayed).toBe(
+    true,
+  );
+});
+
+test("accepted history aligns independently arriving feeds without using stale frames", () => {
+  const f = feeds();
+  f.pacifica.book!.time -= 1400;
+  const old = book(86020);
+  old.time -= 500;
+  f.bulk.books = [{ book: old, receivedAt: now - 500 }];
+  const result = compareLiveRoutes(input, f, now);
+  expect(result.ranked).toHaveLength(2);
+  expect(
+    result.live?.observations.find((o) => o.venue === "bulk")?.sourceAt,
+  ).toBe(now - 500);
+  expect(
+    result.live?.observations.find((o) => o.venue === "bulk")?.receivedAt,
+  ).toBe(now - 500);
+  old.time = now - BOOK_MAX_AGE_MS - 1;
+  expect(compareLiveRoutes(input, f, now).best).toBeNull();
+  old.time = now - 500;
+  f.bulk.connection = "reconnecting";
+  expect(compareLiveRoutes(input, f, now).ranked.map((q) => q.venue)).toEqual([
+    "pacifica",
+  ]);
+});
+
+test("cohort selection maximizes venue coverage then the conservative receive watermark", () => {
+  const earlier = (offset: number) => ({
+    book: { ...book(), time: now + offset },
+    receivedAt: now + offset,
+  });
+  const result = alignedBooks({
+    pacifica: [earlier(0), earlier(-500)],
+    bulk: [earlier(-1100), earlier(-1500)],
+    phoenix: [earlier(-1400)],
+  });
+  expect(Object.keys(result)).toHaveLength(3);
+  expect(result.pacifica?.receivedAt).toBe(now - 500);
+  expect(result.bulk?.receivedAt).toBe(now - 1100);
+  expect(result.phoenix?.receivedAt).toBe(now - 1400);
+});
+
+test("whole-second Phoenix timestamps are intervals, not millisecond-precise clock failures", () => {
+  const f = feeds();
+  f.phoenix.book!.time = now - 1700;
+  f.phoenix.book!.timePrecisionMs = 1000;
+  const result = compareLiveRoutes(
+    { ...input, allowed: ["pacifica", "bulk", "phoenix"] },
+    f,
+    now,
+  );
+  expect(result.ranked).toHaveLength(3);
+  expect(result.live?.curves.every((c) => !c.delayed)).toBe(true);
+  f.phoenix.bookAt = now - BOOK_MAX_AGE_MS - 1;
+  expect(
+    compareLiveRoutes(result.input, f, now).ranked.map((q) => q.venue),
+  ).not.toContain("phoenix");
+});
+
+test("delayed presentation expires and never bypasses bad books, fees, exclusions or connections", () => {
+  for (const side of ["Buy", "Sell"] as const) {
+    const f = feeds();
+    const request = { ...input, side, notional: 1000 };
+    const delayed = compareLiveRoutes(request, f, now + 3000);
+    expect(delayed.best).toBeNull();
+    expect(delayed.ranked).toEqual([]);
+    expect(delayed.reference).toBeNaN();
+    expect(
+      delayed.live?.curves.every((c) => c.points.length === 0 || c.delayed),
+    ).toBe(true);
+    expect(delayed.live?.delayedQuotes.bulk?.quantity).toBe(
+      delayed.live?.delayedQuotes.pacifica?.quantity,
+    );
+    const expired = compareLiveRoutes(request, f, now + 10001);
+    expect(expired.live?.curves.every((c) => !c.points.length)).toBe(true);
+    expect(expired.live?.delayedQuotes).toEqual({});
+  }
+  for (const change of [
+    (f: ComparisonFeeds) => {
+      f.bulk.connection = "offline";
+    },
+    (f: ComparisonFeeds) => {
+      f.bulk.book!.time = now + 6000;
+    },
+    (f: ComparisonFeeds) => {
+      f.bulk.book!.asks[0].size = -1;
+    },
+    (f: ComparisonFeeds) => {
+      f.bulk.fee = null;
+    },
+    (f: ComparisonFeeds) => {
+      f.bulk.fee!.takerBps = -1;
+    },
+    (f: ComparisonFeeds) => {
+      f.bulk.fee!.fetchedAt = now + 10000;
+    },
+    (f: ComparisonFeeds) => {
+      f.bulk.fee!.fetchedAt = now - FEE_MAX_AGE_MS;
+    },
+  ]) {
+    const f = feeds();
+    change(f);
+    expect(
+      compareLiveRoutes(input, f, now + 3000).live?.delayedQuotes.bulk,
+    ).toBeUndefined();
+  }
+  expect(
+    compareLiveRoutes({ ...input, allowed: ["pacifica"] }, feeds(), now + 3000)
+      .live?.delayedQuotes.bulk,
+  ).toBeUndefined();
 });
 
 test("partial visible depth is not a liquidity judgement or a savings claim", () => {

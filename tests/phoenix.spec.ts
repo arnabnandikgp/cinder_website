@@ -283,10 +283,9 @@ test("Pro shows three curves, independent Phoenix chart and honest depth limits"
   );
   await page.getByLabel("Order size", { exact: true }).fill("10000");
   data.sockets.find((s) => s.venue === "phoenix" && !s.closed)!.paused = true;
-  await expect(page.getByTestId("route-row-phoenix")).toContainText(
-    "Stale book",
-  );
+  await expect(page.getByTestId("route-row-phoenix")).toContainText("Delayed");
   await expect(page.getByTestId("curve-phoenix")).toHaveCount(0);
+  await expect(page.getByTestId("delayed-curve-phoenix")).toHaveCount(1);
   await expect(page.getByTestId("comparison-status")).toHaveText(
     /Live books · 2 venues/,
   );

@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { ArrowUpRight, Layers3 } from "lucide-react";
 import { Tabs } from "./controls";
 import { MarketChart } from "./market-chart";
+import { COMPARISON_HISTORY_MS } from "./market-data/feed";
 import {
   markets,
   number,
@@ -20,7 +21,7 @@ import {
   BOOK_MAX_SKEW_MS,
 } from "./live-routing";
 import type { LiveMarket } from "./market-data/use-market-feed";
-import type { Interval } from "./market-data/adapters";
+import type { Interval, LiveVenue } from "./market-data/adapters";
 
 export function CostChart({ comparison }: { comparison: RouteComparison }) {
   const id = useId();
@@ -82,6 +83,9 @@ export function CostChart({ comparison }: { comparison: RouteComparison }) {
             }
           >
             <i aria-hidden="true" /> {venues[venue]}
+            {series.find((s) => s.venue === venue)?.delayed && (
+              <span className="d-delayed-label"> · delayed</span>
+            )}
           </button>
         ))}
       </div>
@@ -94,10 +98,12 @@ export function CostChart({ comparison }: { comparison: RouteComparison }) {
       >
         <title id={`${id}-title`}>Estimated entry cost versus order size</title>
         <desc id={`${id}-desc`}>
-          Estimated {input.side.toLowerCase()} entry costs using live visible
-          books and public venue fees. Cinder pricing is excluded. The table
-          contains estimates for your order. Lower is better. Curves end at
-          observed depth and do not establish full venue liquidity.
+          Estimated {input.side.toLowerCase()} entry costs using observed
+          visible books and public venue fees. Solid curves are fresh; dashed
+          curves are delayed or unaligned and excluded from recommendations.
+          Cinder pricing is excluded. The table contains estimates for your
+          order. Lower is better. Curves end at observed depth and do not
+          establish full venue liquidity.
         </desc>
         {Array.from({ length: 5 }, (_, i) => {
           const cost = min + ((max - min) * i) / 4;
@@ -141,8 +147,8 @@ export function CostChart({ comparison }: { comparison: RouteComparison }) {
           .map((s) => (
             <path
               key={s.venue}
-              className={`d-cost-line d-venue-${s.venue}`}
-              data-testid={`curve-${s.venue}`}
+              className={`d-cost-line d-venue-${s.venue}${s.delayed ? " is-delayed" : ""}`}
+              data-testid={`${s.delayed ? "delayed-curve" : "curve"}-${s.venue}`}
               d={s.points
                 .map(
                   (p, i) =>
@@ -191,7 +197,9 @@ export function CostChart({ comparison }: { comparison: RouteComparison }) {
       <div className="d-plot-caption">
         <span>
           {values.length
-            ? "Lower is better · visible depth only"
+            ? series.some((s) => s.delayed && s.points.length)
+              ? "Dashed = excluded from recommendation"
+              : "Lower is better · visible depth only"
             : "No fresh comparison available"}
         </span>
         <span>
@@ -209,11 +217,8 @@ export function VenueComparison({
 }: {
   comparison: RouteComparison;
 }) {
-  const sorted = [...comparison.candidates].sort(
-    (a, b) =>
-      Number(Boolean(a.reason)) - Number(Boolean(b.reason)) ||
-      (a.quote?.totalCost ?? Infinity) - (b.quote?.totalCost ?? Infinity),
-  );
+  // Stable venue order: live ticks should update values, not move rows around.
+  const sorted = comparison.candidates;
   return (
     <div
       id="d-route-comparison"
@@ -225,7 +230,8 @@ export function VenueComparison({
       <table>
         <caption className="d-sr-only">
           Estimated prices for the same order quantity, using public venue taker
-          fees. Cinder fees are not yet included.
+          fees. Delayed or unaligned rows are excluded from recommendations.
+          Cinder fees are not yet included.
         </caption>
         <thead>
           <tr>
@@ -236,66 +242,80 @@ export function VenueComparison({
           </tr>
         </thead>
         <tbody>
-          {sorted.map(({ venue, quote, reason }) => (
-            <tr
-              key={venue}
-              data-testid={`route-row-${venue}`}
-              className={
-                comparison.best?.venue === venue &&
-                comparison.ranked.length > 1 &&
-                !comparison.live?.tied
-                  ? "d-best-row"
-                  : undefined
-              }
-            >
-              <td>
-                <strong className={`d-venue-key d-venue-${venue}`}>
-                  <i aria-hidden="true" />
-                  {venues[venue]}
-                </strong>
-                <span className="d-cell-sub">
-                  {reason ??
-                    (comparison.live?.tied
-                      ? "Similar estimate"
-                      : comparison.ranked.length === 1
-                        ? "Only complete estimate"
-                        : comparison.best?.venue === venue
-                          ? "Lowest estimate"
-                          : "Comparable")}
-                </span>
-              </td>
-              <td>{quote && !reason ? money(quote.averageFill) : "—"}</td>
-              <td>
-                {quote && !reason ? (
-                  <>
-                    <span>{money(quote.venueFee)}</span>
-                    <span className="d-cell-sub">
-                      {number(
-                        comparison.live?.observations.find(
-                          (o) => o.venue === venue,
-                        )?.fee?.takerBps ?? NaN,
-                      )}{" "}
-                      bps
-                    </span>
-                  </>
-                ) : (
-                  "—"
-                )}
-              </td>
-              <td>
-                {quote && !reason ? (
-                  <>
-                    <strong>{money(quote.effectivePrice)}</strong>
-                    <span className="d-cell-sub">
-                      {inputDirection(comparison)} fee
-                    </span>
-                  </>
-                ) : (
-                  "—"
-                )}
-              </td>
-            </tr>
-          ))}
+          {sorted.map(({ venue, quote, reason }) => {
+            const retained = comparison.live?.delayedQuotes[venue as LiveVenue];
+            const displayQuote = !reason ? quote : retained;
+            const delayed = Boolean(retained);
+            const observation = comparison.live?.observations.find(
+              (o) => o.venue === venue,
+            );
+            return (
+              <tr
+                key={venue}
+                data-testid={`route-row-${venue}`}
+                className={
+                  comparison.best?.venue === venue &&
+                  comparison.ranked.length > 1 &&
+                  !comparison.live?.tied
+                    ? "d-best-row"
+                    : delayed
+                      ? "d-delayed-row"
+                      : undefined
+                }
+              >
+                <td>
+                  <strong className={`d-venue-key d-venue-${venue}`}>
+                    <i aria-hidden="true" />
+                    {venues[venue]}
+                  </strong>
+                  <span className="d-cell-sub">
+                    {delayed
+                      ? observation!.reason?.startsWith("Books out of sync")
+                        ? "Unaligned · not compared"
+                        : `Delayed · ${((comparison.live!.now - observation!.receivedAt) / 1000).toFixed(1)}s since update`
+                      : (reason ??
+                        (comparison.live?.tied
+                          ? "Similar estimate"
+                          : comparison.ranked.length === 1
+                            ? "Only complete estimate"
+                            : comparison.best?.venue === venue
+                              ? "Lowest estimate"
+                              : "Comparable"))}
+                  </span>
+                </td>
+                <td>{displayQuote ? money(displayQuote.averageFill) : "—"}</td>
+                <td>
+                  {displayQuote ? (
+                    <>
+                      <span>{money(displayQuote.venueFee)}</span>
+                      <span className="d-cell-sub">
+                        {number(
+                          comparison.live?.observations.find(
+                            (o) => o.venue === venue,
+                          )?.fee?.takerBps ?? NaN,
+                        )}{" "}
+                        bps
+                      </span>
+                    </>
+                  ) : (
+                    "—"
+                  )}
+                </td>
+                <td>
+                  {displayQuote ? (
+                    <>
+                      <strong>{money(displayQuote.effectivePrice)}</strong>
+                      <span className="d-cell-sub">
+                        {inputDirection(comparison)} fee
+                      </span>
+                    </>
+                  ) : (
+                    "—"
+                  )}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -403,7 +423,11 @@ export function ProWorkspace({
                     ? usdcSize(input.notional!)
                     : "Enter order size"}
                 </h2>
-                <p>Notional exposure · ref. {money(reference)}</p>
+                <p>
+                  Notional exposure ·{" "}
+                  {Number.isFinite(reference) ? "ref." : "last observed ref."}{" "}
+                  {money(comparison.live?.displayReference ?? reference)}
+                </p>
               </div>
               <div
                 className="d-size-presets"
@@ -464,11 +488,16 @@ export function ProWorkspace({
                 similar, not as a measured confidence interval.
               </p>
               <p>
-                Books must be no more than {BOOK_MAX_AGE_MS / 1000}s old and at
-                most {BOOK_MAX_SKEW_MS / 1000}s apart. These are preview checks,
-                not executable quotes. Native sizing, actual collateral and
-                venue risk limits still require backend validation. New-position
-                estimates do not move or close existing positions.
+                Ranked books must be received within {BOOK_MAX_AGE_MS / 1000}s
+                and aligned within {BOOK_MAX_SKEW_MS / 1000}s, allowing for
+                Phoenix’s whole-second source timestamps. Recent accepted
+                snapshots are aligned instead of comparing only the latest
+                independently arriving frames. Delayed observations may remain
+                visible, dashed, for up to {COMPARISON_HISTORY_MS / 1000}s; they
+                never enter rankings, savings or order review. These are preview
+                checks, not executable quotes. Native sizing, actual collateral
+                and venue risk limits still require backend validation.
+                New-position estimates do not move or close existing positions.
               </p>
               <ul>
                 {comparison.live?.observations.map((o) => (
