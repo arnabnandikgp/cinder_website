@@ -3,7 +3,7 @@ import {
   COMPARISON_HISTORY_MS,
   type BookObservation,
 } from "./market-data/feed";
-import type { VenueFee } from "./market-data/fees";
+import { feeBasisKey, type VenueFee } from "./market-data/fees";
 import type { Quote, RouteComparison, RouteInput } from "./routing";
 import {
   bookIssue,
@@ -30,6 +30,7 @@ export type AnalysisRow = {
   dollars: number | null;
   reason: string | null;
   delayed: boolean;
+  fee?: VenueFee | null;
 };
 // Intentionally not a RouteComparison/Quote: an average is not routable.
 export type AnalysisFrame = {
@@ -80,6 +81,9 @@ export function liveAnalysis(comparison: RouteComparison): AnalysisFrame {
         dollars: quote?.totalCost ?? null,
         reason: candidate.reason,
         delayed: Boolean(delayed),
+        fee:
+          comparison.live?.observations.find((o) => o.venue === venue)?.fee ??
+          null,
       };
     }),
     curves: comparison.live?.curves ?? [],
@@ -135,7 +139,7 @@ export class ComparisonWindow {
           ? NaN
           : comparison.input.quantity,
     };
-    const context = analysisContext(input);
+    const context = `${analysisContext(input)}:${JSON.stringify(comparison.live?.observations.map((o) => [o.venue, feeBasisKey(o.fee)]))}`;
     if (context !== this.context) {
       this.samples = [];
       this.startedAt = null;
@@ -226,6 +230,9 @@ export class ComparisonWindow {
               ? "Insufficient shared coverage"
               : "Collecting 5s average"),
         delayed: false,
+        fee:
+          current.live?.observations.find((o) => o.venue === venue)?.fee ??
+          null,
       };
     });
     const capacities = Object.fromEntries(
@@ -327,12 +334,19 @@ export function guardAnalysis(
     // while the current feed remains healthy. A suspended publisher does expire.
     const publicationExpired =
       now - frame.publishedAt > PUBLICATION_MS + SAMPLE_MS;
+    const currentFee = current.live?.observations.find(
+      (o) => o.venue === row.venue,
+    )?.fee;
+    const feeChanged =
+      row.fee !== undefined && feeBasisKey(row.fee) !== feeBasisKey(currentFee);
     const reason =
       candidate.reason ??
-      (publicationExpired
-        ? ((frozenFeed ? bookIssue(frozenFeed, now) : null) ??
-          "Analysis paused · awaiting refresh")
-        : null);
+      (feeChanged
+        ? "Fee basis changed · awaiting refresh"
+        : publicationExpired
+          ? ((frozenFeed ? bookIssue(frozenFeed, now) : null) ??
+            "Analysis paused · awaiting refresh")
+          : null);
     if (!reason) return row;
     const retain =
       frame.mode === "live" &&
@@ -370,11 +384,13 @@ export function guardAnalysis(
         );
         const dataIssue = !frame.input.allowed.includes(curve.venue)
           ? "Excluded"
-          : observation?.reason;
+          : (observation?.reason ??
+            (row.reason?.startsWith("Fee basis changed") ? row.reason : null));
         const captured = frame.capturedBooks?.[curve.venue];
         const expired = now - frame.publishedAt > PUBLICATION_MS + SAMPLE_MS;
         if (!dataIssue && !expired) return curve;
         const retain =
+          !row.reason?.startsWith("Fee basis changed") &&
           (dataIssue?.startsWith("Stale book") ||
             dataIssue?.startsWith("Books out of sync") ||
             expired) &&

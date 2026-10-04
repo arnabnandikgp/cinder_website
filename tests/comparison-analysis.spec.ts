@@ -217,6 +217,48 @@ test("new size, side, market, preferences or risk intent reset temporal history"
   }
 });
 
+test("unchanged fee polls preserve averages, while a rate change resets the window", () => {
+  const window = new ComparisonWindow();
+  fill(window);
+  let t = start + 5250;
+  const f = feeds(t);
+  f.pacifica.fee = { ...f.pacifica.fee!, fetchedAt: t };
+  let current = compare(t, f);
+  window.capture(current, t);
+  expect(window.average(current, t).ready).toBe(true);
+  t += 250;
+  const next = feeds(t);
+  next.pacifica.fee = { ...next.pacifica.fee!, takerBps: 2.8 };
+  current = compare(t, next);
+  window.capture(current, t);
+  expect(window.average(current, t).ready).toBe(false);
+  expect(window.average(current, t).rows.every((r) => !r.costs)).toBe(true);
+});
+
+test("a changed fee clears old live and averaged costs and curves before publication", () => {
+  const window = new ComparisonWindow();
+  const prior = fill(window);
+  const frames = [
+    liveAnalysis(compareLiveRoutes(input, feeds(start + 5000), start + 5000)),
+    window.average(prior, start + 5000),
+  ];
+  for (const offset of [250, 1500]) {
+    const t = start + 5000 + offset;
+    const f = feeds(t);
+    f.pacifica.fee = { ...f.pacifica.fee!, takerBps: 2.8 };
+    for (const frame of frames) {
+      const guarded = guardAnalysis(frame, compare(t, f), f, t);
+      const row = guarded.rows.find((r) => r.venue === "pacifica")!;
+      expect(row.reason).toContain("Fee basis changed");
+      expect(row.costs).toBeNull();
+      expect(row.dollars).toBeNull();
+      expect(
+        guarded.curves.find((c) => c.venue === "pacifica")!.points,
+      ).toHaveLength(0);
+    }
+  }
+});
+
 test("curve stops at minimum observed depth, never averaging only fillable periods", () => {
   const window = new ComparisonWindow();
   const current = fill(window, (t) =>

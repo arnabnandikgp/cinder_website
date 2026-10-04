@@ -187,7 +187,10 @@ export function Records({
                   {positions.map(({ market: key, venue }) => {
                     const item = markets[key];
                     return (
-                      <tr key={`${venue}-${key}`}>
+                      <tr
+                        key={`${venue}-${key}`}
+                        data-position-key={`${venue}-${key}`}
+                      >
                         <td>
                           <strong>{item.symbol}</strong>
                           <span className="d-cell-sub">
@@ -288,7 +291,7 @@ export function Records({
                 </thead>
                 <tbody>
                   {fills.map((fill) => (
-                    <tr key={fill.id}>
+                    <tr key={fill.id} data-fill-id={fill.id}>
                       <td>
                         <strong>{markets[fill.market].symbol}</strong>
                         <span className="d-cell-sub">
@@ -332,7 +335,7 @@ export function Records({
                 </thead>
                 <tbody>
                   {history.map((item) => (
-                    <tr key={item.id}>
+                    <tr key={item.id} data-order-id={item.id}>
                       <td>
                         <strong>SOL-PERP</strong>
                         <button

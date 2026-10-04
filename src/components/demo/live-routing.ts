@@ -361,7 +361,7 @@ export function compareLiveRoutes(
       ? "Estimates are within 0.5 bps or one cent. No clear cost advantage; venue preference is retained."
       : ranked.length === 1
         ? "Only one complete estimate is available. This does not establish a cheaper venue."
-        : `Lowest estimated entry cost using visible books and public venue fees. ${venues[ranked[1].venue]} is the next comparable venue.`;
+        : `Lowest estimated entry cost using visible books and assumed lowest volume-tier taker fees where available. ${venues[ranked[1].venue]} is the next comparable venue.`;
   const displayBooks: Partial<Record<LiveVenue, Book>> = {};
   for (const o of observations) {
     if (!input.allowed.includes(o.venue)) continue;

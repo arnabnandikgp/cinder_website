@@ -149,7 +149,7 @@ test("USDC size formatting preserves small amounts without NaN or scientific not
   expect(usdcSize(NaN)).toBe("—");
 });
 
-test("public fees use explicit units, base tier and instrument overrides without inventing discounts", () => {
+test("public fees select the lowest active taker tier and respect instrument overrides", () => {
   expect(
     parseVenueFee(
       "pacifica",
@@ -163,7 +163,7 @@ test("public fees use explicit units, base tier and instrument overrides without
       },
       now,
     )?.takerBps,
-  ).toBe(4);
+  ).toBe(1);
   const scopes = [
     {
       instrument: "global",

@@ -186,9 +186,10 @@ export function DemoDialogs({
           Public market estimates · No live trading
         </span>
         <p className="d-dialog-intro">
-          Compare the same order quantity using live visible books and public
-          venue fees. Cinder pricing is not included. Incomplete or stale data
-          cannot establish a cheaper venue.
+          Compare the same order quantity using live visible books and modeled
+          venue fees, assuming the lowest volume tiers for Pacifica and BULK.
+          Cinder pricing is not included. Incomplete or stale data cannot
+          establish a cheaper venue.
         </p>
         <fieldset className="d-checks">
           <legend>Venues to compare</legend>

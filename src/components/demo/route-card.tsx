@@ -1,6 +1,7 @@
 import { ArrowRight, Route } from "lucide-react";
 import { DetailList } from "./controls";
 import { number, usdcSize, venues } from "./data";
+import { explainRoute } from "./route-explanation";
 import {
   money,
   snapshotLabels,
@@ -18,6 +19,10 @@ export function RouteCard({
   onAllowed: () => void;
 }) {
   const { best, ranked, savings, explanation } = comparison;
+  const reason = explainRoute(comparison);
+  const appliedFee = comparison.live?.observations.find(
+    (o) => o.venue === best?.venue,
+  )?.fee;
   return (
     <section
       className="d-route-card"
@@ -47,8 +52,11 @@ export function RouteCard({
       {!best && <p>{explanation}</p>}
       {best && (
         <>
+          <p className="d-route-reason" data-testid="route-reason">
+            {reason.text}
+          </p>
           <div className="d-effective-price">
-            <span>Effective price · venue fees included</span>
+            <span>Effective price · modeled venue fees included</span>
             <strong>{money(best.effectivePrice)}</strong>
           </div>
           <details className="d-route-breakdown">
@@ -58,6 +66,14 @@ export function RouteCard({
               rows={[
                 ["Average fill", money(best.averageFill)],
                 ["Venue fee", money(best.venueFee)],
+                ...(appliedFee
+                  ? [
+                      [
+                        "Applied taker rate",
+                        `${number(appliedFee.takerBps)} bps${appliedFee.volumeTier ? " · volume tier assumed" : ""}`,
+                      ] as [string, string],
+                    ]
+                  : []),
                 ["Cinder pricing", "Not included"],
                 [
                   "Entry cost vs reference",
@@ -65,6 +81,28 @@ export function RouteCard({
                 ],
               ]}
             />
+            {reason.against && (
+              <div className="d-route-reason-detail">
+                <h3>Advantage vs {venues[reason.against.venue]}</h3>
+                <DetailList
+                  rows={[
+                    [
+                      "Fill-price contribution",
+                      `${reason.against.priceAdvantage >= 0 ? "+" : "−"}${money(Math.abs(reason.against.priceAdvantage))}`,
+                    ],
+                    [
+                      "Fee contribution",
+                      `${reason.against.feeAdvantage >= 0 ? "+" : "−"}${money(Math.abs(reason.against.feeAdvantage))}`,
+                    ],
+                    ["Net estimated saving", money(reason.against.saving)],
+                  ]}
+                />
+                <p>
+                  Positive contributions reduce entry cost; negative ones offset
+                  the saving. Cinder pricing is excluded.
+                </p>
+              </div>
+            )}
           </details>
         </>
       )}

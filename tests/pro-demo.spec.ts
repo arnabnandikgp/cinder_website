@@ -167,7 +167,7 @@ test("live Pro fetches public fees, keeps depth gaps honest and stops feeds on A
   expect(marketData.requests.some((url) => url.includes("kline"))).toBe(false);
   await page.locator(".d-comparison-method summary").click();
   await expect(page.locator(".d-comparison-method")).toContainText(
-    "Public tier 0: 4.00 bps",
+    "Lowest volume tier · VIP 3 (assumed): 2.80 bps",
   );
   await expect(page.locator(".d-comparison-method")).toContainText("0.5 bps");
   await page

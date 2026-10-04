@@ -5,6 +5,7 @@ import { Tabs } from "./controls";
 import { MarketChart } from "./market-chart";
 import { MarketInstrument } from "./market-instrument";
 import { VenueIcon } from "./venue-select";
+import { FeeTierInfo } from "./fee-tier-info";
 import { COMPARISON_HISTORY_MS } from "./market-data/feed";
 import { number, usdcSize, venues, type Market, type Venue } from "./data";
 import { money, type RouteComparison } from "./routing";
@@ -139,11 +140,12 @@ export function CostChart({ analysis }: { analysis: AnalysisFrame }) {
         <title id={`${id}-title`}>Estimated entry cost versus order size</title>
         <desc id={`${id}-desc`}>
           Estimated {input.side.toLowerCase()} entry costs using observed
-          visible books and public venue fees. Solid curves are fresh; dashed
-          curves are delayed or unaligned and excluded from recommendations.
-          Cinder pricing is excluded. The table contains estimates for your
-          order. Lower is better. Curves end at observed depth and do not
-          establish full venue liquidity.
+          visible books and modeled venue fees. Pacifica and BULK assume their
+          lowest volume-tier taker rates; Phoenix uses its public market fee.
+          Solid curves are fresh; dashed curves are delayed or unaligned and
+          excluded from recommendations. Cinder pricing is excluded. The table
+          contains estimates for your order. Lower is better. Curves end at
+          observed depth and do not establish full venue liquidity.
           {analysis.mode === "average" &&
             " Five-second averages use matched 250ms observations. The live order ticket does not use these averages."}
         </desc>
@@ -280,7 +282,8 @@ export function VenueComparison({ analysis }: { analysis: AnalysisFrame }) {
           against the shared reference notional. Price cost plus fee cost equals
           entry cost. Eligible venues are sorted from lowest to highest cost;
           delayed, excluded and unavailable venues follow and are not ranked.
-          Public venue taker fees are included; Cinder pricing is excluded.
+          Lowest published volume-tier taker fees are assumed for Pacifica and
+          BULK; Phoenix uses its public market fee. Cinder pricing is excluded.
         </caption>
         <thead>
           <tr>
@@ -293,7 +296,7 @@ export function VenueComparison({ analysis }: { analysis: AnalysisFrame }) {
           </tr>
         </thead>
         <tbody>
-          {sorted.map(({ venue, costs, dollars, reason, delayed }) => {
+          {sorted.map(({ venue, costs, dollars, reason, delayed, fee }) => {
             return (
               <tr
                 key={venue}
@@ -338,13 +341,16 @@ export function VenueComparison({ analysis }: { analysis: AnalysisFrame }) {
                   )}
                 </td>
                 <td>
-                  {costs ? (
-                    <span className="d-cost-bps">
-                      {formatCostBps(costs.feeBps)} <small>bps</small>
-                    </span>
-                  ) : (
-                    "—"
-                  )}
+                  <div className="d-fee-cost">
+                    {costs ? (
+                      <span className="d-cost-bps">
+                        {formatCostBps(costs.feeBps)} <small>bps</small>
+                      </span>
+                    ) : (
+                      "—"
+                    )}
+                    <FeeTierInfo venue={venue} fee={fee} />
+                  </div>
                 </td>
                 <td>
                   {dollars !== null && costs ? (
@@ -542,14 +548,14 @@ export function ProWorkspace({
               <summary>
                 <span>How estimates work</span>
                 <span className="d-method-pricing">
-                  Public venue fees · Cinder pricing excluded
+                  Volume-tier fees assumed · Cinder pricing excluded
                 </span>
               </summary>
               <p>
                 ¹ Entry cost = price cost + fee cost. Each is expressed in basis
                 points of the same shared-reference order notional; 1 bp is
                 0.01%. Price cost compares the average fill with the shared
-                midpoint reference. Fee cost is the public taker fee on the
+                midpoint reference. Fee cost is the modeled taker fee on the
                 estimated fill, normalized to that same reference notional.
                 Values are rounded for display; ranking uses full precision.
                 Negative reference cost is not guaranteed profit.
@@ -569,7 +575,11 @@ export function ProWorkspace({
               </p>
               <p>
                 Same quantity across compared venues; no extrapolated liquidity.
-                Funding, exit costs, account discounts and Cinder pricing are
+                Pacifica and BULK assume qualification for the lowest published
+                taker tier in their active schedules through pooled account
+                volume; Cinder’s qualifying volume is not verified. Phoenix uses
+                its public market fee without a volume discount. Funding, exit
+                costs, maker rebates, referral discounts and Cinder pricing are
                 excluded. Differences under 0.5 bps or one cent are treated as
                 similar, not as a measured confidence interval.
               </p>

@@ -41,7 +41,7 @@ export const recordLabels = {
   funding: "Funding history",
 } as const;
 export type RecordTab = keyof typeof recordLabels;
-export type View = "trade" | "account" | "activity";
+export type View = "trade" | "account" | "activity" | "agents";
 export type Scenario = "funded" | "partial" | "empty" | "stale" | "deposit";
 // Illustrative collateral allocations, not computed margin requirements.
 // Both the positions table and account breakdown read these same records.

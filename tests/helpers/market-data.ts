@@ -1,6 +1,43 @@
 import type { Page, WebSocketRoute } from "@playwright/test";
 type TestVenue = "pacifica" | "bulk" | "phoenix";
 
+export function pacificaFees() {
+  return {
+    success: true,
+    data: [
+      0.0004, 0.00038, 0.00036, 0.00034, 0.00032, 0.0003, 0.00029, 0.00028,
+    ].map((rate, level) => ({ level, taker_fee_rate: String(rate) })),
+  };
+}
+export function bulkFees() {
+  return {
+    globalPolicyActive: true,
+    scopes: [
+      {
+        instrument: "global",
+        active_policy: {
+          window_days: 14,
+          tiers: [
+            [0, 3.5],
+            [1e6, 3.3],
+            [1e7, 3],
+            [5e7, 2.8],
+            [1.5e8, 2.6],
+            [5e8, 2.4],
+            [1.5e9, 2.3],
+            [4e9, 2.2],
+          ].map(([threshold_volume, taker_bps]) => ({
+            threshold_volume,
+            taker_bps,
+            maker_bps: 0,
+          })),
+          maker_share_tiers: [{ threshold_ppm: 50_000, rebate_bps: -1.5 }],
+        },
+      },
+    ],
+  };
+}
+
 export function phoenixBars(interval = "15m", price = 152.5) {
   return bars(interval, price).map((b) => ({
     time: b.t,
@@ -141,24 +178,7 @@ export async function mockMarketData(
           return route.fulfill({ status: 503, body: "Unavailable" });
         return route.fulfill({
           contentType: "application/json",
-          body: JSON.stringify(
-            pacifica
-              ? {
-                  success: true,
-                  data: [{ level: 0, taker_fee_rate: "0.0004" }],
-                }
-              : {
-                  globalPolicyActive: true,
-                  scopes: [
-                    {
-                      instrument: "global",
-                      active_policy: {
-                        tiers: [{ threshold_volume: 0, taker_bps: 3.5 }],
-                      },
-                    },
-                  ],
-                },
-          ),
+          body: JSON.stringify(pacifica ? pacificaFees() : bulkFees()),
         });
       }
       const info =

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   ArrowUpRight,
@@ -9,9 +9,13 @@ import {
   CandlestickChart,
   WalletCards,
   History,
+  Compass,
+  Bot,
 } from "lucide-react";
 import { Brand } from "@/components/ui";
 import { AccountOverview, ActivityView } from "./account-views";
+import { AgentsView } from "./agents-view";
+import { agentsFor } from "./agents";
 import { DemoDialogs, type DialogState } from "./demo-dialogs";
 import { MarketChart, OrderBook } from "./market-chart";
 import { OrderTicket, initialTicket, type Ticket } from "./order-ticket";
@@ -19,6 +23,8 @@ import { initialStrategy } from "./strategies";
 import { Records } from "./records";
 import { ProWorkspace } from "./pro-workspace";
 import { WalletConnect } from "./wallet-connect";
+import { SpotlightTour } from "./spotlight-tour";
+import { useTerminalTour } from "./use-terminal-tour";
 import { useMarketFeed } from "./market-data/use-market-feed";
 import { channelHealth } from "./market-data/feed";
 import { intervals, type Interval } from "./market-data/adapters";
@@ -58,19 +64,30 @@ const workspaceViews = [
     description: "Fills, fees & funding",
     icon: History,
   },
+  {
+    value: "agents",
+    label: "Agents",
+    description: "Permissions & activity",
+    icon: Bot,
+  },
 ] as const;
 
 export function Terminal() {
   const params = useSearchParams();
+  const tour = useTerminalTour();
+  // Tour navigation is temporary, never written into the URL or order state.
+  const tourContext: Record<string, string> = tour.step?.context ?? {};
+  const context = (key: string) => tourContext[key] ?? params.get(key);
+  const tourTrigger = useRef<HTMLButtonElement>(null);
   const view = pick<View>(
-    params.get("view"),
-    ["trade", "account", "activity"],
+    context("view"),
+    ["trade", "account", "activity", "agents"],
     "trade",
   );
-  const market = pick<Market>(params.get("market"), ["SOL", "BTC"], "SOL");
-  const mode = pick(params.get("mode"), ["manual", "auto"] as const, "manual");
+  const market = pick<Market>(context("market"), ["SOL", "BTC"], "SOL");
+  const mode = pick(context("mode"), ["manual", "auto"] as const, "manual");
   const venue = pick<Venue>(
-    params.get("venue"),
+    context("venue"),
     Object.keys(venues) as Venue[],
     "pacifica",
   );
@@ -89,7 +106,7 @@ export function Terminal() {
     chart,
     market,
     interval,
-    view === "trade" && (mode === "manual" || params.get("panel") === "price"),
+    view === "trade" && (mode === "manual" || context("panel") === "price"),
   );
   const proEnabled = mode === "auto" && view === "trade";
   const pacifica = useMarketFeed(
@@ -108,23 +125,28 @@ export function Terminal() {
     "comparison",
   );
   const scope = pick<VenueScope>(
-    params.get("scope"),
+    context("scope"),
     ["all", ...(Object.keys(venues) as Venue[])],
     mode === "auto" ? "all" : venue,
   );
   const tab = pick<RecordTab>(
-    params.get("record"),
+    context("record"),
     ["positions", "orders", "trades", "history", "funding"],
     "positions",
   );
   const scenario = pick<Scenario>(
-    params.get("scenario"),
+    context("scenario"),
     ["funded", "partial", "empty", "stale", "deposit"],
     "funded",
   );
   const filter = pick(
-    params.get("filter"),
+    context("filter"),
     ["all", "orders", "trades", "fees", "funding", "transfers", "drafts"],
+    "all",
+  );
+  const actor = pick(
+    context("actor"),
+    ["all", "you", "system", ...agentsFor(scenario).map((agent) => agent.id)],
     "all",
   );
   const [standardTicket, setStandardTicket] = useState<Ticket>(() =>
@@ -136,13 +158,13 @@ export function Terminal() {
     size: "10000",
     slippage: "0.5",
   }));
-  const [proVisited, setProVisited] = useState(mode === "auto");
+  const [proVisited, setProVisited] = useState(params.get("mode") === "auto");
   const ticket = mode === "auto" ? proTicket : standardTicket;
   const setTicket = mode === "auto" ? setProTicket : setStandardTicket;
   const [allowed, setAllowed] = useState<Venue[]>([...comparisonVenues]);
-  const panel = pick(params.get("panel"), ["cost", "price"] as const, "cost");
+  const panel = pick(context("panel"), ["cost", "price"] as const, "cost");
   const analysisMode = pick(
-    params.get("analysis"),
+    context("analysis"),
     ["live", "average"] as const,
     "live",
   );
@@ -201,6 +223,7 @@ export function Terminal() {
   const [notice, setNotice] = useState("");
   function updateQuery(values: Record<string, string>, push = false) {
     const next = new URLSearchParams(window.location.search);
+    next.delete("journey"); // Retire bookmarks for the removed ledger guide.
     Object.entries(values).forEach(([key, value]) => next.set(key, value));
     // Only share navigation/context, never amounts, draft contents or personal data.
     if (push) window.history.pushState(null, "", `/demo?${next}`);
@@ -241,7 +264,21 @@ export function Terminal() {
         aria-label="Cinder demo workspace"
       >
         <header className="d-header">
-          <Brand />
+          <div className="d-brand-tools">
+            <Brand />
+            <button
+              ref={tourTrigger}
+              type="button"
+              className="d-tour-trigger"
+              aria-label="Take a tour"
+              aria-haspopup="dialog"
+              title="Take a tour"
+              onClick={tour.start}
+            >
+              <Compass size={17} aria-hidden="true" />
+              <span>Take a tour</span>
+            </button>
+          </div>
           <nav aria-label="Workspace navigation">
             {workspaceViews.map(({ value, label, description, icon: Icon }) => (
               <button
@@ -445,7 +482,7 @@ export function Terminal() {
             </div>
           </>
         ) : (
-          <div className="d-account-content">
+          <div className="d-account-content" key={view}>
             {view === "account" ? (
               <>
                 <AccountOverview
@@ -454,12 +491,28 @@ export function Terminal() {
                 />
                 {records}
               </>
+            ) : view === "agents" ? (
+              <AgentsView
+                scenario={scenario}
+                cancel={cancel}
+                drafts={drafts}
+                selected={context("agent") ?? ""}
+                onSelect={(value) => updateQuery({ agent: value })}
+                onActivity={(value) =>
+                  updateQuery(
+                    { view: "activity", actor: value, filter: "all" },
+                    true,
+                  )
+                }
+              />
             ) : (
               <ActivityView
                 scenario={scenario}
                 cancel={cancel}
                 drafts={drafts}
                 filter={filter}
+                actor={actor}
+                onActor={(value) => updateQuery({ actor: value })}
                 onFilter={(value) => updateQuery({ filter: value })}
                 onDetail={actions.onDetail}
               />
@@ -467,6 +520,15 @@ export function Terminal() {
           </div>
         )}
       </main>
+      {tour.step && tour.index !== null && (
+        <SpotlightTour
+          step={tour.step}
+          index={tour.index}
+          onStep={tour.go}
+          onClose={tour.close}
+          returnFocus={tourTrigger}
+        />
+      )}
       {dialog && (
         <DemoDialogs
           key={dialog.kind}

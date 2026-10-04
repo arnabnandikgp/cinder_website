@@ -28,17 +28,22 @@ for (const width of [375, 768, 1001, 1280]) {
       name: "Activity",
       exact: true,
     });
+    const agents = navigation.getByRole("button", {
+      name: "Agents",
+      exact: true,
+    });
     await expect(trade).toHaveAttribute("aria-current", "page");
     await expect(trade).toHaveCSS("background-color", "rgb(0, 81, 254)");
     await expect(account).toHaveAccessibleDescription("Balances & positions");
     await expect(activity).toHaveAccessibleDescription("Fills, fees & funding");
+    await expect(agents).toHaveAccessibleDescription("Permissions & activity");
     const actions = await page.locator(".d-account-actions").boundingBox();
     const navBox = await navigation.boundingBox();
     expect(
       navBox!.y >= actions!.y + actions!.height ||
         navBox!.x + navBox!.width <= actions!.x,
     ).toBe(true);
-    for (const button of [trade, account, activity]) {
+    for (const button of [trade, account, activity, agents]) {
       await expect(button).toBeInViewport();
       const box = await button.boundingBox();
       expect(box!.height).toBeGreaterThanOrEqual(44);
@@ -57,6 +62,13 @@ for (const width of [375, 768, 1001, 1280]) {
     await page.keyboard.press("Space");
     await expect(activity).toHaveAttribute("aria-current", "page");
     await expect(page).toHaveURL(/view=activity/);
+    await page.keyboard.press("Tab");
+    await expect(agents).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(agents).toHaveAttribute("aria-current", "page");
+    await expect(page).toHaveURL(/view=agents/);
+    await page.goBack();
+    await expect(activity).toHaveAttribute("aria-current", "page");
     await page.goBack();
     await expect(account).toHaveAttribute("aria-current", "page");
     expect(
@@ -133,7 +145,7 @@ for (const [width, height] of [
     await lastFill.scrollIntoViewIfNeeded();
     await expect(lastFill).toBeInViewport();
     expect(await page.evaluate(() => scrollY)).toBe(0);
-    for (const view of ["Account", "Activity"]) {
+    for (const view of ["Account", "Activity", "Agents"]) {
       await page
         .getByRole("navigation", { name: "Workspace navigation" })
         .getByRole("button", { name: view, exact: true })

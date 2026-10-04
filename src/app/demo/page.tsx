@@ -7,11 +7,13 @@ import "./pro.css";
 import "./market-data.css";
 import "./order-entry.css";
 import "./terminal-chrome.css";
+import "./agents.css";
+import "./terminal-tour.css";
 
 export const metadata: Metadata = {
   title: "Cinder | Interactive trading demo",
   description:
-    "Explore Cinder with live Pacifica, BULK and Phoenix market data and venue-fee entry comparisons. Connect a Solana wallet without signing. Account records remain simulated; no live trading.",
+    "Explore Cinder with live Pacifica, BULK and Phoenix market data and entry-cost comparisons assuming the lowest volume-tier fees where available. Account records remain simulated; no live trading.",
   robots: { index: false, follow: true },
   alternates: { canonical: "/demo" },
   openGraph: {

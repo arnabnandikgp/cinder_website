@@ -1,0 +1,562 @@
+/* Agent access shares the terminal's palette and quiet ledger typography. */
+.d-header nav {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.d-agents-view {
+  max-width: 1400px;
+  margin-inline: auto;
+}
+.d-agents-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.d-agent-guide {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  color: var(--d-blue);
+  font-size: 13px;
+}
+.d-agents-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 28px;
+  margin-bottom: 24px;
+  color: var(--d-muted);
+  font-size: 12px;
+}
+.d-agents-summary > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--off-white);
+}
+.d-agents-summary > span:first-child svg {
+  color: var(--d-blue);
+}
+.d-agents-summary > span:last-child {
+  margin-left: auto;
+}
+.d-agents-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.8fr) minmax(420px, 1.2fr);
+  align-items: start;
+  gap: 24px;
+}
+.d-agents-panel-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--d-line);
+}
+.d-agents-panel-heading :is(h2, h3) {
+  font-size: 16px;
+  font-weight: 500;
+}
+.d-agents-panel-heading > span:not(.d-agent-status) {
+  font-size: 12px;
+  color: var(--d-muted);
+}
+.d-agents-panel-heading .d-overline {
+  display: block;
+  margin-bottom: 8px;
+}
+.d-agent-detail-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}
+.d-agent-detail-actions .d-cell-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+}
+.d-agent-row {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 24px;
+  text-align: left;
+  background: transparent;
+  border-bottom: 1px solid var(--d-line);
+  border-left: 2px solid transparent;
+  cursor: pointer;
+}
+.d-agent-row[aria-pressed="true"] {
+  background: var(--cobalt-tint);
+  border-left-color: var(--d-blue);
+}
+.d-agent-avatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  color: var(--d-blue);
+  background: var(--d-raised);
+  border-radius: var(--d-radius);
+}
+.d-agent-row-copy {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+.d-agent-row-copy strong {
+  font-size: 15px;
+  font-weight: 500;
+}
+.d-agent-row-copy :is(span, small) {
+  color: var(--d-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.d-agent-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--d-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.d-agent-status::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.d-agent-status[data-status="Authorized"] {
+  color: var(--d-positive);
+}
+.d-agent-directory-note {
+  padding: 20px 24px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.d-agent-terms {
+  margin: 0;
+  padding: 16px 24px;
+}
+.d-agent-terms > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  padding: 10px 0;
+  font-size: 13px;
+}
+.d-agent-terms dt {
+  color: var(--d-muted);
+}
+.d-agent-terms dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.d-agent-terms dd small {
+  display: block;
+  color: var(--d-muted);
+  font-size: 12px;
+  margin-top: 4px;
+}
+.d-agent-key {
+  margin: 0 24px 16px;
+  font-size: 12px;
+}
+.d-agent-key summary,
+.d-agent-protocol-limits summary,
+.d-agent-revocation summary {
+  display: list-item;
+  cursor: pointer;
+  min-height: 40px;
+  align-content: center;
+  color: var(--d-blue);
+}
+.d-agent-key code {
+  display: block;
+  padding: 12px;
+  margin-top: 8px;
+  border-radius: var(--d-radius);
+  background: var(--d-input);
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  user-select: text;
+}
+.d-agent-scope {
+  padding: 20px 24px;
+  border-top: 1px solid var(--d-line);
+}
+.d-agent-scope h3 {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 16px;
+}
+.d-agent-scope ul {
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 16px;
+}
+.d-agent-scope li {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 12px;
+  font-size: 13px;
+}
+.d-agent-scope li strong {
+  color: var(--d-blue);
+  font-size: 12px;
+  font-weight: 500;
+}
+.d-agent-scope li span {
+  color: var(--d-muted);
+  line-height: 1.6;
+}
+.d-agent-warning {
+  color: var(--off-white);
+  background: var(--d-raised);
+  border-left: 2px solid var(--d-blue);
+  padding: 12px 16px;
+  font-size: 12px;
+  line-height: 1.7;
+  margin-top: 16px;
+}
+.d-agent-detail > .d-agent-warning {
+  margin: 16px 24px 0;
+}
+.d-agent-protocol-limits {
+  padding: 0 24px 16px;
+  font-size: 12px;
+}
+.d-agent-protocol-limits .d-agent-terms {
+  padding: 0;
+}
+.d-agent-note {
+  color: var(--d-muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.d-agent-recent .d-agents-panel-heading {
+  border-top: 1px solid var(--d-line);
+}
+.d-agent-recent ol {
+  list-style: none;
+  margin: 0;
+  padding: 0 24px;
+}
+.d-agent-recent li {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--d-line);
+}
+.d-agent-recent li:last-child {
+  border-bottom: 0;
+}
+.d-agent-recent li > div {
+  display: grid;
+  gap: 6px;
+}
+.d-agent-recent li strong {
+  font-size: 13px;
+  font-weight: 500;
+}
+.d-agent-recent li :is(span, time) {
+  font-size: 12px;
+  color: var(--d-muted);
+}
+.d-agent-recent time {
+  margin-left: auto;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.d-agent-recent .d-cell-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+}
+.d-agent-revocation {
+  max-width: 760px;
+  margin-top: 24px;
+  font-size: 13px;
+}
+.d-agent-revocation p {
+  margin-block: 8px;
+  line-height: 1.7;
+}
+.d-agent-revocation strong {
+  color: var(--off-white);
+  font-weight: 500;
+}
+.d-agent-onboarding form {
+  display: grid;
+  gap: 20px;
+}
+.d-agent-preview-note {
+  display: flex;
+  gap: 10px;
+  padding-bottom: 20px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.d-agent-preview-note svg {
+  flex-shrink: 0;
+  color: var(--d-blue);
+}
+.d-agent-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.d-agent-field {
+  min-width: 0;
+}
+.d-agent-field label {
+  display: block;
+  color: var(--d-muted);
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+.d-agent-field :is(input, select),
+.d-activity-actor select {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--d-control-line);
+  border-radius: var(--d-radius);
+  background: var(--d-input);
+  color: var(--off-white);
+  padding: 10px 12px;
+  font-size: 14px;
+}
+.d-agent-field input[aria-invalid="true"] {
+  border-color: var(--d-error);
+}
+.d-agent-field p {
+  font-size: 12px;
+  line-height: 1.6;
+  margin-top: 6px;
+}
+.d-agent-permissions {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.d-agent-permissions legend {
+  font-size: 12px;
+  color: var(--d-muted);
+  margin-bottom: 8px;
+}
+.d-agent-permissions label {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding-block: 12px;
+  cursor: pointer;
+  min-height: 44px;
+}
+.d-agent-permissions input {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  accent-color: var(--cobalt);
+}
+.d-agent-permissions label > span {
+  display: grid;
+  gap: 4px;
+}
+.d-agent-permissions strong {
+  font-size: 14px;
+  font-weight: 500;
+}
+.d-agent-permissions small {
+  font-size: 12px;
+  color: var(--d-muted);
+  line-height: 1.6;
+}
+.d-agent-limits {
+  border-top: 1px solid var(--d-line);
+  padding-top: 20px;
+  display: grid;
+  gap: 16px;
+}
+.d-agent-limits h3 {
+  font-size: 14px;
+  font-weight: 500;
+}
+.d-agent-limits > p {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.d-agent-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+.d-agent-onboarding .d-agent-key {
+  margin: 20px 0;
+}
+.d-agent-onboarding .d-agent-guide {
+  margin-top: 16px;
+}
+.d-agent-onboarding .d-agent-error {
+  color: var(--d-error);
+}
+.d-agent-review-heading {
+  font-size: 16px;
+  font-weight: 500;
+  margin: 4px 0 16px;
+}
+.d-agent-review-button {
+  min-height: 44px;
+}
+.d-activity-actor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--d-line);
+  font-size: 13px;
+}
+.d-activity-actor select {
+  width: auto;
+  min-width: 180px;
+  max-width: 100%;
+}
+.d-activity-actor > span {
+  font-size: 12px;
+  color: var(--d-muted);
+  margin-left: auto;
+}
+.d-activity-actor button {
+  min-height: 40px;
+}
+.d-event-actor {
+  display: block;
+  font-size: 12px;
+  color: var(--d-blue);
+  margin-bottom: 6px;
+}
+
+@media (hover: hover) {
+  .d-agent-row:hover {
+    background: var(--d-raised);
+  }
+  .d-agent-guide:hover {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+}
+@media (min-width: 1001px) and (max-width: 1280px) {
+  .d-header {
+    gap: 12px;
+    padding-inline: 12px;
+  }
+  .d-header nav {
+    gap: 4px;
+  }
+  .d-header nav button {
+    padding-inline: 8px;
+    gap: 6px;
+  }
+  .d-tour-trigger > span {
+    display: none;
+  }
+}
+@media (max-width: 1000px) {
+  .d-agents-grid {
+    grid-template-columns: 1fr;
+  }
+  .d-agents-summary > span:last-child {
+    margin-left: 0;
+  }
+}
+@media (max-width: 760px) {
+  .d-agent-detail > .d-agents-panel-heading {
+    flex-wrap: wrap;
+  }
+  .d-header nav button {
+    gap: 4px;
+    padding-inline: 4px;
+  }
+  .d-header nav button > svg {
+    width: 16px;
+    height: 16px;
+  }
+  .d-nav-label {
+    font-size: 13px;
+  }
+  .d-agents-heading-actions {
+    justify-content: space-between;
+    width: 100%;
+    gap: 12px;
+  }
+  .d-agents-grid {
+    gap: 16px;
+  }
+  .d-agents-panel-heading,
+  .d-agent-row,
+  .d-agent-scope {
+    padding: 16px;
+  }
+  .d-agent-terms {
+    padding: 12px 16px;
+  }
+  .d-agent-terms > div {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .d-agent-terms dd {
+    margin-left: auto;
+  }
+  .d-agent-key {
+    margin-inline: 16px;
+  }
+  .d-agent-protocol-limits {
+    padding-inline: 16px;
+  }
+  .d-agent-row {
+    flex-wrap: wrap;
+  }
+  .d-agent-row-copy {
+    min-width: 140px;
+  }
+  .d-agent-row > .d-agent-status {
+    margin-left: 48px;
+  }
+  .d-agent-recent ol {
+    padding-inline: 16px;
+  }
+  .d-agent-recent li {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .d-agent-recent .d-agents-panel-heading {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .d-agent-form-grid {
+    grid-template-columns: 1fr;
+  }
+  .d-activity-actor {
+    padding-inline: 16px;
+  }
+  .d-activity-actor > span {
+    width: 100%;
+    margin-left: 0;
+  }
+}

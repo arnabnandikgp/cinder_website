@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { mockMarketData } from "./helpers/market-data";
+import { bookMessage, mockMarketData } from "./helpers/market-data";
 
 let marketData: Awaited<ReturnType<typeof mockMarketData>>;
 test.beforeEach(async ({ page }) => {
@@ -165,16 +165,32 @@ test("near ties are sorted but do not imply a clear cheapest venue", async ({
 }) => {
   await page.goto("/demo?mode=auto&market=BTC");
   await expect(page.getByTestId("curve-phoenix")).toHaveCount(1);
-  await expect(page.getByTestId("route-row-pacifica")).toContainText(
-    "Similar estimate",
-  );
-  const rows = page.locator(".d-comparison-table tbody tr");
-  const costs = await rows
-    .locator(".d-entry-cost")
-    .evaluateAll((els) =>
-      els.map((el) => Number(el.getAttribute("data-cost-bps"))),
+  // At the new volume-tier fees, equal BTC midpoints no longer make a near
+  // tie. A $5 higher BULK fill offsets its 0.6 bp fee advantage in this case.
+  const socket = marketData.sockets.find(
+    (s) => s.venue === "bulk" && !s.closed,
+  )!;
+  socket.paused = true;
+  const timer = setInterval(() => {
+    if (!page.isClosed())
+      socket.socket.send(
+        JSON.stringify(bookMessage("bulk", "BTC", 86005, Date.now(), true)),
+      );
+  }, 150);
+  try {
+    await expect(page.getByTestId("route-row-pacifica")).toContainText(
+      "Similar estimate",
     );
-  expect(costs).toEqual([...costs].sort((a, b) => a - b));
-  await expect(page.locator(".d-best-row")).toHaveCount(0);
-  await expect(page.locator(".d-route-saving")).toHaveCount(0);
+    const rows = page.locator(".d-comparison-table tbody tr");
+    const costs = await rows
+      .locator(".d-entry-cost")
+      .evaluateAll((els) =>
+        els.map((el) => Number(el.getAttribute("data-cost-bps"))),
+      );
+    expect(costs).toEqual([...costs].sort((a, b) => a - b));
+    await expect(page.locator(".d-best-row")).toHaveCount(0);
+    await expect(page.locator(".d-route-saving")).toHaveCount(0);
+  } finally {
+    clearInterval(timer);
+  }
 });

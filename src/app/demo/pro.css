@@ -484,6 +484,30 @@ button.d-venue-key {
   margin: 0 0 16px;
   grid-column: 1 / -1;
 }
+.d-fee-cost {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 40px;
+  align-items: center;
+  gap: 4px;
+}
+.demo .d-fee-tier-info {
+  display: grid;
+  place-items: center;
+  min-width: 40px;
+  min-height: 40px;
+  color: var(--d-blue);
+  background: transparent;
+  border-radius: var(--d-radius);
+}
+.d-fee-doc-link {
+  margin-top: 12px;
+}
+@media (hover: hover) {
+  .demo .d-fee-tier-info:hover {
+    color: var(--off-white);
+    background: var(--d-raised);
+  }
+}
 .d-route-card-heading {
   display: flex;
   justify-content: space-between;
@@ -521,6 +545,25 @@ button.d-venue-key {
 .d-route-card > p {
   font-size: 12px;
   line-height: 1.6;
+}
+.d-route-card > .d-route-reason {
+  color: var(--d-muted);
+  margin: 8px 0 12px;
+}
+.d-route-reason-detail {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--d-line);
+}
+.d-route-reason-detail h3 {
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+.d-route-reason-detail p {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--d-muted);
 }
 .d-route-card .d-detail-list {
   margin: 12px 0;

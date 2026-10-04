@@ -1,6 +1,6 @@
 # Cinder order entry and execution decisions
 
-Updated 4 October 2026. For the founder, frontend developer and backend implementation owner.
+Updated 5 October 2026. For the founder, frontend developer and backend implementation owner.
 
 This document records the direction for Cinder's Standard and Pro trading experiences, the advanced strategy previews implemented locally in `/demo`, and the execution requirements that must be resolved before those controls can place real orders. It is a product and engineering handoff, not a claim of implemented trading capabilities or deployment status.
 
@@ -24,7 +24,17 @@ This supersedes the earlier suggestion to replace the Standard/Pro switch with C
 
 ## Current local baseline
 
-The local working tree has a Standard venue chart and order book backed by public Pacifica, BULK and Phoenix data, and a Pro comparison using visible books and public base fee schedules. Velocity remains an unsupported market-data preview. Pro evaluates immediate market entries, not resting limits or scheduled strategies. Venue data availability does not prove execution availability.
+The local working tree has a Standard venue chart and order book backed by public Pacifica, BULK and Phoenix data, and a Pro comparison using visible books and modeled taker fees. Pacifica and BULK assume qualification for their lowest active volume tiers; Phoenix uses its public market fee. These are demo assumptions, not verified Cinder account tiers or customer pricing. Velocity remains an unsupported market-data preview. Pro evaluates immediate market entries, not resting limits or scheduled strategies. Venue data availability does not prove execution availability.
+
+### Volume-tier fee assumptions
+
+The read-only comparison selects the lowest taker rate from the current fee API schedule, rather than the base tier. As checked on 4 October 2026, Pacifica VIP 3 is **2.8 bps (0.028%)**, requiring **over $500M in 30 rolling days**; BULK's lowest global tier is **2.2 bps (0.022%)**, requiring **at least $4B across 14 completed UTC days**. Main/subaccount aggregation at a venue does not establish Cinder's current qualification. BULK instrument policies override global pricing. Phoenix has no assumed pooled-volume discount. Maker-share rebates are not taker discounts and are excluded.
+
+The fee-cost cells expose an accessible information button with the applied rate, public base rate, threshold, volume window and official fee schedule. Curves, the live recommendation, five-second analysis and frozen review receipts share the same selected rate. Fee cost still equals estimated fill notional multiplied by that rate, normalized to the shared-reference notional for the bps presentation; it can differ slightly from the posted schedule rate. Missing, invalid or expired fee schedules cannot turn into zero fees or a hardcoded discounted fallback. A change in fee basis resets temporal averaging; unchanged refresh timestamps do not.
+
+Before production, resolve the actual omnibus account's qualified tier, applicable instrument policy and the customer's all-in Cinder charge. Do not reuse this lowest-tier demo assumption for signing or submitting orders. Qualification thresholds for Pacifica's level-only API are documented mappings, not independently returned by that API, and must be maintained when the venue changes its schedule.
+
+Sources: [Pacifica trading fees](https://docs.pacifica.fi/trading-on-pacifica/trading-fees), [BULK fees](https://docs.bulk.trade/bulk-exchange/fees). Implementation: `market-data/fees.ts`, `fee-tier-info.tsx`; coverage: `tests/fee-tiers.spec.ts`, `tests/comparison-analysis.spec.ts`.
 
 ### Phoenix public market-data integration
 
@@ -165,7 +175,7 @@ The implementation owner should define and version these requirements before a p
 5. **Risk and reservation:** reserve against the customer's obligations, enforce the aggregate parent budget across all in-flight children, and check destination collateral before routing. Account for working orders, fees and protective orders. Cross-venue capital movement is a separate authorized operation.
 6. **Strategy safety:** specify scheduling, allowed lateness, partial-fill allocation, cancel/replace sequencing, retry limits, price-bound enforcement, pause/cancel semantics, kill switches and behaviour during venue outages. Pausing new submissions must not be confused with cancelling resting children.
 7. **Omnibus allocation:** deterministically attribute fills, fees and funding to customers, enforce customer-specific reduce-only, address self-trade prevention and net external exposure, and prevent one customer's control changes from altering another's entitlement or risk unexpectedly.
-8. **Economics:** use applicable customer pricing, actual venue tier and maker/taker outcomes. Separate venue expense, customer charge and retained Cinder revenue. Current public base-fee estimates do not establish production customer pricing.
+8. **Economics:** use applicable customer pricing, actual venue tier and maker/taker outcomes. Separate venue expense, customer charge and retained Cinder revenue. Current lowest-volume-tier demo assumptions do not establish production customer pricing or verified Cinder eligibility.
 9. **Confidentiality:** protect parent instructions and account records in the intended execution boundary. Native venue algorithms may reveal a parent amount to that venue; synthetic child orders may reduce that disclosure but do not establish unobservable activity. Keep that distinction explicit.
 10. **Observability and recovery:** preserve parent/child identifiers, source timestamps, decisions, acknowledgements and reconciled outcomes. Give customers their own progress and receipts without exposing other customers or leaking confidential plans into ordinary logs.
 
@@ -181,7 +191,7 @@ Standard and Pro reuse one instrument header: actual coin artwork, USDC pair and
 
 Quick sizes are one labelled USDC control with a selected state and directly update the existing order ticket. The buy/sell intent, notional exposure and shared reference are separate from these shortcuts. Feed health sits in the header; the cost plot and ranked venue table form one analytical workspace. Venue emblems identify the table rows, and fee provenance remains visible beside the expandable methodology.
 
-The table shows **Price cost**, **Fee cost** and **Entry cost** in basis points of the same shared-reference order notional, with the total dollar cost secondary. Price cost includes the venue's price difference from the shared reference and the visible book sweep; it is not pure slippage against each venue's own midpoint. Fee cost is the actual estimated public taker fee divided by that common notional, not simply the published fee rate pasted beside another denominator. The two unrounded contributions sum to the plotted entry cost; rounding can introduce a 0.01 bp display difference. Eligible rows sort by full-precision cost (ascending), independently of buy/sell direction. Retained delayed quotes stay visibly unranked below them. The blue highlight still identifies a clear best estimate, not a near tie or a single remaining quote. Average fill and effective price remain available in the order-ticket breakdown and saved receipts; public fee provenance remains in the methodology. This presentation change does not modify the book walk, benchmark, fee policy, freshness gates or recommendation.
+The table shows **Price cost**, **Fee cost** and **Entry cost** in basis points of the same shared-reference order notional, with the total dollar cost secondary. Price cost includes the venue's price difference from the shared reference and the visible book sweep; it is not pure slippage against each venue's own midpoint. Fee cost is the modeled taker fee divided by that common notional, not simply the published fee rate pasted beside another denominator; the current volume-tier assumptions are recorded above. The two unrounded contributions sum to the plotted entry cost; rounding can introduce a 0.01 bp display difference. Eligible rows sort by full-precision cost (ascending), independently of buy/sell direction. Retained delayed quotes stay visibly unranked below them. The blue highlight still identifies a clear best estimate, not a near tie or a single remaining quote. Average fill and effective price remain available in the order-ticket breakdown and saved receipts; fee provenance remains in the methodology and fee information controls. The bps presentation itself does not change the book walk, benchmark or freshness gates.
 
 The cost plot defaults to an order-focused range, with **Full range** available for all captured depth. Both views use actual book-walk samples and stop at observed capacity. Chart range and curve visibility affect presentation only, not the ranked order, allowed venues, freshness checks or route-review validation. This is still entry cost versus USDC order size, not a cumulative price-versus-depth chart. No new historical collector or venue data service is introduced.
 
@@ -209,7 +219,26 @@ Keep Positions, Open orders, Trade history, Order history and Funding history. A
 
 The top-level Activity timeline should explain important transitions: plan saved, parent accepted, paused, partially filled, cancelled or completed. In the demo, saved plans stay local and non-executing. Future pause/cancel actions must state whether resting orders remain and cannot reverse already completed fills.
 
+## Agents and actor-attributed Activity
+
+The fourth top-level view is **Agents**. It is an owner-facing authorization directory, not a bot hosting service. The sample grants show Authorized or Expired, their trading market, permissions, expiry, accepted-order allowance and last request. These describe the simulated account snapshot; authorization is not evidence that an agent process is running. Public keys and protocol-unit limits are available through disclosures rather than crowding the main list.
+
+**View all activity** opens the existing Activity page with `view=activity&actor=<fixture-id>&filter=all`. Navigation retains the selected agent for returning to Agents. The event-type and actor filters compose and survive reloads. The selected agent's recent list and the full timeline use the same event builder and IDs, not independent logs. Labels distinguish You, a named agent and System. A fill fee is a system consequence with an originating agent link; funding is position-level and is not included in an agent's timeline. Rejected requests do not create fake orders or fills. No agent-specific PnL is inferred from shared positions.
+
+**Add agent** opens a validated, non-persistent authorization preview with name, separate Ed25519 public key, market, permissions, expiry and order limits. It never signs, creates a grant, asks for a private key, connects a wallet or changes the simulated directory. READ is off by default and warns about account-wide visibility. Public-key checking only verifies base58 encoding and 32-byte length; production must also check valid Ed25519 keys and separation from the owner's key. Names, entered keys and grant limits are never written into the URL or local storage. The setup guide opens in a separate tab.
+
+The official grant contract uses `maximumLots` (maximum absolute lots per order), `maximumFee` (maximum fee per lot in quote atoms), `maximumOrders` (lifetime count of accepted orders in the epoch) and an absolute expiry. These are not interchangeable with a USDC notional cap or total fees. The preview exposes protocol units explicitly rather than inventing a conversion; production should translate them with verified market precision and show the exact signed bounds. Accepted retries do not consume an extra budget unit. Preview numeric and duration choices are not approved deployment limits.
+
+READ exposes the bound account across markets; the market scopes TRADE and CANCEL. CANCEL applies only to orders admitted under that agent's key. Agents cannot withdraw, change recipients, select leverage, redelegate or administer Cinder. Revocation advances the account authority epoch and disables **all existing agent grants**; it does not cancel open orders. Accordingly, the demo provides an account-wide revocation explanation rather than a misleading per-row Revoke button. Live implementation needs owner-signed grants, governed expiry, current-epoch checks, receipts and reconciliation, error states and explicit regranting; the frontend alone cannot enforce these rights.
+
+Implementation: `agents.ts`, `agents-view.tsx`, `agent-onboarding.tsx` and the shared `activity.ts`; styles in `src/app/demo/agents.css`. Regression coverage: `tests/agents.spec.ts`, existing workspace tests and the extended tour. References: [agent permissions and revocation](https://docs.cinder.exchange/guides/agents#agents), [grant fields and semantics](https://docs.cinder.exchange/api/methods/grant).
+
 ## Acceptance checks
+
+- Agents shows authorization state and scope, not an inferred runtime heartbeat.
+- Agent-filtered Activity includes linked fill fees, but not position-level funding.
+- Add agent is non-signing and non-persistent; no secret-key input or grant requests.
+- Revocation is account-wide and does not imply automatic cancellation of open orders.
 
 - Venue identity remains visible and is repeated in every Standard preview, including advanced strategies.
 - Market/Limit/Advanced are prominent and keyboard accessible; only relevant inputs appear.
@@ -221,6 +250,16 @@ The top-level Activity timeline should explain important transitions: plan saved
 - Each strategy validates its parameters and explains its planned action without inventing execution outcomes.
 - Preview/save actions perform no signing, venue writes, collateral movement or unattended execution.
 - Existing live data, reduced-motion, mobile, accessibility and data-quality tests remain intact.
+
+## First-visit terminal tour
+
+The former inline example journey is replaced by a ten-stop tour of the actual terminal: an introduction to Standard and Pro, Standard venue selection, the complete Standard workspace, the complete Pro workspace, Pro entry-cost comparison, the Account page, venue-scoped margin, the Activity page, timeline details and the Agents page. The mode introduction highlights both mode buttons and explains venue-first trading versus order-size-specific price-cost and fee comparison. Pro stops actually select Pro and its execution-cost panel, first showing how the workspace changes, then explaining the basis-point comparison and lowest-first ordering without promising guaranteed fills. Each stop has a short explanation, Skip and Next (Finish on the last stop), with Back from the second stop onward. A discreet **Take a tour** header control replays it.
+
+The tour starts once per browser profile after hydration. Skipping, finishing or pressing Escape stores only a versioned seen preference in local storage; no wallet connection is required. Blocked storage must not prevent dismissal or replay. In that case, dismissal lasts for the current page session and a later reload may offer the tour again.
+
+Tour navigation temporarily selects the appropriate workspace, mode and record filter without changing the URL, order drafts, saved plans, cancellations, account fixtures or wallet state. Pro stops temporarily select Live comparison rather than waiting for an average to warm up; exiting restores the underlying navigation context, including the user's sampling selection. A native modal keeps highlighted controls read-only during the walkthrough: the tour never places an order, moves collateral, submits a strategy or requests a signature. It remains usable when public feeds are unavailable, without substituting fabricated live prices.
+
+Detail stops dim and blur the background outside the highlighted control or section. Their desktop callouts sit beside the target where space permits; mobile uses a bottom card and scrolls the relevant section into view. Large detail sections reveal their upper portion rather than letting the card cover the subject. Overview stops leave the visible workspace below the header clear, with one continuous outline rising into a rounded notch around the active Trade, Account, Activity or Agents tab. Only that tab and its connection to the content are clear; the logo, wallet controls and inactive tabs remain dimmed and blurred. Header bounds and notch geometry are measured from the actual responsive layout, not fixed screen coordinates. A compact lower-right desktop card (bottom sheet on mobile) overlays the overview without cropping the highlight or blurring other panels. Mobile retains the normal stacked page layout; it does not shrink a desktop terminal into unreadable miniature text. Focus stays within the tour, moves to each step heading and returns to the replay control on dismissal. Reduced-motion settings disable the entrance animation.
 
 ## Terminal chrome and connect-only wallet
 
