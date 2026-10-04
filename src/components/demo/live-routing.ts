@@ -49,8 +49,26 @@ export type LiveComparisonMeta = {
   // for ranking, savings, route selection or order review.
   delayedQuotes: Partial<Record<LiveVenue, Quote>>;
   displayReference: number;
+  // Accepted, aligned frames only. Used by the read-only temporal analysis;
+  // delayed presentation books are deliberately not captured here.
+  selectedBooks: Partial<Record<LiveVenue, BookObservation>>;
 };
 export type ComparisonFeeds = Record<LiveVenue, FeedState>;
+
+/** Presentation only: a legible viewport around the intended USDC exposure. */
+export function focusedChartMax(notional: number, fullRange: number) {
+  const limit = Number.isFinite(fullRange) && fullRange > 0 ? fullRange : 1000;
+  const target = Math.min(
+    limit,
+    Math.max(
+      1000,
+      Number.isFinite(notional) && notional > 0 ? notional * 2 : 1000,
+    ),
+  );
+  const magnitude = 10 ** Math.floor(Math.log10(target));
+  const rounded = Math.ceil(target / magnitude / 0.5) * magnitude * 0.5;
+  return Math.min(limit, rounded);
+}
 
 function validBook(book: Book) {
   return (
@@ -216,6 +234,7 @@ export function compareLiveRoutes(
   input: RouteInput,
   feeds: ComparisonFeeds,
   now: number,
+  options: { curves?: boolean } = {},
 ): RouteComparison {
   const observations: Observation[] = comparisonVenues.map((venue) => {
     const feed = feeds[venue];
@@ -238,7 +257,7 @@ export function compareLiveRoutes(
   const fresh = observations.filter(
     (o) => !o.reason && input.allowed.includes(o.venue),
   );
-  const options = Object.fromEntries(
+  const bookOptions = Object.fromEntries(
     fresh.map((o) => {
       const feed = feeds[o.venue];
       const latest = { book: feed.book!, receivedAt: feed.bookAt };
@@ -250,7 +269,7 @@ export function compareLiveRoutes(
       return [o.venue, [...history.slice(-23), latest].reverse()];
     }),
   );
-  let selected = alignedBooks(options);
+  let selected = alignedBooks(bookOptions);
   const selectedCount = Object.keys(selected).length;
   const alignmentReason =
     fresh.length > 1 && selectedCount < 2
@@ -311,31 +330,7 @@ export function compareLiveRoutes(
           observation.fee!.takerBps,
         )
       : null;
-    if (!reason) {
-      if (!sizeValid) reason = "Enter a valid order size";
-      else if (!quote) reason = "Insufficient visible depth for this size";
-      else if (input.account === "stale") reason = "Account updates paused";
-      else if (input.account === "empty")
-        reason = "No sample collateral available";
-      else if (!Number.isFinite(input.leverage) || input.leverage <= 0)
-        reason = "Select a valid leverage preference";
-      else if (
-        !Number.isFinite(input.slippage) ||
-        input.slippage <= 0 ||
-        input.slippage >= 100
-      )
-        reason = "Enter a valid price tolerance";
-      // Adverse movement only: a favourable price must never fail this gate.
-      else if (
-        (input.side === "Buy" ? 1 : -1) *
-          (quote.worstFill / reference - 1) *
-          100 >
-        input.slippage + 1e-10
-      )
-        reason = "Beyond price tolerance";
-      else if (quote.notional / input.leverage + quote.totalFees > 7400)
-        reason = "Exceeds sample margin budget";
-    }
+    if (!reason) reason = quoteIssue(input, quote, reference);
     return { venue, quote, reason };
   });
   const ranked = candidates
@@ -426,37 +421,58 @@ export function compareLiveRoutes(
   );
   const magnitude = 10 ** Math.floor(Math.log10(targetMax));
   const chartMax = Math.ceil(targetMax / magnitude / 0.5) * magnitude * 0.5;
-  const curves: Curve[] = comparisonVenues.map((venue) => {
-    const observation = observations.find((o) => o.venue === venue)!;
-    if (!displayBooks[venue] || !Number.isFinite(displayReference))
-      return { venue, capacity: 0, points: [] };
-    const book = displayBooks[venue]!;
-    const levels = input.side === "Buy" ? book.asks : book.bids;
-    const capacity =
-      levels.reduce((sum, l) => sum + l.size, 0) * displayReference;
-    const end = Math.min(capacity, chartMax);
-    const sizes = [
-      ...Array.from({ length: 121 }, (_, i) => Math.max(1e-8, (end * i) / 120)),
-      end,
-      displayQuantity * displayReference,
-    ];
-    const points = [
-      ...new Set(sizes.filter((n) => Number.isFinite(n) && n > 0 && n <= end)),
-    ]
-      .sort((a, b) => a - b)
-      .flatMap((notional) => {
-        const q = walkBook(
-          venue,
-          book,
-          input.side,
-          notional / displayReference,
-          displayReference,
-          observation.fee!.takerBps,
-        );
-        return q ? [{ notional, cost: q.costBps }] : [];
-      });
-    return { venue, capacity, points, delayed: Boolean(observation.reason) };
-  });
+  const focusedEnd = focusedChartMax(
+    displayQuantity * displayReference,
+    chartMax,
+  );
+  const curves: Curve[] =
+    options.curves === false
+      ? []
+      : comparisonVenues.map((venue) => {
+          const observation = observations.find((o) => o.venue === venue)!;
+          if (!displayBooks[venue] || !Number.isFinite(displayReference))
+            return { venue, capacity: 0, points: [] };
+          const book = displayBooks[venue]!;
+          const levels = input.side === "Buy" ? book.asks : book.bids;
+          const capacity =
+            levels.reduce((sum, l) => sum + l.size, 0) * displayReference;
+          const end = Math.min(capacity, chartMax);
+          const sizes = [
+            ...Array.from({ length: 121 }, (_, i) =>
+              Math.max(1e-8, (end * i) / 120),
+            ),
+            // Actual book walks near the ticket size keep the focused viewport
+            // detailed without inventing depth or changing the ranked quote.
+            ...Array.from({ length: 61 }, (_, i) =>
+              Math.max(1e-8, (Math.min(end, focusedEnd) * i) / 60),
+            ),
+            end,
+            displayQuantity * displayReference,
+          ];
+          const points = [
+            ...new Set(
+              sizes.filter((n) => Number.isFinite(n) && n > 0 && n <= end),
+            ),
+          ]
+            .sort((a, b) => a - b)
+            .flatMap((notional) => {
+              const q = walkBook(
+                venue,
+                book,
+                input.side,
+                notional / displayReference,
+                displayReference,
+                observation.fee!.takerBps,
+              );
+              return q ? [{ notional, cost: q.costBps }] : [];
+            });
+          return {
+            venue,
+            capacity,
+            points,
+            delayed: Boolean(observation.reason),
+          };
+        });
   return {
     input,
     reference,
@@ -478,8 +494,42 @@ export function compareLiveRoutes(
       chartMax,
       delayedQuotes,
       displayReference,
+      selectedBooks: selected,
     },
   };
+}
+
+/** Same intent gates for live estimates and historical analytical samples. */
+export function quoteIssue(
+  input: RouteInput,
+  quote: Quote | null,
+  reference: number,
+) {
+  if (
+    !Number.isFinite(input.quantity) ||
+    input.quantity <= 0 ||
+    !Number.isFinite(input.quantity * reference)
+  )
+    return "Enter a valid order size";
+  if (!quote) return "Insufficient visible depth for this size";
+  if (input.account === "stale") return "Account updates paused";
+  if (input.account === "empty") return "No sample collateral available";
+  if (!Number.isFinite(input.leverage) || input.leverage <= 0)
+    return "Select a valid leverage preference";
+  if (
+    !Number.isFinite(input.slippage) ||
+    input.slippage <= 0 ||
+    input.slippage >= 100
+  )
+    return "Enter a valid price tolerance";
+  if (
+    (input.side === "Buy" ? 1 : -1) * (quote.worstFill / reference - 1) * 100 >
+    input.slippage + 1e-10
+  )
+    return "Beyond price tolerance";
+  if (quote.notional / input.leverage + quote.totalFees > 7400)
+    return "Exceeds sample margin budget";
+  return null;
 }
 
 export function comparisonStatus(comparison: RouteComparison) {

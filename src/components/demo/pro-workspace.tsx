@@ -1,31 +1,33 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { ArrowUpRight, Layers3 } from "lucide-react";
 import { Tabs } from "./controls";
 import { MarketChart } from "./market-chart";
+import { MarketInstrument } from "./market-instrument";
+import { VenueIcon } from "./venue-select";
 import { COMPARISON_HISTORY_MS } from "./market-data/feed";
-import {
-  markets,
-  number,
-  usdcSize,
-  venues,
-  type Market,
-  type Venue,
-} from "./data";
+import { number, usdcSize, venues, type Market, type Venue } from "./data";
 import { money, type RouteComparison } from "./routing";
 import {
   comparisonVenues,
   comparisonStatus,
   BOOK_MAX_AGE_MS,
   BOOK_MAX_SKEW_MS,
+  focusedChartMax,
 } from "./live-routing";
 import type { LiveMarket } from "./market-data/use-market-feed";
-import type { Interval, LiveVenue } from "./market-data/adapters";
+import type { Interval } from "./market-data/adapters";
+import { formatCostBps } from "./venue-estimates";
+import {
+  rankAnalysis,
+  type AnalysisFrame,
+  type AnalysisMode,
+} from "./comparison-analysis";
 
-export function CostChart({ comparison }: { comparison: RouteComparison }) {
+export function CostChart({ analysis }: { analysis: AnalysisFrame }) {
   const id = useId();
   const [hidden, setHidden] = useState<Venue[]>([]);
+  const [range, setRange] = useState<"order" | "depth">("order");
   const svg = useRef<SVGSVGElement>(null);
   const [bounds, setBounds] = useState({ width: 560, height: 220 });
   useEffect(() => {
@@ -41,13 +43,20 @@ export function CostChart({ comparison }: { comparison: RouteComparison }) {
     observer.observe(target);
     return () => observer.disconnect();
   }, []);
-  const { input, reference, best } = comparison;
+  const { input, reference } = analysis;
+  const { lowest } = rankAnalysis(analysis);
   const orderNotional = input.notional ?? input.quantity * reference;
-  const series = comparison.live?.curves ?? [];
-  const chartMax = comparison.live?.chartMax ?? 1000;
-  const visible = series.filter(
-    (s) => !hidden.includes(s.venue) && input.allowed.includes(s.venue),
-  );
+  const series = analysis.curves;
+  const fullRange = analysis.chartMax;
+  const chartMax =
+    range === "order" ? focusedChartMax(orderNotional, fullRange) : fullRange;
+  // Changing the viewport or visibility never changes routing eligibility.
+  const visible = series
+    .filter((s) => !hidden.includes(s.venue) && input.allowed.includes(s.venue))
+    .map((s) => ({
+      ...s,
+      points: s.points.filter((point) => point.notional <= chartMax),
+    }));
   const values = visible.flatMap((s) => s.points.map((p) => p.cost));
   const min = Math.min(0, Math.floor(Math.min(0, ...values) / 5) * 5);
   const max = Math.max(5, Math.ceil(Math.max(0, ...values) / 5) * 5);
@@ -63,6 +72,33 @@ export function CostChart({ comparison }: { comparison: RouteComparison }) {
   const fixed = (n: number) => Number(n.toFixed(4));
   return (
     <div className="d-cost-plot">
+      <div className="d-cost-plot-heading">
+        <h3>
+          {analysis.mode === "average"
+            ? "5s average by size"
+            : "Entry cost by size"}
+        </h3>
+        <div
+          className="d-chart-range"
+          role="group"
+          aria-label="Cost chart range"
+        >
+          <button
+            type="button"
+            aria-pressed={range === "order"}
+            onClick={() => setRange("order")}
+          >
+            Order range
+          </button>
+          <button
+            type="button"
+            aria-pressed={range === "depth"}
+            onClick={() => setRange("depth")}
+          >
+            Full range
+          </button>
+        </div>
+      </div>
       <div className="d-cost-legend" aria-label="Chart visibility">
         {comparisonVenues.map((venue) => (
           <button
@@ -95,6 +131,10 @@ export function CostChart({ comparison }: { comparison: RouteComparison }) {
         role="img"
         aria-labelledby={`${id}-title ${id}-desc`}
         className="d-cost-svg"
+        data-chart-range={range}
+        data-chart-max={chartMax}
+        data-published-at={analysis.publishedAt}
+        data-analysis-mode={analysis.mode}
       >
         <title id={`${id}-title`}>Estimated entry cost versus order size</title>
         <desc id={`${id}-desc`}>
@@ -104,6 +144,8 @@ export function CostChart({ comparison }: { comparison: RouteComparison }) {
           Cinder pricing is excluded. The table contains estimates for your
           order. Lower is better. Curves end at observed depth and do not
           establish full venue liquidity.
+          {analysis.mode === "average" &&
+            " Five-second averages use matched 250ms observations. The live order ticket does not use these averages."}
         </desc>
         {Array.from({ length: 5 }, (_, i) => {
           const cost = min + ((max - min) * i) / 4;
@@ -137,7 +179,7 @@ export function CostChart({ comparison }: { comparison: RouteComparison }) {
           </g>
         ))}
         <text x="40" y="14">
-          Entry cost¹ · bps
+          Cost¹ · bps
         </text>
         <text x={right} y={bounds.height - 2} textAnchor="end">
           Order notional · USDC
@@ -174,10 +216,10 @@ export function CostChart({ comparison }: { comparison: RouteComparison }) {
             >
               Your order
             </text>
-            {comparison.candidates
+            {analysis.rows
               .filter(
                 (c) =>
-                  c.quote &&
+                  c.costs &&
                   !c.reason &&
                   input.allowed.includes(c.venue) &&
                   !hidden.includes(c.venue),
@@ -187,8 +229,8 @@ export function CostChart({ comparison }: { comparison: RouteComparison }) {
                   key={c.venue}
                   className={`d-cost-point d-venue-${c.venue}`}
                   cx={fixed(x(orderNotional))}
-                  cy={fixed(y(c.quote!.costBps))}
-                  r={best?.venue === c.venue ? 5 : 3}
+                  cy={fixed(y(c.costs!.totalBps))}
+                  r={lowest === c.venue ? 5 : 3}
                 />
               ))}
           </g>
@@ -204,7 +246,7 @@ export function CostChart({ comparison }: { comparison: RouteComparison }) {
         </span>
         <span>
           {orderNotional > chartMax
-            ? "Order outside chart range; see exact quote below."
+            ? "Order outside chart range; see venue estimates."
             : "Hiding a curve doesn’t exclude a venue."}
         </span>
       </div>
@@ -212,13 +254,8 @@ export function CostChart({ comparison }: { comparison: RouteComparison }) {
   );
 }
 
-export function VenueComparison({
-  comparison,
-}: {
-  comparison: RouteComparison;
-}) {
-  // Stable venue order: live ticks should update values, not move rows around.
-  const sorted = comparison.candidates;
+export function VenueComparison({ analysis }: { analysis: AnalysisFrame }) {
+  const { rows: sorted, count, tied, lowest } = rankAnalysis(analysis);
   return (
     <div
       id="d-route-comparison"
@@ -226,37 +263,43 @@ export function VenueComparison({
       role="group"
       aria-label="Venue comparison table"
       className="d-comparison-table d-table-scroll"
+      data-published-at={analysis.publishedAt}
+      data-analysis-mode={analysis.mode}
     >
+      <div className="d-comparison-table-heading">
+        <h3>
+          {analysis.mode === "average"
+            ? "5s average · bps"
+            : "Entry cost · bps"}
+        </h3>
+        <span>Lowest first · {count} comparable</span>
+      </div>
       <table>
         <caption className="d-sr-only">
-          Estimated prices for the same order quantity, using public venue taker
-          fees. Delayed or unaligned rows are excluded from recommendations.
-          Cinder fees are not yet included.
+          Estimated entry costs for the same order quantity, in basis points
+          against the shared reference notional. Price cost plus fee cost equals
+          entry cost. Eligible venues are sorted from lowest to highest cost;
+          delayed, excluded and unavailable venues follow and are not ranked.
+          Public venue taker fees are included; Cinder pricing is excluded.
         </caption>
         <thead>
           <tr>
             <th scope="col">Venue</th>
-            <th scope="col">Avg. fill</th>
-            <th scope="col">Venue fee</th>
-            <th scope="col">Effective price</th>
+            <th scope="col">Price cost</th>
+            <th scope="col">Fee cost</th>
+            <th scope="col" aria-sort="ascending">
+              Entry cost¹
+            </th>
           </tr>
         </thead>
         <tbody>
-          {sorted.map(({ venue, quote, reason }) => {
-            const retained = comparison.live?.delayedQuotes[venue as LiveVenue];
-            const displayQuote = !reason ? quote : retained;
-            const delayed = Boolean(retained);
-            const observation = comparison.live?.observations.find(
-              (o) => o.venue === venue,
-            );
+          {sorted.map(({ venue, costs, dollars, reason, delayed }) => {
             return (
               <tr
                 key={venue}
                 data-testid={`route-row-${venue}`}
                 className={
-                  comparison.best?.venue === venue &&
-                  comparison.ranked.length > 1 &&
-                  !comparison.live?.tied
+                  lowest === venue
                     ? "d-best-row"
                     : delayed
                       ? "d-delayed-row"
@@ -265,49 +308,54 @@ export function VenueComparison({
               >
                 <td>
                   <strong className={`d-venue-key d-venue-${venue}`}>
-                    <i aria-hidden="true" />
+                    <VenueIcon venue={venue} size={20} />
                     {venues[venue]}
                   </strong>
                   <span className="d-cell-sub">
                     {delayed
-                      ? observation!.reason?.startsWith("Books out of sync")
+                      ? reason?.startsWith("Books out of sync")
                         ? "Unaligned · not compared"
-                        : `Delayed · ${((comparison.live!.now - observation!.receivedAt) / 1000).toFixed(1)}s since update`
+                        : "Delayed · not compared"
                       : (reason ??
-                        (comparison.live?.tied
+                        (tied
                           ? "Similar estimate"
-                          : comparison.ranked.length === 1
+                          : count === 1
                             ? "Only complete estimate"
-                            : comparison.best?.venue === venue
-                              ? "Lowest estimate"
+                            : lowest === venue
+                              ? analysis.mode === "average"
+                                ? "Lowest 5s average"
+                                : "Lowest estimate"
                               : "Comparable"))}
                   </span>
                 </td>
-                <td>{displayQuote ? money(displayQuote.averageFill) : "—"}</td>
                 <td>
-                  {displayQuote ? (
-                    <>
-                      <span>{money(displayQuote.venueFee)}</span>
-                      <span className="d-cell-sub">
-                        {number(
-                          comparison.live?.observations.find(
-                            (o) => o.venue === venue,
-                          )?.fee?.takerBps ?? NaN,
-                        )}{" "}
-                        bps
-                      </span>
-                    </>
+                  {costs ? (
+                    <span className="d-cost-bps">
+                      {formatCostBps(costs.priceBps)} <small>bps</small>
+                    </span>
                   ) : (
                     "—"
                   )}
                 </td>
                 <td>
-                  {displayQuote ? (
+                  {costs ? (
+                    <span className="d-cost-bps">
+                      {formatCostBps(costs.feeBps)} <small>bps</small>
+                    </span>
+                  ) : (
+                    "—"
+                  )}
+                </td>
+                <td>
+                  {dollars !== null && costs ? (
                     <>
-                      <strong>{money(displayQuote.effectivePrice)}</strong>
-                      <span className="d-cell-sub">
-                        {inputDirection(comparison)} fee
-                      </span>
+                      <strong
+                        className="d-cost-bps d-entry-cost"
+                        data-cost-bps={costs.totalBps}
+                      >
+                        {formatCostBps(costs.totalBps)} <small>bps</small>
+                      </strong>
+                      <span className="d-cell-sub">{money(dollars)}</span>
                     </>
                   ) : (
                     "—"
@@ -324,6 +372,8 @@ export function VenueComparison({
 
 export function ProWorkspace({
   comparison,
+  analysis,
+  onAnalysis,
   chartVenue,
   leverage,
   panel,
@@ -337,6 +387,8 @@ export function ProWorkspace({
   onNotional,
 }: {
   comparison: RouteComparison;
+  analysis: AnalysisFrame;
+  onAnalysis: (mode: AnalysisMode) => void;
   chartVenue: Venue;
   leverage: string;
   panel: "cost" | "price";
@@ -349,41 +401,20 @@ export function ProWorkspace({
   onRetry: () => void;
   onNotional: (value: number) => void;
 }) {
-  const { input, reference } = comparison;
+  const { input } = comparison;
+  const reference = analysis.reference;
   return (
     <section
       className="d-panel d-pro-workspace"
       aria-label="Pro execution workspace"
     >
       <div className="d-pro-heading">
-        <div className="d-instrument-line">
-          <Layers3 size={20} className="d-pro-symbol" aria-hidden="true" />
-          {panel === "cost" && (
-            <>
-              <label htmlFor="d-pro-market" className="d-sr-only">
-                Market
-              </label>
-              <select
-                id="d-pro-market"
-                value={input.market}
-                onChange={(e) => onMarket(e.target.value as Market)}
-              >
-                {Object.entries(markets).map(([key, m]) => (
-                  <option key={key} value={key}>
-                    {m.symbol}
-                  </option>
-                ))}
-              </select>
-              <span
-                className="d-leverage-badge"
-                aria-label={`Order leverage ${leverage}x`}
-              >
-                {leverage}x
-              </span>
-            </>
-          )}
-          {panel === "price" && <strong>Market reference</strong>}
-        </div>
+        <MarketInstrument
+          id="d-pro-market"
+          market={input.market}
+          leverage={leverage}
+          onMarket={onMarket}
+        />
         <Tabs
           id="pro-view"
           label="Pro workspace views"
@@ -394,18 +425,35 @@ export function ProWorkspace({
           ]}
           onChange={onPanel}
         />
+        {panel === "cost" && (
+          <div className="d-comparison-status" data-testid="comparison-status">
+            <span>
+              <i
+                className={comparison.live?.aligned ? "is-live" : ""}
+                aria-hidden="true"
+              />
+              {comparisonStatus(comparison)}
+            </span>
+            {!comparison.live?.aligned && (
+              <button type="button" className="d-text-button" onClick={onRetry}>
+                Reconnect feeds
+              </button>
+            )}
+          </div>
+        )}
       </div>
       <div
         id="pro-view-panel"
         role="tabpanel"
         aria-labelledby={`pro-view-${panel}`}
-        className="d-pro-content"
+        className={`d-pro-content d-pro-${panel}-content`}
       >
         {panel === "price" ? (
           <MarketChart
             market={input.market}
             venue={chartVenue}
             canChooseVenue
+            showInstrument={false}
             leverage={leverage}
             onMarket={onMarket}
             onVenue={onChartVenue}
@@ -418,68 +466,106 @@ export function ProWorkspace({
             <div className="d-cost-heading">
               <div>
                 <h2>
-                  {input.side} ·{" "}
-                  {Number.isFinite(input.notional) && input.notional! > 0
-                    ? usdcSize(input.notional!)
-                    : "Enter order size"}
+                  <span className={input.side === "Buy" ? "d-up" : "d-down"}>
+                    {input.side === "Buy" ? "Buy / Long" : "Sell / Short"}
+                  </span>
+                  <span className="d-cost-notional">
+                    {Number.isFinite(input.notional) && input.notional! > 0
+                      ? usdcSize(input.notional!)
+                      : "Enter order size"}
+                  </span>
                 </h2>
                 <p>
-                  Notional exposure ·{" "}
-                  {Number.isFinite(reference) ? "ref." : "last observed ref."}{" "}
-                  {money(comparison.live?.displayReference ?? reference)}
+                  {analysis.mode === "average"
+                    ? "5s mean reference"
+                    : Number.isFinite(reference)
+                      ? "Shared reference"
+                      : "Last observed reference"}
+                  <strong>{money(reference)}</strong>
                 </p>
               </div>
-              <div
-                className="d-size-presets"
-                aria-label="Order notional presets"
-              >
-                {[5000, 25000, 100000].map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => onNotional(value)}
-                    disabled={!Number.isFinite(reference)}
-                    aria-label={`Set order notional to ${value} USDC`}
-                  >
-                    {value / 1000}k USDC
-                    <ArrowUpRight size={12} aria-hidden="true" />
-                  </button>
-                ))}
+              <div className="d-quick-size">
+                <span>Quick size · USDC</span>
+                <div
+                  className="d-size-presets"
+                  role="group"
+                  aria-label="Order notional presets"
+                >
+                  {[5000, 25000, 100000].map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => onNotional(value)}
+                      disabled={!Number.isFinite(comparison.reference)}
+                      aria-label={`Set order notional to ${value} USDC`}
+                      aria-pressed={input.notional === value}
+                    >
+                      {value / 1000}k
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-            <div
-              className="d-comparison-status"
-              data-testid="comparison-status"
-            >
-              <span>
-                <i
-                  className={comparison.live?.aligned ? "is-live" : ""}
-                  aria-hidden="true"
-                />
-                {comparisonStatus(comparison)}
-              </span>
-              {!comparison.live?.aligned && (
+            <div className="d-analysis-controls">
+              <div
+                className="d-chart-range d-analysis-switch"
+                role="group"
+                aria-label="Comparison sampling"
+              >
                 <button
                   type="button"
-                  className="d-text-button"
-                  onClick={onRetry}
+                  aria-pressed={analysis.mode === "live"}
+                  onClick={() => onAnalysis("live")}
                 >
-                  Reconnect feeds
+                  Live
                 </button>
+                <button
+                  type="button"
+                  aria-pressed={analysis.mode === "average"}
+                  onClick={() => onAnalysis("average")}
+                >
+                  5s average
+                </button>
+              </div>
+              <span data-testid="analysis-status">{analysis.status}</span>
+              {analysis.mode === "average" && (
+                <span className="d-analysis-ticket-note">
+                  Ticket uses live books
+                </span>
               )}
-              <span>Public venue fees · Cinder pricing excluded</span>
             </div>
             <div className="d-pro-analysis">
-              <CostChart comparison={comparison} />
-              <VenueComparison comparison={comparison} />
+              <CostChart analysis={analysis} />
+              <VenueComparison analysis={analysis} />
             </div>
             <details className="d-comparison-method">
-              <summary>How estimates work</summary>
+              <summary>
+                <span>How estimates work</span>
+                <span className="d-method-pricing">
+                  Public venue fees · Cinder pricing excluded
+                </span>
+              </summary>
               <p>
-                ¹ Entry cost compares the average fill with the shared midpoint
-                reference, then adds public venue taker fees. Effective price is
-                the average fill plus fees for buys, minus fees for sells.
+                ¹ Entry cost = price cost + fee cost. Each is expressed in basis
+                points of the same shared-reference order notional; 1 bp is
+                0.01%. Price cost compares the average fill with the shared
+                midpoint reference. Fee cost is the public taker fee on the
+                estimated fill, normalized to that same reference notional.
+                Values are rounded for display; ranking uses full precision.
                 Negative reference cost is not guaranteed profit.
+              </p>
+              <p>
+                Feeds continue updating independently. Analysis samples aligned
+                books on a common 250ms clock; graph and table publish together
+                every second. The optional 5s view averages calculated costs,
+                not order books, using at least 16 of 20 matching time slots.
+                Each ranked venue uses the same slots and reference cohort.
+                Missing or invalid samples are not zero-filled. Average curves
+                end at the minimum observed depth across those samples. Changing
+                order intent resets the window. Stale or invalid data is
+                excluded immediately. The ticket and order review always
+                recompute from live books; the lowest average need not be best
+                now.
               </p>
               <p>
                 Same quantity across compared venues; no extrapolated liquidity.
@@ -537,8 +623,4 @@ export function ProWorkspace({
       </div>
     </section>
   );
-}
-
-function inputDirection(comparison: RouteComparison) {
-  return comparison.input.side === "Buy" ? "Including" : "After";
 }

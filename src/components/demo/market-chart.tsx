@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
 import { CandlestickChart, Info, Minus, Plus, RotateCcw } from "lucide-react";
 import type { IChartApi, ISeriesApi, UTCTimestamp } from "lightweight-charts";
 import { displayBook, precision, type Interval } from "./market-data/adapters";
 import { candleHealth, channelHealth } from "./market-data/feed";
 import type { LiveMarket } from "./market-data/use-market-feed";
 import { MarketStatistics } from "./market-statistics";
+import { MarketInstrument } from "./market-instrument";
 import { VenueIcon, VenueSelect } from "./venue-select";
 import {
   candles,
@@ -453,6 +453,7 @@ export function MarketChart({
   live,
   liveInterval,
   onInterval,
+  showInstrument = true,
 }: {
   market: Market;
   venue: Venue;
@@ -463,6 +464,7 @@ export function MarketChart({
   live?: LiveMarket;
   liveInterval?: Interval;
   onInterval?: (value: Interval) => void;
+  showInstrument?: boolean;
 }) {
   const [localInterval, setInterval] = useState<Interval>("15m");
   const interval = liveInterval ?? localInterval;
@@ -499,68 +501,40 @@ export function MarketChart({
       className="d-panel d-market"
       aria-label="Market chart"
       data-live={live ? "true" : undefined}
+      data-instrument={showInstrument ? undefined : "hidden"}
     >
       <div className="d-market-heading">
-        <div className="d-instrument">
-          <Image
-            className="d-asset-icon"
-            src={`/brand/assets/${market.toLowerCase()}.svg`}
-            width={32}
-            height={32}
-            alt=""
-            unoptimized
-          />
-          <div>
-            <div className="d-instrument-line">
-              <label className="d-sr-only" htmlFor="d-market">
-                Market
-              </label>
-              <select
-                id="d-market"
-                value={market}
-                onChange={(e) => onMarket(e.target.value as Market)}
-              >
-                {Object.keys(markets).map((key) => (
-                  <option key={key} value={key}>
-                    {key}-USDC
-                  </option>
-                ))}
-              </select>
+        {showInstrument && (
+          <MarketInstrument
+            id="d-market"
+            market={market}
+            leverage={leverage}
+            onMarket={onMarket}
+          >
+            {!canChooseVenue && (
               <span
-                className="d-leverage-badge"
-                title="Leverage preference for the new order"
-                aria-label={`Order leverage ${leverage}x`}
+                className="d-market-venue"
+                title={`${venues[venue]}${live ? ` · ${channelHealth(live, "ticker")}` : ""}`}
               >
-                {leverage}x
-              </span>
-              {!canChooseVenue && (
-                <span
-                  className="d-market-venue"
-                  title={`${venues[venue]}${live ? ` · ${channelHealth(live, "ticker")}` : ""}`}
-                >
-                  <VenueIcon venue={venue} size={20} />
-                  <strong
-                    className="d-sr-only"
-                    data-testid="manual-chart-source"
+                <VenueIcon venue={venue} size={20} />
+                <strong className="d-sr-only" data-testid="manual-chart-source">
+                  {venues[venue]}
+                </strong>
+                {live && (
+                  <span
+                    className="d-ticker-health"
+                    data-testid="ticker-status"
+                    data-health={channelHealth(live, "ticker")}
                   >
-                    {venues[venue]}
-                  </strong>
-                  {live && (
-                    <span
-                      className="d-ticker-health"
-                      data-testid="ticker-status"
-                      data-health={channelHealth(live, "ticker")}
-                    >
-                      <span className="d-sr-only">
-                        {channelHealth(live, "ticker")}
-                      </span>
+                    <span className="d-sr-only">
+                      {channelHealth(live, "ticker")}
                     </span>
-                  )}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
+                  </span>
+                )}
+              </span>
+            )}
+          </MarketInstrument>
+        )}
         {!live && (
           <>
             <div className="d-reference-price">

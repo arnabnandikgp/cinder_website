@@ -26,7 +26,7 @@ export function RouteCard({
     >
       <div className="d-route-card-heading">
         <span>
-          <Route size={15} aria-hidden="true" /> Entry estimate
+          <Route size={15} aria-hidden="true" /> Best now · live estimate
         </span>
         <span>{ranked.length} comparable</span>
       </div>

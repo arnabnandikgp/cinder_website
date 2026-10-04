@@ -24,6 +24,7 @@ import { channelHealth } from "./market-data/feed";
 import { intervals, type Interval } from "./market-data/adapters";
 import { parseAmount, type RouteInput } from "./routing";
 import { compareLiveRoutes, comparisonVenues } from "./live-routing";
+import { useComparisonAnalysis } from "./use-comparison-analysis";
 import {
   pick,
   number,
@@ -140,6 +141,11 @@ export function Terminal() {
   const setTicket = mode === "auto" ? setProTicket : setStandardTicket;
   const [allowed, setAllowed] = useState<Venue[]>([...comparisonVenues]);
   const panel = pick(params.get("panel"), ["cost", "price"] as const, "cost");
+  const analysisMode = pick(
+    params.get("analysis"),
+    ["live", "average"] as const,
+    "live",
+  );
   const routeInput: RouteInput = {
     market,
     side: ticket.side === "Sell" ? "Sell" : "Buy",
@@ -167,6 +173,7 @@ export function Terminal() {
         },
         { pacifica, bulk, phoenix },
         Math.max(pacifica.now, bulk.now, phoenix.now),
+        { curves: false },
       ),
     [
       market,
@@ -180,6 +187,13 @@ export function Terminal() {
       bulk,
       phoenix,
     ],
+  );
+  const analysis = useComparisonAnalysis(
+    routeInput,
+    { pacifica, bulk, phoenix },
+    comparison,
+    analysisMode,
+    proEnabled,
   );
   const [cancel, setCancel] = useState<CancelState>("none");
   const [drafts, setDrafts] = useState<Draft[]>([]);
@@ -315,6 +329,8 @@ export function Terminal() {
               {mode === "auto" ? (
                 <ProWorkspace
                   comparison={comparison}
+                  analysis={analysis}
+                  onAnalysis={(value) => updateQuery({ analysis: value })}
                   chartVenue={chart}
                   leverage={ticket.leverage}
                   panel={panel}
@@ -358,7 +374,7 @@ export function Terminal() {
                 </>
               )}
               <OrderTicket
-                key={`${mode}-${venue}-${market}`}
+                key={`${venue}-${market}`}
                 market={market}
                 mode={mode}
                 venue={venue}

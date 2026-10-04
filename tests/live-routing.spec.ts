@@ -5,6 +5,7 @@ import {
   BOOK_MAX_AGE_MS,
   BOOK_MAX_SKEW_MS,
   alignedBooks,
+  focusedChartMax,
   type ComparisonFeeds,
 } from "../src/components/demo/live-routing";
 import { MarketFeed } from "../src/components/demo/market-data/feed";
@@ -62,6 +63,44 @@ function feeds(): ComparisonFeeds {
     ]),
   ) as ComparisonFeeds;
 }
+
+test("focused chart range is presentation-only and samples use real visible book walks", () => {
+  expect(focusedChartMax(300, 250000)).toBe(1000);
+  expect(focusedChartMax(10000, 250000)).toBe(20000);
+  expect(focusedChartMax(25000, 250000)).toBe(50000);
+  expect(focusedChartMax(100000, 250000)).toBe(200000);
+  expect(focusedChartMax(100000, 15000)).toBe(15000);
+  expect(focusedChartMax(Number.MAX_VALUE, 250000)).toBe(250000);
+  for (const size of [NaN, Infinity, -100, 0])
+    expect(focusedChartMax(size, 250000)).toBe(1000);
+
+  const f = feeds();
+  const comparison = compareLiveRoutes({ ...input, notional: 300 }, f, now);
+  const focus = focusedChartMax(300, comparison.live!.chartMax);
+  for (const curve of comparison.live!.curves.filter((s) => s.points.length)) {
+    expect(
+      curve.points.filter((p) => p.notional <= focus).length,
+    ).toBeGreaterThanOrEqual(60);
+    const last = curve.points.at(-1)!;
+    expect(last.notional).toBeLessThanOrEqual(curve.capacity);
+    for (const point of curve.points) {
+      const quote = walkBook(
+        curve.venue,
+        f[curve.venue].book!,
+        input.side,
+        point.notional / comparison.reference,
+        comparison.reference,
+        f[curve.venue].fee!.takerBps,
+      );
+      expect(point.cost).toBe(quote!.costBps);
+    }
+  }
+  const winner = comparison.best!.venue;
+  // Choosing a plot range does not replace or resize the compared order.
+  focusedChartMax(comparison.input.notional!, comparison.live!.chartMax);
+  expect(comparison.best!.venue).toBe(winner);
+  expect(comparison.input.notional).toBe(300);
+});
 
 test("USDC intent converts at one shared reference without leverage multiplication or input mutation", () => {
   const requested = { ...input, notional: 10000, quantity: NaN };

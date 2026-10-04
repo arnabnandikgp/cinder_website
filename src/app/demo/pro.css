@@ -5,7 +5,7 @@
   --d-venue-velocity: #e9c278;
   --d-venue-phoenix: #f5b580;
 }
-.d-pro-grid {
+.d-trading-grid.d-pro-grid {
   grid-template-columns: minmax(0, 1fr) 328px;
 }
 .d-pro-grid > .d-ticket {
@@ -21,13 +21,14 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
+  container-type: inline-size;
 }
 .d-pro-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 4px 16px;
+  gap: 8px 20px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--d-line);
   flex-shrink: 0;
 }
@@ -36,10 +37,6 @@
   border-color: transparent;
   background-color: transparent;
   padding-left: 0;
-}
-.d-pro-symbol {
-  color: var(--d-blue);
-  flex-shrink: 0;
 }
 .d-simulation-label {
   display: flex;
@@ -56,6 +53,8 @@
 }
 .d-pro-heading > .d-tabs button {
   min-height: 40px;
+  padding-inline: 0;
+  margin-inline: 0 20px;
 }
 .d-pro-content {
   overflow: auto;
@@ -63,12 +62,30 @@
   flex: 1;
   scrollbar-width: thin;
 }
+.d-pro-cost-content {
+  display: flex;
+  flex-direction: column;
+}
+.d-pro-price-content {
+  display: flex;
+  flex-direction: column;
+}
 .d-pro-content > .d-market {
   border: 0;
   min-height: 440px;
+  flex: 1;
 }
 .d-pro-content > .d-market .d-chart-frame {
   min-height: 240px;
+}
+@media (min-width: 1000px) and (min-height: 720px),
+  (min-width: 761px) and (min-height: 800px) {
+  .d-pro-price-content > .d-market {
+    min-height: 0;
+  }
+  .d-pro-price-content > .d-market .d-chart-frame {
+    min-height: 100px;
+  }
 }
 .d-cost-heading {
   display: flex;
@@ -77,13 +94,30 @@
   gap: 16px;
   padding: 8px 16px;
   border-bottom: 1px solid var(--d-line);
+  flex-shrink: 0;
 }
 .d-cost-heading h2 {
-  font-size: 15px;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.d-cost-notional {
+  font-size: 17px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
 .d-cost-heading p {
   font-size: 12px;
   margin-top: 4px;
+  display: flex;
+  gap: 8px;
+}
+.d-cost-heading p strong {
+  font-weight: 400;
+  color: var(--off-white);
+  font-variant-numeric: tabular-nums;
 }
 .d-snapshot-control {
   display: flex;
@@ -101,20 +135,76 @@
   min-height: 36px;
 }
 .d-cost-plot {
-  padding: 0 12px;
+  display: flex;
+  flex-direction: column;
+  padding: 0 16px;
   min-width: 0;
 }
 .d-pro-analysis {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 410px;
-  align-items: start;
+  grid-template-columns: minmax(0, 1fr) clamp(380px, 38%, 430px);
+  flex: 1;
+  min-height: 320px;
+}
+.d-analysis-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  padding: 4px 16px;
+  border-bottom: 1px solid var(--d-line);
+  flex-shrink: 0;
+  color: var(--d-muted);
+  font-size: 12px;
+}
+.d-analysis-switch button {
+  min-height: 40px;
+  min-width: 48px;
+  padding-inline: 12px;
+}
+.d-analysis-switch button[aria-pressed="true"] {
+  background: var(--cobalt-tint);
+  color: var(--off-white);
+}
+.d-analysis-ticket-note {
+  margin-left: auto;
+}
+.d-cost-plot-heading,
+.d-comparison-table-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+}
+.d-cost-plot-heading h3,
+.d-comparison-table-heading h3 {
+  font-size: 13px;
+  font-weight: 500;
+}
+.d-chart-range {
+  display: flex;
+  gap: 4px;
+}
+.d-chart-range button {
+  font-size: 12px;
+  min-height: 36px;
+  padding: 4px 8px;
+  color: var(--d-muted);
+  background: transparent;
+  border-radius: 4px;
+}
+.d-chart-range button[aria-pressed="true"] {
+  color: var(--off-white);
+  background: var(--d-raised);
 }
 .d-cost-legend {
   display: flex;
   align-items: center;
   gap: 4px 16px;
   flex-wrap: wrap;
-  min-height: 40px;
+  min-height: 36px;
+  flex-shrink: 0;
 }
 .d-venue-pacifica {
   --venue-color: var(--d-venue-pacifica);
@@ -137,7 +227,7 @@
   font-size: 12px;
 }
 button.d-venue-key {
-  min-height: 40px;
+  min-height: 36px;
   padding: 0;
 }
 .d-venue-key i {
@@ -159,7 +249,9 @@ button.d-venue-key {
 .d-cost-svg {
   display: block;
   width: 100%;
-  height: clamp(170px, 22dvh, 260px);
+  height: 100%;
+  flex: 1;
+  min-height: 200px;
   overflow: visible;
 }
 .d-cost-svg text {
@@ -209,22 +301,45 @@ button.d-venue-key {
   color: var(--d-muted);
   font-size: 12px;
   padding: 4px 0 12px;
+  flex-shrink: 0;
+}
+.d-quick-size {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.d-quick-size > span {
+  font-size: 12px;
+  color: var(--d-muted);
 }
 .d-size-presets {
   display: flex;
-  gap: 4px;
+  gap: 0;
+  padding: 2px;
+  border: 1px solid var(--d-line);
+  border-radius: 6px;
   flex-shrink: 0;
 }
 .d-size-presets button {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: var(--d-raised);
+  background: transparent;
   border-radius: 4px;
   color: var(--d-muted);
   font-size: 12px;
-  padding: 4px 8px;
+  padding: 4px 12px;
   min-height: 32px;
+}
+.d-size-presets button[aria-pressed="true"] {
+  color: var(--d-blue);
+  background: var(--cobalt-tint);
+}
+.d-comparison-table-heading {
+  padding: 0 12px;
+  border-bottom: 1px solid var(--d-line);
+}
+.d-comparison-table-heading > span {
+  color: var(--d-muted);
+  font-size: 12px;
 }
 .d-comparison-table {
   outline-offset: -2px !important;
@@ -233,15 +348,42 @@ button.d-venue-key {
   align-self: stretch;
 }
 .d-comparison-table :is(td, th) {
-  padding: 10px 8px;
+  padding: 12px;
   font-variant-numeric: tabular-nums;
+}
+.d-comparison-table table {
+  min-width: 360px;
+}
+.d-comparison-table th {
+  white-space: normal;
+  line-height: 1.4;
+}
+.d-comparison-table :is(td, th):not(:first-child) {
+  padding-inline: 8px;
+}
+.d-cost-bps {
+  font-size: 12px;
+  white-space: nowrap;
+}
+.d-cost-bps small {
+  font-size: 12px;
+  color: var(--d-muted);
+  font-weight: 400;
+}
+.d-entry-cost {
+  font-size: 14px;
+}
+.d-best-row .d-entry-cost,
+.d-best-row .d-entry-cost small {
+  color: var(--d-blue);
 }
 .d-comparison-table .d-cell-sub {
   font-size: 12px;
 }
 .d-comparison-table td:first-child .d-cell-sub {
   white-space: normal;
-  max-width: 100px;
+  max-width: 148px;
+  line-height: 1.5;
 }
 .d-best-row {
   background: var(--cobalt-tint);
@@ -437,21 +579,14 @@ button.d-venue-key {
 .d-comparison-status {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 4px 16px;
-  min-height: 36px;
-  padding: 4px 16px;
+  gap: 4px 12px;
   color: var(--d-muted);
   font-size: 12px;
-  border-bottom: 1px solid var(--d-line);
 }
 .d-comparison-status > span:first-child {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-.d-comparison-status > span:last-child {
-  margin-left: auto;
 }
 .d-comparison-status i {
   width: 6px;
@@ -471,11 +606,15 @@ button.d-venue-key {
   border-top: 1px solid var(--d-line);
   font-size: 12px;
   color: var(--d-muted);
+  flex-shrink: 0;
 }
 .d-comparison-method summary {
   cursor: pointer;
   min-height: 40px;
   padding: 10px 0;
+}
+.d-method-pricing {
+  float: right;
 }
 .d-comparison-method p,
 .d-comparison-method ul {
@@ -527,15 +666,12 @@ button.d-venue-key {
   text-align: right;
 }
 @media (min-width: 1181px) and (max-height: 840px) {
-  .d-pro-grid .d-plot-caption {
-    display: none;
-  }
   .d-pro-grid .d-route-fixture {
     display: none;
   }
 }
 @media (max-width: 1180px) {
-  .d-pro-grid {
+  .d-trading-grid.d-pro-grid {
     grid-template-columns: minmax(0, 1fr) 320px;
   }
   .d-cost-heading {
@@ -549,23 +685,70 @@ button.d-venue-key {
     flex-wrap: wrap;
     gap: 8px;
   }
+  .d-simulation-label {
+    margin-left: auto;
+  }
+}
+/* Respond to the workspace width, not the whole browser's width. */
+@container (max-width: 850px) {
+  .d-pro-heading {
+    flex-wrap: wrap;
+    gap: 4px 16px;
+  }
+  .d-comparison-status {
+    margin-left: auto;
+  }
+}
+@container (max-width: 760px) {
   .d-pro-analysis {
     grid-template-columns: minmax(0, 1fr);
+    flex: none;
+  }
+  .d-cost-svg {
+    height: 240px;
+    flex: none;
   }
   .d-comparison-table {
     border-left: 0;
     border-top: 1px solid var(--d-line);
   }
-  .d-pro-heading {
+  .d-cost-heading {
     flex-wrap: wrap;
-    gap: 4px 16px;
+    gap: 8px 16px;
   }
-  .d-simulation-label {
-    margin-left: auto;
+}
+@container (max-width: 540px) {
+  .d-pro-heading > .d-tabs {
+    order: 2;
+    width: 100%;
+    margin-right: 0;
+  }
+  .d-pro-heading > .d-tabs button {
+    flex: 1;
+    margin-inline: 0;
+  }
+  .d-comparison-status {
+    flex-wrap: wrap;
+    justify-content: end;
+    max-width: 140px;
+    gap: 0;
+  }
+  .d-comparison-status > span:first-child {
+    gap: 6px;
+  }
+  .d-cost-plot-heading {
+    flex-wrap: wrap;
+    gap: 0 8px;
+    padding-top: 4px;
+  }
+  .d-method-pricing {
+    float: none;
+    display: block;
+    padding: 4px 0 0;
   }
 }
 @media (max-width: 760px) {
-  .d-pro-grid {
+  .d-trading-grid.d-pro-grid {
     grid-template-columns: minmax(0, 1fr);
   }
   .d-pro-grid > :is(.d-ticket, .d-records, .d-pro-workspace) {
@@ -577,7 +760,7 @@ button.d-venue-key {
   }
   .d-pro-heading {
     padding-inline: 12px;
-    gap: 8px;
+    gap: 4px 8px;
     flex-wrap: wrap;
   }
   .d-pro-heading .d-instrument-line {
@@ -593,7 +776,7 @@ button.d-venue-key {
     height: 220px;
   }
   .d-cost-plot {
-    overflow-x: auto;
+    overflow-x: clip;
   }
   .d-cost-legend {
     padding-inline: 4px;
@@ -602,6 +785,8 @@ button.d-venue-key {
     padding-inline: 4px;
   }
   .d-size-presets button,
+  .d-chart-range button,
+  button.d-venue-key,
   .d-route-links .d-text-button,
   .d-snapshot-control select {
     min-height: 40px;

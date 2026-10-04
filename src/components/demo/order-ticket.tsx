@@ -5,6 +5,7 @@ import { ArrowRight, ChevronDown, LockKeyhole, Route } from "lucide-react";
 import { DetailList, Segments, useClientReady } from "./controls";
 import { RouteCard } from "./route-card";
 import { VenueSelect } from "./venue-select";
+import { TradingModeSwitch } from "./trading-mode-switch";
 import { parseAmount, type RouteComparison } from "./routing";
 import {
   OrderTypes,
@@ -235,14 +236,9 @@ export function OrderTicket({
         New order · {markets[market].symbol}
       </h2>
       <div className="d-mode-switch">
-        <Segments
-          label="Trading mode"
+        <TradingModeSwitch
           disabled={!ready}
           value={mode}
-          options={[
-            { value: "manual", label: "Standard" },
-            { value: "auto", label: "Pro" },
-          ]}
           onChange={(value) => {
             setErrors({});
             onMode(value);

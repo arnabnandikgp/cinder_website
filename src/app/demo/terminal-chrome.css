@@ -323,6 +323,24 @@
     grid-row: 1 / 3;
   }
 }
+/* Pro's shared instrument lives above the price view, not inside it. */
+.d-market[data-live="true"][data-instrument="hidden"] .d-market-heading {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+.d-market[data-live="true"][data-instrument="hidden"] .d-chart-source {
+  grid-column: 1;
+  grid-row: 1;
+}
+.d-market[data-live="true"][data-instrument="hidden"] .d-live-stats {
+  grid-column: 2;
+  grid-row: 1;
+}
+@container (max-width: 640px) {
+  .d-market[data-live="true"][data-instrument="hidden"] .d-live-stats {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
 @media (hover: hover) {
   .d-account-actions .d-button:hover,
   .d-wallet-list button:hover {
