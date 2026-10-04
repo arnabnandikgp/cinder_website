@@ -79,6 +79,10 @@ test("homepage uses the chart-first screenshot and links to the real demo and ar
     "src",
     /cinder-trade/,
   );
+  await expect(page.locator(".product-preview img")).toHaveAttribute(
+    "alt",
+    /Standard trading demo.*Trade, Account, Activity and Agents/,
+  );
   await expect(page.locator(".product-preview-link")).toHaveAttribute(
     "href",
     "/demo",

@@ -108,7 +108,7 @@ export default function Home() {
               >
                 <Image
                   src={tradePreview}
-                  alt="Cinder’s chart-first prototype, with a SOL chart, venue selection, order entry and personal positions. Trade, Account and Activity are available in the same workspace. Sample data only."
+                  alt="Cinder’s Standard trading demo, with a SOL-USDC chart, live order book, venue selection, order entry and sample position records. Trade, Account, Activity and Agents share one workspace."
                   sizes="(max-width: 800px) 100vw, 1280px"
                   preload
                 />

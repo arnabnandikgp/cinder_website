@@ -92,4 +92,4 @@ Refresh the homepage screenshot from the running demo:
 node scripts/capture-demo.mjs
 ```
 
-This updates `public/previews/cinder-trade.png` and saves desktop/mobile review frames in `test-results/review/`. See the [trader review guide](docs/ux/trader-review.md) for a short moderated session. The earlier three-layout study remains isolated in `ux/terminal-study/`; only chart-first is exposed at `/demo`.
+This updates `public/previews/cinder-trade.png` with a 2x capture of the actual Standard terminal, including the current header, mode controls and Agents tab. It skips the first-visit invitation through its normal button, waits for populated candles and live ticker/book data, and selects Market entry without placing an order. It also saves Pro, Account, Activity, Agents and desktop/mobile review frames in `test-results/review/`. Run against working public venue feeds; the script does not substitute synthetic prices to generate the hero. See the [trader review guide](docs/ux/trader-review.md) for a short moderated session. The earlier three-layout study remains isolated in `ux/terminal-study/`; only chart-first is exposed at `/demo`.
