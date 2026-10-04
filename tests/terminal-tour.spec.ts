@@ -11,6 +11,15 @@ import { mockMarketData } from "./helpers/market-data";
 import { chooseVenue } from "./helpers/venue-select";
 
 const tour = (page: Page) => page.locator(".d-tour-dialog");
+const welcome = (page: Page) => page.locator(".d-welcome-dialog");
+async function acceptWelcome(page: Page) {
+  await expect(welcome(page)).toBeVisible();
+  await expect(tour(page)).toHaveCount(0);
+  await welcome(page)
+    .getByRole("button", { name: "Take a tour", exact: true })
+    .click();
+  await expect(welcome(page)).toHaveCount(0);
+}
 async function atStep(page: Page, index: number) {
   await expect(tour(page)).toBeVisible();
   await expect(tour(page)).toHaveAttribute(
@@ -233,21 +242,32 @@ test.describe("first visit", () => {
     await mockMarketData(page, { stream: true, phoenix: true });
   });
 
-  test("opens once, can skip immediately and remembers the preference on reload", async ({
+  test("asks first, can skip without starting the tour and remembers the choice", async ({
     page,
   }) => {
     await page.goto("/demo?venue=bulk&view=activity&filter=funding");
     const url = page.url();
-    await atStep(page, 0);
-    await expect(tour(page).locator(".d-tour-modes dt")).toHaveText([
+    await expect(welcome(page)).toBeVisible();
+    await expect(welcome(page)).not.toContainText(
+      "Live market data where available.",
+    );
+    await expect(welcome(page)).not.toContainText("Simulated account records.");
+    await expect(welcome(page)).not.toContainText("No live orders.");
+    await expect(welcome(page)).not.toContainText("—");
+    await expect(welcome(page).locator(".d-welcome-modes dt")).toHaveText([
       "Standard",
       "Pro",
     ]);
-    await expect(tour(page)).toContainText("Choose a venue and trade");
-    await expect(tour(page)).toContainText(
-      "Compare estimated price cost and venue fees",
-    );
-    await tour(page).getByRole("button", { name: "Skip tour" }).click();
+    await expect(welcome(page)).toContainText("Cinder demo");
+    await expect(welcome(page).getByRole("button")).toHaveCount(2);
+    await expect(tour(page)).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Activity", exact: true }),
+    ).toHaveAttribute("aria-current", "page");
+    await welcome(page)
+      .getByRole("button", { name: "Skip", exact: true })
+      .click();
+    await expect(welcome(page)).toHaveCount(0);
     await expect(tour(page)).toHaveCount(0);
     expect(page.url()).toBe(url);
     await expect(
@@ -261,12 +281,133 @@ test.describe("first visit", () => {
       page.getByRole("button", { name: "Take a tour" }),
     ).toBeVisible();
     await expect(tour(page)).toHaveCount(0);
+    await expect(welcome(page)).toHaveCount(0);
     await page.getByRole("button", { name: "Take a tour" }).click();
     await atStep(page, 0);
+    await expect(welcome(page)).toHaveCount(0);
+    await expect(tour(page).locator(".d-tour-modes dt")).toHaveText([
+      "Standard",
+      "Pro",
+    ]);
+    await expect(tour(page)).toContainText("Choose a venue and trade");
     await page.keyboard.press("Escape");
     await expect(
       page.getByRole("button", { name: "Take a tour" }),
     ).toBeFocused();
+  });
+
+  test("welcome keyboard focus stays contained and choosing the tour is remembered immediately", async ({
+    page,
+  }) => {
+    await page.goto("/demo?view=agents&agent=btc-hedger");
+    const url = page.url();
+    await expect(welcome(page)).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(
+      welcome(page).getByRole("button", { name: "Skip", exact: true }),
+    ).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(
+      welcome(page).getByRole("button", { name: "Take a tour", exact: true }),
+    ).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(
+      welcome(page).getByRole("button", { name: "Skip", exact: true }),
+    ).toBeFocused();
+    await page.keyboard.press("Shift+Tab");
+    await page.keyboard.press("Enter");
+    await atStep(page, 0);
+    await expect(welcome(page)).toHaveCount(0);
+    expect(page.url()).toBe(url);
+    expect(
+      await page.evaluate((key) => localStorage.getItem(key), TOUR_SEEN_KEY),
+    ).toBe("seen");
+    await page.reload();
+    await expect(
+      page.getByRole("button", { name: "Agents", exact: true }),
+    ).toHaveAttribute("aria-current", "page");
+    await expect(welcome(page)).toHaveCount(0);
+    await expect(tour(page)).toHaveCount(0);
+    await page
+      .getByRole("button", { name: "Take a tour", exact: true })
+      .click();
+    await atStep(page, 0);
+    await tour(page).getByRole("button", { name: "Skip tour" }).click();
+    await expect(page.getByTestId("agent-detail")).toContainText("BTC hedger");
+  });
+
+  test("Escape skips the welcome without changing the selected workspace", async ({
+    page,
+  }) => {
+    await page.goto("/demo?mode=auto&view=account");
+    const url = page.url();
+    await expect(welcome(page)).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(welcome(page)).toHaveCount(0);
+    await expect(tour(page)).toHaveCount(0);
+    expect(page.url()).toBe(url);
+    await expect(
+      page.getByRole("button", { name: "Take a tour", exact: true }),
+    ).toBeFocused();
+    await page.reload();
+    await expect(welcome(page)).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Account", exact: true }),
+    ).toHaveAttribute("aria-current", "page");
+  });
+
+  test("skipping welcome with blocked storage lasts for the page session", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      Storage.prototype.getItem = () => {
+        throw new DOMException("Blocked", "SecurityError");
+      };
+      Storage.prototype.setItem = () => {
+        throw new DOMException("Blocked", "SecurityError");
+      };
+    });
+    await page.goto("/demo");
+    await expect(welcome(page)).toBeVisible();
+    await welcome(page)
+      .getByRole("button", { name: "Skip", exact: true })
+      .click();
+    await page.getByRole("button", { name: "Activity", exact: true }).click();
+    await expect(welcome(page)).toHaveCount(0);
+    await expect(tour(page)).toHaveCount(0);
+    await page
+      .getByRole("button", { name: "Take a tour", exact: true })
+      .click();
+    await atStep(page, 0);
+    await page.keyboard.press("Escape");
+    await expect(welcome(page)).toHaveCount(0);
+  });
+
+  test("a choice in another tab dismisses its invitation, not an active tour", async ({
+    page,
+    context,
+  }) => {
+    await page.goto("/demo");
+    const second = await context.newPage();
+    await mockMarketData(second, { stream: true, phoenix: true });
+    await second.goto("/demo?view=account");
+    await expect(welcome(page)).toBeVisible();
+    await expect(welcome(second)).toBeVisible();
+    await welcome(page)
+      .getByRole("button", { name: "Skip", exact: true })
+      .click();
+    await expect(welcome(second)).toHaveCount(0);
+    await second
+      .getByRole("button", { name: "Take a tour", exact: true })
+      .click();
+    await atStep(second, 0);
+    await page
+      .getByRole("button", { name: "Take a tour", exact: true })
+      .click();
+    await atStep(page, 0);
+    await page.keyboard.press("Escape");
+    await atStep(second, 0);
+    await second.close();
   });
 
   test("walks all ten stops including Pro and Agents, finishes without rewriting URL or records", async ({
@@ -276,6 +417,7 @@ test.describe("first visit", () => {
       "/demo?mode=auto&venue=phoenix&market=BTC&scope=phoenix&record=funding&panel=price&chart=bulk&analysis=average",
     );
     const url = page.url();
+    await acceptWelcome(page);
     await atStep(page, 0);
     expect(tourSteps.map((step) => step.id)).toEqual([
       "modes",
@@ -429,6 +571,7 @@ test.describe("first visit", () => {
       };
     });
     await page.goto("/demo");
+    await acceptWelcome(page);
     await atStep(page, 0);
     await page.keyboard.press("Escape");
     await expect(tour(page)).toHaveCount(0);
@@ -454,6 +597,19 @@ test.describe("first visit", () => {
     }, testInfo) => {
       await page.setViewportSize({ width, height });
       await page.goto("/demo");
+      await expect(welcome(page)).toBeVisible();
+      const box = (await welcome(page).boundingBox())!;
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.y).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(width);
+      expect(box.y + box.height).toBeLessThanOrEqual(height);
+      expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+      for (const button of await welcome(page).getByRole("button").all()) {
+        await expect(button).toBeInViewport();
+        expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(40);
+      }
+      await page.screenshot({ path: testInfo.outputPath("welcome.png") });
+      await acceptWelcome(page);
       for (let index = 0; index < tourSteps.length; index++) {
         await atStep(page, index);
         await geometry(page, width, height);
@@ -488,6 +644,7 @@ test.describe("first visit", () => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/demo");
+    await acceptWelcome(page);
     await atStep(page, 0);
     await tour(page).getByRole("button", { name: "Next", exact: true }).click();
     await atStep(page, 1);
@@ -506,6 +663,7 @@ test.describe("first visit", () => {
   }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/demo");
+    await acceptWelcome(page);
     for (let index = 0; index < tourSteps.length; index++) {
       await atStep(page, index);
       if (tourSteps[index].presentation === "overview") {
@@ -535,6 +693,9 @@ test.describe("first visit", () => {
       (route) => route.fulfill({ status: 503, body: "Unavailable" }),
     );
     await page.goto("/demo");
+    await expect(welcome(page)).toBeVisible();
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    await acceptWelcome(page);
     await atStep(page, 0);
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
     await page.keyboard.press("Tab");

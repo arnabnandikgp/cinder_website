@@ -26,27 +26,35 @@ function subscribe(callback: () => void) {
 }
 const serverSeen = () => true;
 
+function rememberChoice() {
+  seenInSession = true;
+  try {
+    window.localStorage.setItem(TOUR_SEEN_KEY, "seen");
+  } catch {
+    // Private/blocked storage must never prevent skipping or replaying.
+  }
+  window.dispatchEvent(new Event(eventName));
+}
+
 export function useTerminalTour() {
   // Server and hydration output remain the regular terminal; the browser-only
   // preference is checked immediately after hydration, without a URL flag.
   const hasSeen = useSyncExternalStore(subscribe, seen, serverSeen);
   const [requested, setRequested] = useState<number | null>(null);
-  const index = requested ?? (hasSeen ? null : 0);
+  const index = requested;
   return {
     index,
+    welcome: !hasSeen && index === null,
     step: index === null ? null : tourSteps[index],
-    start: () => setRequested(0),
+    start: () => {
+      rememberChoice();
+      setRequested(0);
+    },
     go: (next: number) =>
       setRequested(Math.max(0, Math.min(next, tourSteps.length - 1))),
     close: () => {
-      seenInSession = true;
-      try {
-        window.localStorage.setItem(TOUR_SEEN_KEY, "seen");
-      } catch {
-        // Private/blocked storage must never prevent skipping or replaying.
-      }
+      rememberChoice();
       setRequested(null);
-      window.dispatchEvent(new Event(eventName));
     },
   };
 }

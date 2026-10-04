@@ -24,6 +24,7 @@ import { Records } from "./records";
 import { ProWorkspace } from "./pro-workspace";
 import { WalletConnect } from "./wallet-connect";
 import { SpotlightTour } from "./spotlight-tour";
+import { TerminalWelcome } from "./terminal-welcome";
 import { useTerminalTour } from "./use-terminal-tour";
 import { useMarketFeed } from "./market-data/use-market-feed";
 import { channelHealth } from "./market-data/feed";
@@ -520,6 +521,13 @@ export function Terminal() {
           </div>
         )}
       </main>
+      {tour.welcome && (
+        <TerminalWelcome
+          onStart={tour.start}
+          onSkip={tour.close}
+          returnFocus={tourTrigger}
+        />
+      )}
       {tour.step && tour.index !== null && (
         <SpotlightTour
           step={tour.step}
