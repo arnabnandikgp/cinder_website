@@ -7,10 +7,10 @@ import Link from "next/link";
 import { site } from "@/lib/site";
 
 const links = [
+  { label: "Trading", href: "#trading" },
+  { label: "Agents", href: "#agents" },
   { label: "The account", href: "#advantage" },
   { label: "Privacy", href: "#privacy" },
-  { label: "The vision", href: "#vision" },
-  { label: "FAQs", href: "#faq" },
 ];
 
 export function Header() {

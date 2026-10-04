@@ -79,10 +79,7 @@ export function AgentsView({
         </section>
       ) : (
         <div className="d-agents-grid">
-          <section
-            className="d-panel d-agents-directory"
-            aria-label="Agent directory"
-          >
+          <section className="d-agents-directory" aria-label="Agent directory">
             <div className="d-agents-panel-heading">
               <h2>Agent directory</h2>
               <span>{agents.length} agents</span>
@@ -116,14 +113,19 @@ export function AgentsView({
             </p>
           </section>
           <section
-            className="d-panel d-agent-detail"
+            className="d-agent-detail"
             aria-labelledby="d-agent-detail-title"
             data-testid="agent-detail"
           >
             <div className="d-agents-panel-heading">
-              <div>
-                <span className="d-overline">SELECTED AGENT</span>
-                <h2 id="d-agent-detail-title">{agent.name}</h2>
+              <div className="d-agent-identity">
+                <span className="d-agent-avatar">
+                  <Bot size={22} aria-hidden="true" />
+                </span>
+                <div>
+                  <span className="d-overline">SELECTED AGENT</span>
+                  <h2 id="d-agent-detail-title">{agent.name}</h2>
+                </div>
               </div>
               <div className="d-agent-detail-actions">
                 <span className="d-agent-status" data-status={agent.status}>
@@ -152,16 +154,6 @@ export function AgentsView({
                 <dd>{agent.expiry}</dd>
               </div>
               <div>
-                <dt>Accepted-order allowance</dt>
-                <dd>
-                  {agent.maximumOrders - agent.acceptedOrders} of{" "}
-                  {agent.maximumOrders} remaining
-                  {agent.status === "Expired" && (
-                    <small>Historical allowance · Grant inactive</small>
-                  )}
-                </dd>
-              </div>
-              <div>
                 <dt>Last request</dt>
                 <dd>
                   {recent.find((event) => event.actor === agent.id)?.time ??
@@ -170,10 +162,26 @@ export function AgentsView({
                 </dd>
               </div>
             </dl>
-            <details className="d-agent-key">
-              <summary>Agent public key</summary>
-              <code>{agent.publicKey}</code>
-            </details>
+            <div className="d-agent-allowance">
+              <div>
+                <span>Accepted-order allowance</span>
+                <strong>
+                  {agent.maximumOrders - agent.acceptedOrders} of{" "}
+                  {agent.maximumOrders} remaining
+                </strong>
+              </div>
+              <meter
+                min={0}
+                max={agent.maximumOrders}
+                value={agent.maximumOrders - agent.acceptedOrders}
+                aria-label="Remaining accepted-order allowance"
+                aria-valuetext={`${agent.maximumOrders - agent.acceptedOrders} of ${agent.maximumOrders} orders remaining`}
+                data-inactive={agent.status === "Expired"}
+              />
+              {agent.status === "Expired" && (
+                <small>Historical allowance · Grant inactive</small>
+              )}
+            </div>
             <div className="d-agent-scope">
               <h3>Permission scope</h3>
               <ul>
@@ -197,6 +205,10 @@ export function AgentsView({
                 </p>
               )}
             </div>
+            <details className="d-agent-key">
+              <summary>Agent public key</summary>
+              <code>{agent.publicKey}</code>
+            </details>
             <details className="d-agent-protocol-limits">
               <summary>Per-order limits</summary>
               <dl className="d-agent-terms">

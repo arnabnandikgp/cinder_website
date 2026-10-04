@@ -4,6 +4,7 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   ArrowRightLeft,
+  ChevronRight,
   FileText,
   LockKeyhole,
   Wallet,
@@ -25,6 +26,7 @@ import {
   type Draft,
   type Scenario,
 } from "./data";
+import { VenueIcon } from "./venue-select";
 
 export function AccountOverview({
   scenario,
@@ -40,7 +42,7 @@ export function AccountOverview({
     0,
   );
   return (
-    <>
+    <div className="d-account-overview">
       <div className="d-view-heading">
         <div>
           <span className="d-overline">YOUR CINDER ACCOUNT</span>
@@ -53,66 +55,102 @@ export function AccountOverview({
           <LockKeyhole size={14} aria-hidden="true" /> Sample private account
         </span>
       </div>
-      <div className="d-capital-grid">
-        <section className="d-panel d-equity">
-          <span className="d-overline">ACCOUNT EQUITY</span>
-          <div>
-            {number(empty ? 0 : 12024)} <span>USDC</span>
-          </div>
-          <p>Illustrative snapshot · Includes sample unrealized PnL</p>
-          <div className="d-capital-actions">
-            <button
-              className="d-button d-primary"
-              onClick={() => onTransfer("deposit")}
-            >
-              <ArrowDownLeft size={15} aria-hidden="true" />
-              Deposit preview
-            </button>
-            <button className="d-button" onClick={() => onTransfer("withdraw")}>
-              <ArrowUpRight size={15} aria-hidden="true" />
-              Withdraw preview
-            </button>
-          </div>
-        </section>
-        <section className="d-panel d-capital-detail">
-          <h2>Capital availability</h2>
-          <dl className="d-detail-list">
+      <div className="d-account-capital">
+        <div className="d-capital-grid">
+          <section className="d-equity" aria-label="Account equity">
+            <span className="d-overline">ACCOUNT EQUITY</span>
             <div>
-              <dt>Available to trade</dt>
-              <dd>{number(empty ? 0 : 7400)} USDC</dd>
+              {number(empty ? 0 : 12024)} <span>USDC</span>
             </div>
-            <div className="d-margin-group">
-              <dt>Margin committed</dt>
-              <dd data-testid="margin-committed">{number(committed)} USDC</dd>
-              <dd className="d-margin-details">
-                <dl
-                  className="d-margin-breakdown"
-                  aria-label="Margin committed by venue"
-                >
-                  {allocations.map(({ venue, positions, margin }) => (
-                    <div key={venue} data-testid={`margin-${venue}`}>
-                      <dt>
-                        {venues[venue]}
-                        <span>
-                          {positions
-                            ? `${positions} open position${positions === 1 ? "" : "s"}`
-                            : "No open positions"}
-                        </span>
-                      </dt>
-                      <dd>{number(margin)} USDC</dd>
-                    </div>
-                  ))}
-                </dl>
-              </dd>
+            <p>Illustrative snapshot · Includes sample unrealized PnL</p>
+            <div className="d-capital-actions">
+              <button
+                className="d-button d-primary"
+                onClick={() => onTransfer("deposit")}
+              >
+                <ArrowDownLeft size={15} aria-hidden="true" />
+                Deposit preview
+              </button>
+              <button
+                className="d-button"
+                onClick={() => onTransfer("withdraw")}
+              >
+                <ArrowUpRight size={15} aria-hidden="true" />
+                Withdraw preview
+              </button>
             </div>
+          </section>
+          <section
+            className="d-capital-availability"
+            aria-label="Capital availability"
+          >
+            <h2>Capital availability</h2>
+            <dl className="d-detail-list">
+              <div>
+                <dt>Available to trade</dt>
+                <dd>{number(empty ? 0 : 7400)} USDC</dd>
+              </div>
+              <div>
+                <dt>Available to withdraw</dt>
+                <dd>{number(empty ? 0 : 5000)} USDC</dd>
+              </div>
+            </dl>
+            <p>
+              Different measures, not an equity breakdown. Eligibility and risk
+              calculations are not implemented in this demo.
+            </p>
+          </section>
+        </div>
+        <section
+          className="d-capital-detail d-margin-group"
+          aria-labelledby="d-margin-title"
+        >
+          <div className="d-allocation-heading">
             <div>
-              <dt>Available to withdraw</dt>
-              <dd>{number(empty ? 0 : 5000)} USDC</dd>
+              <h2 id="d-margin-title">Margin committed</h2>
+              <p>Allocated to open positions, by venue.</p>
             </div>
+            <strong data-testid="margin-committed">
+              {number(committed)} USDC
+            </strong>
+          </div>
+          <div className="d-allocation-labels" aria-hidden="true">
+            <span>Venue / positions</span>
+            <span>Share of committed margin</span>
+          </div>
+          <dl
+            className="d-margin-breakdown"
+            aria-label="Margin committed by venue"
+          >
+            {allocations.map(({ venue, positions, margin }) => (
+              <div key={venue} data-testid={`margin-${venue}`}>
+                <dt>
+                  <VenueIcon venue={venue} size={24} />
+                  <div>
+                    <strong>{venues[venue]}</strong>
+                    <span>
+                      {positions
+                        ? `${positions} open position${positions === 1 ? "" : "s"}`
+                        : "No open positions"}
+                    </span>
+                  </div>
+                </dt>
+                <dd>
+                  <meter
+                    min={0}
+                    max={committed || 1}
+                    value={margin}
+                    aria-label={`${venues[venue]} share of committed margin`}
+                    aria-valuetext={`${number(margin)} of ${number(committed)} USDC committed`}
+                  />
+                  <span>{number(margin)} USDC</span>
+                </dd>
+              </div>
+            ))}
           </dl>
-          <p>
-            Different measures, not an equity breakdown. Eligibility and risk
-            calculations are not implemented in this demo.
+          <p className="d-allocation-note">
+            Margin stays separate by venue. These bars show committed margin,
+            not account equity.
           </p>
         </section>
       </div>
@@ -124,7 +162,7 @@ export function AccountOverview({
             : "The account view shows your Cinder records. It does not imply shared margin or freely transferable positions across venues."}
         </p>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -163,7 +201,7 @@ export function ActivityView({
         </div>
         <span className="d-badge">All venues · Sample records</span>
       </div>
-      <section className="d-panel d-activity">
+      <section className="d-activity" aria-label="Account activity ledger">
         <div className="d-activity-actor">
           <label htmlFor="d-activity-actor">Initiated by</label>
           <select
@@ -217,6 +255,14 @@ export function ActivityView({
           <span>Sample day</span>
           <span>UTC · Newest first</span>
         </div>
+        <div className="d-ledger-columns" aria-hidden="true">
+          <span>Time</span>
+          <span>Event</span>
+          <span>Initiated by</span>
+          <span>Venue</span>
+          <span>Amount / result</span>
+          <span />
+        </div>
         {visible.length === 0 ? (
           <Empty title="No activity in this view">
             Choose another event or actor filter.
@@ -230,44 +276,62 @@ export function ActivityView({
                 data-actor={event.actor}
                 data-origin-agent={event.originAgent}
               >
-                <span className="d-event-icon" aria-hidden="true">
-                  {event.category === "transfers" ? (
-                    <ArrowDownLeft size={18} />
-                  ) : event.category === "trades" ||
-                    event.category === "funding" ? (
-                    <ArrowRightLeft size={18} />
-                  ) : (
-                    <FileText size={18} />
-                  )}
-                </span>
+                <time className="d-event-time">{event.time}</time>
                 <div className="d-event-content">
-                  <span className="d-event-actor">
-                    {eventActorLabel(event)}
-                  </span>
-                  <h2>{event.title}</h2>
-                  <p>{event.detail}</p>
-                  {event.id.startsWith("AG-") ? (
-                    <button
-                      className="d-cell-link"
-                      onClick={() => setDetail(event)}
-                    >
-                      {event.id} · View event details
-                    </button>
-                  ) : event.order ? (
-                    <button
-                      className="d-cell-link"
-                      onClick={() => onDetail(event.order!)}
-                    >
-                      {event.order} · View details
-                    </button>
-                  ) : (
-                    <span className="d-cell-sub">{event.id}</span>
-                  )}
+                  <h2>
+                    <span className="d-event-icon" aria-hidden="true">
+                      {event.category === "transfers" ? (
+                        <ArrowDownLeft size={18} />
+                      ) : event.category === "trades" ||
+                        event.category === "funding" ? (
+                        <ArrowRightLeft size={18} />
+                      ) : (
+                        <FileText size={18} />
+                      )}
+                    </span>
+                    {event.title}
+                  </h2>
+                  <p>
+                    {event.detail}
+                    <span className="d-event-id"> · {event.id}</span>
+                  </p>
                 </div>
-                <div className="d-event-amount">
+                <span className="d-event-actor">{eventActorLabel(event)}</span>
+                <span className="d-event-venue">
+                  {event.venue && <VenueIcon venue={event.venue} size={16} />}
+                  {event.venue ? venues[event.venue] : "Cinder"}
+                </span>
+                <div
+                  className="d-event-amount"
+                  data-tone={
+                    event.amount.startsWith("−")
+                      ? "negative"
+                      : event.amount.startsWith("+")
+                        ? "positive"
+                        : /rejected|expired/i.test(event.amount)
+                          ? "negative"
+                          : "neutral"
+                  }
+                >
                   <strong>{event.amount}</strong>
-                  <span>{event.time}</span>
                 </div>
+                <button
+                  className="d-event-inspect"
+                  aria-label={
+                    event.id.startsWith("AG-")
+                      ? `${event.id} · View event details`
+                      : event.order
+                        ? `${event.order} · View details`
+                        : `${event.id} · View event details`
+                  }
+                  onClick={() =>
+                    event.id.startsWith("AG-") || !event.order
+                      ? setDetail(event)
+                      : onDetail(event.order)
+                  }
+                >
+                  <ChevronRight size={16} aria-hidden="true" />
+                </button>
               </li>
             ))}
           </ol>
@@ -289,6 +353,7 @@ export function ActivityView({
             rows={[
               ["Event", detail.id],
               ["Initiated by", eventActorLabel(detail)],
+              ["Venue", detail.venue ? venues[detail.venue] : "Cinder"],
               ["Time", `${detail.time} UTC · Sample day`],
               ["Result", detail.amount],
               ...(detail.order

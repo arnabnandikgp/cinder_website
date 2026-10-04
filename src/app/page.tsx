@@ -2,14 +2,18 @@ import {
   ArrowDown,
   ArrowRight,
   ArrowUpRight,
-  ChartNoAxesCombined,
-  Layers3,
-  ListFilter,
+  ShieldCheck,
+  SlidersHorizontal,
+  History,
 } from "lucide-react";
 import Image from "next/image";
 import tradePreview from "../../public/previews/cinder-trade.png";
+import proPreview from "../../public/previews/cinder-pro.png";
+import accountPreview from "../../public/previews/cinder-account.png";
+import activityPreview from "../../public/previews/cinder-activity.png";
 import Link from "next/link";
 import { Header } from "@/components/header";
+import { AgentAccessDiagram } from "@/components/agent-access-diagram";
 import { Brand, ExploreButton, Mark } from "@/components/ui";
 import { AdvantageMini, PrivacyMap } from "@/components/diagrams";
 import { site } from "@/lib/site";
@@ -28,7 +32,12 @@ const faqs = [
   {
     question: "Do I choose where my order executes?",
     answer:
-      "Yes. The initial direction is explicit venue selection. Optional automatic routing is a future capability as integrations expand, not a requirement to use the Cinder account.",
+      "In Standard, you choose the execution venue and its chart follows that choice. Pro compares visible liquidity and estimated entry costs for your order size, with price cost and venue fees shown separately. The demo previews a venue recommendation; automatic routing and live execution are not enabled.",
+  },
+  {
+    question: "How do trading agents fit into Cinder?",
+    answer:
+      "The account is designed to support scoped agent permissions, expiry and order limits without granting withdrawal authority. The Agents view lets you inspect example authorizations and open Activity filtered to an agent. Adding or revoking an agent in the demo is a local preview, not an onchain authorization.",
   },
   {
     question: "Does one account mean one position across every venue?",
@@ -53,7 +62,12 @@ const faqs = [
   {
     question: "Can I trade in the demo?",
     answer:
-      "The demo is an interactive prototype with synthetic market data and sample account records. It does not connect a wallet, accept deposits, submit orders, or demonstrate live venue integrations. Auto-route is shown as a future concept.",
+      "The demo uses public market feeds from Pacifica, BULK and Phoenix where available, alongside simulated account records. You can connect a real wallet, but no signatures, deposits or live orders are requested. Order drafts, strategy plans and agent controls stay local previews. Pro estimates use visible books and labelled fee assumptions, not guaranteed fills or final Cinder pricing.",
+  },
+  {
+    question: "What is the longer-term direction?",
+    answer:
+      "Broader venue access, optional routing and deeper risk coordination build on the broker account. A coordinated clearing layer is a longer-term ambition, not a claim of shared cross-venue margin or settlement guarantees today. The article explains why this account layer matters.",
   },
 ];
 
@@ -89,35 +103,125 @@ export default function Home() {
               <div>
                 <p className="hero-intro">
                   Cinder is building a prime broker account for trading Solana
-                  perpetuals. Choose your venue, manage your positions, and
-                  benefit from pooled trading volume through one workspace.
+                  perpetuals. Choose your venue, compare execution costs, or
+                  give trading agents scoped access. Your capital, positions and
+                  activity stay together in one workspace.
                 </p>
                 <div className="hero-actions">
                   <ExploreButton />
-                  <a className="text-link" href="#advantage">
-                    Meet the account <ArrowDown size={15} aria-hidden="true" />
+                  <a className="text-link" href="#agents">
+                    Explore agent access{" "}
+                    <ArrowDown size={15} aria-hidden="true" />
                   </a>
                 </div>
               </div>
             </div>
             <figure className="product-preview">
-              <Link
-                href="/demo"
-                className="product-preview-link"
-                aria-label="Explore the chart-first Cinder demo"
-              >
-                <Image
-                  src={tradePreview}
-                  alt="Cinder’s Standard trading demo, with a SOL-USDC chart, live order book, venue selection, order entry and sample position records. Trade, Account, Activity and Agents share one workspace."
-                  sizes="(max-width: 800px) 100vw, 1280px"
-                  preload
-                />
-                <span className="preview-open">
-                  Explore the workspace{" "}
-                  <ArrowUpRight size={16} aria-hidden="true" />
-                </span>
-              </Link>
+              <Image
+                src={tradePreview}
+                alt="Cinder’s Standard trading demo, with a SOL-USDC chart, live order book, venue selection, order entry and sample position records. Trade, Account, Activity and Agents share one workspace."
+                sizes="(max-width: 800px) 100vw, 1280px"
+                preload
+              />
             </figure>
+          </div>
+        </section>
+
+        <section
+          className="section trading-section"
+          id="trading"
+          aria-labelledby="trading-title"
+        >
+          <div className="container trading-story-layout">
+            <div className="trading-story-copy">
+              <h2 id="trading-title">
+                Two ways to trade.
+                <br />
+                One <span className="heading-accent">workspace.</span>
+              </h2>
+              <p className="trading-story-intro">
+                Know where you want to trade? Go straight to the market.
+                Comparing venues? See how the cost changes with your order size
+                before deciding.
+              </p>
+              <div className="trading-modes">
+                <article>
+                  <span className="editorial-label">STANDARD</span>
+                  <h3>Your venue. Your trade.</h3>
+                  <p>
+                    Live prices, depth and market, limit or advanced order
+                    plans. Your selected execution venue stays in view.
+                  </p>
+                  <Link href="/demo" className="text-link">
+                    Explore Standard <ArrowRight size={15} aria-hidden="true" />
+                  </Link>
+                </article>
+                <article className="pro-mode-story">
+                  <span className="editorial-label">PRO</span>
+                  <h3>Compare the cost, not just the price.</h3>
+                  <p>
+                    Compare estimated entry cost in basis points for your order
+                    size, separating price cost from venue fees. Use live books
+                    or a five-second average.
+                  </p>
+                  <Link href="/demo?mode=auto" className="text-link">
+                    Explore Pro <ArrowRight size={15} aria-hidden="true" />
+                  </Link>
+                </article>
+              </div>
+            </div>
+            <div className="feature-preview pro-feature-preview">
+              <Image
+                src={proPreview}
+                alt="Cinder Pro preview with a 100,000 USDC order selected, comparing venue entry costs with separate price-cost and fee columns."
+                sizes="(max-width: 1000px) 100vw, (max-width: 1440px) 55vw, 740px"
+              />
+            </div>
+          </div>
+        </section>
+
+        <section
+          className="section agents-section"
+          id="agents"
+          aria-labelledby="agents-title"
+        >
+          <div className="container agent-story-layout">
+            <div className="section-copy">
+              <span className="editorial-label">FOR AGENT-DRIVEN TRADING</span>
+              <h2 id="agents-title">
+                Your agents.
+                <br />
+                <span className="heading-accent">Your control.</span>
+              </h2>
+              <p>
+                An agent should have a clear mandate, not unrestricted access to
+                your account. Cinder’s agent workflow is designed around scoped
+                permissions, expiry and order limits.
+              </p>
+              <ul className="agent-story-points">
+                <li>
+                  <SlidersHorizontal size={18} aria-hidden="true" /> Inspect
+                  trading permissions and limits.
+                </li>
+                <li>
+                  <ShieldCheck size={18} aria-hidden="true" /> Keep withdrawal
+                  authority out of agent access.
+                </li>
+                <li>
+                  <History size={18} aria-hidden="true" /> Follow each agent’s
+                  actions in Activity.
+                </li>
+              </ul>
+              <a
+                href={`${site.docs}/guides/agents#agents`}
+                className="agent-docs-link text-link"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Agent setup guide <ArrowUpRight size={15} aria-hidden="true" />
+              </a>
+            </div>
+            <AgentAccessDiagram />
           </div>
         </section>
 
@@ -129,53 +233,55 @@ export default function Home() {
           <div className="container">
             <div className="workspace-heading">
               <h2 id="advantage-title">
-                Your trading.
+                Every position.
                 <br />
-                One <span className="heading-accent">connected workspace.</span>
+                Every <span className="heading-accent">move.</span>
               </h2>
               <p>
-                Moving between venues should not mean rebuilding your trading
-                workflow. Cinder brings the trading screen, your individual
-                account, and the history behind every move into one place.
+                Whether you trade directly or through an agent, the account is
+                yours. See where your capital is committed and trace the
+                activity behind it, without piecing together separate venues.
               </p>
             </div>
-            <div className="workspace-features">
-              {[
-                {
-                  name: "Trade",
-                  icon: ChartNoAxesCombined,
-                  heading: "Choose your venue. Place your trade.",
-                  text: "Analyse the market, set your order, and manage open positions from one trading screen. Choose the venue for each new trade without switching platforms.",
-                  href: "/demo",
-                },
-                {
-                  name: "Account",
-                  icon: Layers3,
-                  heading: "Your capital, with context.",
-                  text: "See your account equity alongside what is available to trade and withdraw. One account view, with the venue behind each position still visible.",
-                  href: "/demo?view=account",
-                },
-                {
-                  name: "Activity",
-                  icon: ListFilter,
-                  heading: "Know what changed. And why.",
-                  text: "Trace an order through its fills, separate trading fees from funding, and follow transfers. Your personal records, not a shared venue account’s entire history.",
-                  href: "/demo?view=activity",
-                },
-              ].map((item) => (
-                <article key={item.name}>
-                  <div className="workspace-feature-label">
-                    <item.icon size={20} aria-hidden="true" />
-                    <span>{item.name}</span>
-                  </div>
-                  <h3>{item.heading}</h3>
-                  <p>{item.text}</p>
-                  <Link href={item.href} className="text-link">
-                    Explore {item.name.toLowerCase()}{" "}
-                    <ArrowRight size={15} aria-hidden="true" />
-                  </Link>
-                </article>
-              ))}
+            <div className="account-story-grid">
+              <article>
+                <div className="feature-preview">
+                  <Image
+                    src={accountPreview}
+                    alt="Sample Cinder capital view with available funds and margin committed broken down by venue."
+                    sizes="(max-width: 800px) 100vw, 620px"
+                  />
+                </div>
+                <span className="editorial-label">ACCOUNT</span>
+                <h3>Your capital, with context.</h3>
+                <p>
+                  See equity, available funds and venue-by-venue margin.
+                  Positions keep their venue identity; one account view does not
+                  imply shared cross-venue margin.
+                </p>
+                <Link href="/demo?view=account" className="text-link">
+                  Explore Account <ArrowRight size={15} aria-hidden="true" />
+                </Link>
+              </article>
+              <article>
+                <div className="feature-preview activity-feature-preview">
+                  <Image
+                    src={activityPreview}
+                    alt="Sample account-wide activity in Cinder, with actor and event filters and traceable order, fill and fee records."
+                    sizes="(max-width: 800px) 100vw, 620px"
+                  />
+                </div>
+                <span className="editorial-label">ACTIVITY</span>
+                <h3>Know what changed. And why.</h3>
+                <p>
+                  Follow orders, fills, fees, funding and transfers in one
+                  timeline. Filter by you or an agent, then open the details
+                  behind an event.
+                </p>
+                <Link href="/demo?view=activity" className="text-link">
+                  Explore Activity <ArrowRight size={15} aria-hidden="true" />
+                </Link>
+              </article>
             </div>
           </div>
         </section>
@@ -244,52 +350,6 @@ export default function Home() {
               </div>
             </div>
             <PrivacyMap />
-          </div>
-        </section>
-
-        <section
-          className="section vision-section"
-          id="vision"
-          aria-labelledby="vision-title"
-        >
-          <div className="container">
-            <div className="workspace-heading">
-              <h2 id="vision-title">
-                A broader account layer
-                <br />
-                for <span className="heading-accent">Solana perps.</span>
-              </h2>
-              <p>
-                The prime broker account comes first. Broader venue access,
-                optional routing and deeper risk coordination build on that
-                foundation.
-              </p>
-            </div>
-            <div className="product-roadmap">
-              {[
-                {
-                  stage: "THE FOUNDATION",
-                  title: "A broker account, built around the trader.",
-                  text: "Venue-directed trading, individual account records, pooled fee economics, and confidential order handling.",
-                },
-                {
-                  stage: "AS CONNECTIONS EXPAND",
-                  title: "More venues. Optional routing.",
-                  text: "Keep choosing a venue yourself, or opt into routing for a new order as eligible integrations and execution tools develop.",
-                },
-                {
-                  stage: "THE LONGER-TERM VISION",
-                  title: "A more coordinated clearing layer.",
-                  text: "Work toward deeper risk management and coordination of collateral and settlement. Not a claim of shared margin or settlement guarantees today.",
-                },
-              ].map((item) => (
-                <article key={item.stage}>
-                  <span className="editorial-label">{item.stage}</span>
-                  <h3>{item.title}</h3>
-                  <p>{item.text}</p>
-                </article>
-              ))}
-            </div>
           </div>
         </section>
 

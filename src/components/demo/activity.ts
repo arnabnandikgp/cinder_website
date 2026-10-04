@@ -9,6 +9,7 @@ import {
   type CancelState,
   type Draft,
   type Scenario,
+  type Venue,
 } from "./data";
 import { actorLabel } from "./agents";
 
@@ -24,6 +25,7 @@ export type ActivityEvent = {
   // falsely presented as requests that the agent signed (e.g. fee booking).
   originAgent?: string;
   order?: string;
+  venue?: Venue;
 };
 
 export function eventActorLabel(event: ActivityEvent) {
@@ -50,6 +52,7 @@ export function activityFor(
       : [
           {
             id: "EX-104",
+            venue: "pacifica",
             category: "orders",
             actor: "you",
             title:
@@ -83,6 +86,7 @@ export function activityFor(
             return [
               {
                 id: fill.id,
+                venue: fill.venue,
                 category: "trades",
                 actor,
                 title: `${fill.side} filled`,
@@ -93,6 +97,7 @@ export function activityFor(
               },
               {
                 id: `fee-${fill.id}`,
+                venue: fill.venue,
                 category: "fees",
                 actor: "system",
                 originAgent: actor === "you" ? undefined : actor,
@@ -110,6 +115,7 @@ export function activityFor(
           }),
           {
             id: "AG-102",
+            venue: "pacifica",
             category: "orders",
             actor: "sol-execution",
             order: "EX-102",
@@ -121,6 +127,7 @@ export function activityFor(
           },
           {
             id: "AG-101",
+            venue: "pacifica",
             category: "orders",
             actor: "sol-execution",
             title: "Agent order cancelled",
@@ -131,6 +138,7 @@ export function activityFor(
           },
           ...funding.map((item) => ({
             id: item.id,
+            venue: item.venue,
             category: "funding",
             actor: "system",
             title: item.amount < 0 ? "Funding paid" : "Funding received",
@@ -171,6 +179,7 @@ export function activityFor(
   return [
     ...[...drafts].reverse().map((draft): ActivityEvent => ({
       id: draft.id,
+      venue: draft.venue,
       category: "drafts",
       actor: "you",
       title: draft.strategy ? `${draft.type} plan saved` : "Order draft saved",
