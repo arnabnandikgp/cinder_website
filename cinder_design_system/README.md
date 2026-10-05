@@ -9,12 +9,21 @@ the old 634 × 706 aspect ratio or recreate exports from the archived dark refer
 
 `mark/png/cinder-mark-dark.png` is the canonical approved raster. Its SVG is a
 hybrid (original raster plus a vector corner repair), not a fully vectorized logo.
-Lockup and wordmark SVGs also contain raster images. The light mark and existing
-light-source favicons already had an intact tip and remain unchanged.
+Lockup SVGs still contain raster images of the approved symbol. The light mark
+and existing light-source favicons already had an intact tip and remain unchanged.
+
+The wordmark was cleaned up on 2026-10-05. Its canonical SVGs now contain real
+letter outlines, not an embedded bitmap or a font. The detached fragment above
+the `d` is removed. These reuse the clean lettering previously restored for the
+video, preserving the established Cinder wordmark rather than redesigning it.
+The website and demo use the SVG directly; transparent PNGs are exported at
+**2430 × 642** for social cards and raster-only uses. The symbol is unchanged.
+An imagegen cleanup was evaluated but rejected because it introduced edge noise.
 
 From the repository root, `node scripts/export-brand.mjs` syncs the approved mark
-to the website/video and rebuilds dark lockups and the overview. Run
-`node scripts/verify-brand.mjs` to check the master, copies and SVG/PNG agreement.
+to the website/video, exports both wordmark variants, and rebuilds the lockups
+and overview. Run `node scripts/verify-brand.mjs` to check the master, copies,
+SVG/PNG agreement, and that only six letters plus the `i` dot remain.
 Original artwork under `assets/reference/` is retained as historical reference.
 
 ## Included

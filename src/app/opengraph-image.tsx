@@ -47,7 +47,7 @@ export default async function OpenGraphImage() {
           alt="Cinder"
           src={`data:image/png;base64,${wordmark.toString("base64")}`}
           width={128}
-          height={37}
+          height={(128 * 214) / 810}
         />
       </div>
       <div

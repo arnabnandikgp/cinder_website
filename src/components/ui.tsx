@@ -19,11 +19,12 @@ export function Brand({ large = false }: { large?: boolean }) {
         className="brand-mark"
       />
       <Image
-        src="/brand/wordmark-dark.png"
+        src="/brand/wordmark-dark.svg"
         alt="Cinder"
         width={810}
-        height={233}
+        height={214}
         sizes="105px"
+        unoptimized
         className="brand-wordmark"
       />
     </Link>

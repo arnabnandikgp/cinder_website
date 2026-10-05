@@ -70,6 +70,17 @@ try {
       .waitFor({ state: "attached" });
     await page.evaluate(() => document.fonts.ready);
     await page.locator('[data-chart-status="ready"]').waitFor();
+    // A websocket can supply a current candle before historical candles arrive.
+    // Never replace the homepage preview with a near-empty, one-candle chart.
+    await expect
+      .poll(
+        async () =>
+          Number(
+            await page.locator(".d-tv-chart").getAttribute("data-candle-count"),
+          ),
+        { timeout: 30_000 },
+      )
+      .toBeGreaterThan(40);
     await expect(page.getByTestId("book-status")).toHaveText("Live", {
       timeout: 30_000,
     });
