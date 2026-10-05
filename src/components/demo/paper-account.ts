@@ -1,6 +1,6 @@
 import type { ActivityEvent } from "./activity";
 import { number, venues, type Draft, type Market, type Venue } from "./data";
-import { bookIssue, walkBook } from "./live-routing";
+import { bookIssue, bookMidpoint, walkBook } from "./live-routing";
 import type { FeedState } from "./market-data/feed";
 import { FEE_MAX_AGE_MS } from "./market-data/fees";
 import type { LiveVenue } from "./market-data/adapters";
@@ -27,6 +27,7 @@ export type PaperOrder = {
   reason?: string;
   bracket: Bracket;
   execution?: {
+    costBasis?: "venue-midpoint";
     reference: number;
     costBps: number;
     effectivePrice: number;
@@ -182,7 +183,10 @@ export function previewPaperOrder(
   );
   if (!Number.isFinite(result.reference)) return null;
   const qty =
-    quantity ?? (limit ? notional / limit : notional / result.reference);
+    quantity ??
+    (limit
+      ? notional / limit
+      : (result.quote?.quantity ?? notional / (reference ?? result.reference)));
   const previous = account.positions.find(
     (p) => p.market === draft.market && p.venue === draft.venue,
   );
@@ -374,10 +378,13 @@ export function decodePaperAccount(
       !a.orders.every(
         (o) =>
           !o.execution ||
-          (Object.values(o.execution).every(finite) &&
+          ((o.execution.costBasis === undefined ||
+            o.execution.costBasis === "venue-midpoint") &&
             o.execution.reference > 0 &&
             o.execution.effectivePrice > 0 &&
             o.execution.feeBps >= 0 &&
+            (o.execution.costBasis !== "venue-midpoint" ||
+              (o.execution.priceCost >= 0 && o.execution.costBps >= 0)) &&
             [
               "reference",
               "costBps",
@@ -481,9 +488,11 @@ export function paperQuote(
       ? "Waiting for a current venue fee"
       : null);
   if (reason || !feed.book) return { quote: null, reference: NaN, reason };
-  const ref =
-    reference ?? (feed.book.bids[0].price + feed.book.asks[0].price) / 2;
-  const size = quantity ?? notional / ref;
+  const ref = reference ?? bookMidpoint(feed.book);
+  // Preserve the selected intent's sizing and price guard. walkBook calculates
+  // friction independently against the fresh book's own midpoint; never rebase
+  // an already selected slippage bound just to make a moving market pass.
+  const size = quantity ?? notional / (reference ?? ref);
   if (!(size > 0) || !Number.isFinite(size) || !(ref > 0))
     return { quote: null, reference: ref, reason: "Enter a valid order size" };
   const quote = walkBook(
@@ -491,7 +500,6 @@ export function paperQuote(
     feed.book,
     side === "Sell" ? "Sell" : "Buy",
     size,
-    ref,
     fee!.takerBps,
   );
   return {
@@ -586,9 +594,8 @@ function applyFill(
   order.reserve = 0;
   order.updatedAt = at;
   order.execution = {
-    reference:
-      quote.notional / quote.quantity -
-      (quote.priceCost / quote.quantity) * (d.side === "Buy" ? 1 : -1),
+    costBasis: "venue-midpoint",
+    reference: quote.reference,
     costBps: quote.costBps,
     effectivePrice: quote.effectivePrice,
     priceCost: quote.priceCost,
@@ -672,7 +679,10 @@ export function placePaperOrder(
   );
   if (!Number.isFinite(result.reference))
     throw new Error(result.reason ?? "Waiting for a fresh book");
-  const qty = requestedQuantity ?? notional / result.reference;
+  const qty =
+    requestedQuantity ??
+    result.quote?.quantity ??
+    notional / (reference ?? result.reference);
   const existing = a.positions.find(
     (p) => p.venue === draft.venue && p.market === draft.market,
   );

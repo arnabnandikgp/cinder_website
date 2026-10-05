@@ -84,6 +84,7 @@ export function bookMessage(
   price = 152,
   time = Date.now(),
   deep = false,
+  step = 0.01,
 ) {
   if (venue === "phoenix")
     return {
@@ -92,17 +93,17 @@ export function bookMessage(
       timestamp: Math.floor(time / 1000),
       slot: time,
       bids: Array.from({ length: 12 }, (_, i) => [
-        Number((price - (i + 1) * 0.01).toFixed(2)),
+        Number((price - (i + 1) * step).toFixed(2)),
         i + 1,
       ]),
       asks: Array.from({ length: 12 }, (_, i) => [
-        Number((price + (i + 1) * 0.01).toFixed(2)),
+        Number((price + (i + 1) * step).toFixed(2)),
         i + 1,
       ]),
     };
   const levels = [-1, 1].map((side) =>
     Array.from({ length: 12 }, (_, i) => {
-      const px = Number((price + side * (i + 1) * 0.01).toFixed(2));
+      const px = Number((price + side * (i + 1) * step).toFixed(2));
       return venue === "pacifica"
         ? { p: String(px), a: String(i + 1), n: 1 }
         : { px, sz: deep ? 60 + i : i + 1, n: 1 };

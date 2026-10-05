@@ -26,7 +26,7 @@ test("Pro compares exact sizes, changes direction and excludes stale venues", as
     0,
   );
   await expect(page.locator(".d-book")).toHaveCount(0);
-  await expect(page.getByTestId("recommended-venue")).toHaveText("Pacifica");
+  await expect(page.getByTestId("recommended-venue")).toHaveText("BULK");
   await expect(page.locator(".d-field-size .d-amount-input > span")).toHaveText(
     "USDC",
   );
@@ -79,10 +79,10 @@ test("visibility does not change routing and Standard retains its instruction", 
   await expect(page).toHaveURL(/venue=bulk/);
   await page.getByLabel("Order size", { exact: true }).fill("10000");
   await page.getByRole("radio", { name: "Pro", exact: true }).check();
-  await expect(page.getByTestId("recommended-venue")).toHaveText("Pacifica");
+  await expect(page.getByTestId("recommended-venue")).toHaveText("BULK");
   await page.getByRole("button", { name: "Show Pacifica curve" }).click();
   await expect(page.getByTestId("curve-pacifica")).toHaveCount(0);
-  await expect(page.getByTestId("recommended-venue")).toHaveText("Pacifica");
+  await expect(page.getByTestId("recommended-venue")).toHaveText("BULK");
   await page.getByRole("button", { name: /Allowed venues/ }).click();
   await page.getByRole("checkbox", { name: "Pacifica" }).uncheck();
   await page.getByRole("button", { name: "Save preferences" }).click();
@@ -106,7 +106,7 @@ test("paper fill receipt persists after comparison inputs change", async ({
 }) => {
   await page.goto("/demo?mode=auto");
   await connectWallet(page);
-  await expect(page.getByTestId("recommended-venue")).toHaveText("Pacifica");
+  await expect(page.getByTestId("recommended-venue")).toHaveText("BULK");
   await page.getByRole("button", { name: "Place buy order" }).click();
   await expect(page.locator(".d-paper-table")).toContainText("Long");
   await expect(page.locator(".d-feedback-note")).toHaveCount(0);
@@ -130,7 +130,7 @@ test("price chart remains independent and view comparison restores the cost tabl
 }) => {
   await page.goto("/demo?mode=auto");
   await connectWallet(page);
-  await expect(page.getByTestId("recommended-venue")).toHaveText("Pacifica");
+  await expect(page.getByTestId("recommended-venue")).toHaveText("BULK");
   const best = await page.getByTestId("recommended-venue").innerText();
   await page.getByRole("tab", { name: "Execution cost", exact: true }).focus();
   await page.keyboard.press("ArrowRight");
@@ -348,7 +348,7 @@ for (const [width, height] of [
     page.on("pageerror", (e) => errors.push(e.message));
     await page.goto("/demo?mode=auto");
     await connectWallet(page);
-    await expect(page.getByTestId("recommended-venue")).toHaveText("Pacifica");
+    await expect(page.getByTestId("recommended-venue")).toHaveText("BULK");
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,

@@ -87,7 +87,7 @@ test("average warms up, reconciles chart and table, supports keyboard and persis
     "paired samples",
     { timeout: 9000 },
   );
-  await expect(page.getByTestId("route-row-pacifica")).toContainText(
+  await expect(page.getByTestId("route-row-bulk")).toContainText(
     "Lowest 5s average",
   );
   await expect(page.locator(".d-route-card-heading")).toContainText(
@@ -124,36 +124,38 @@ test("average warms up, reconciles chart and table, supports keyboard and persis
   );
 });
 
-test("average winner never drives live ticket or review, and new size resets history", async ({
+test("average winner never drives live ticket or submission, and new size resets history", async ({
   page,
 }) => {
   const data = await mockMarketData(page, { stream: true, phoenix: true });
   await page.goto("/demo?mode=auto&analysis=average");
   await connectWallet(page);
-  await expect(page.getByTestId("route-row-pacifica")).toContainText(
+  await expect(page.getByTestId("route-row-bulk")).toContainText(
     "Lowest 5s average",
     { timeout: 9000 },
   );
-  const pacifica = data.sockets.find(
-    (s) => s.venue === "pacifica" && !s.closed,
-  )!;
-  pacifica.paused = true;
+  const bulk = data.sockets.find((s) => s.venue === "bulk" && !s.closed)!;
+  bulk.paused = true;
+  // Widen actual spread/depth, not the venue price offset. The old average
+  // can prefer BULK while the fresh lower-friction route is now Pacifica.
   const timer = setInterval(() => {
     if (!page.isClosed())
-      pacifica.socket.send(
-        JSON.stringify(bookMessage("pacifica", "SOL", 153.4)),
+      bulk.socket.send(
+        JSON.stringify(bookMessage("bulk", "SOL", 153, Date.now(), true, 0.2)),
       );
   }, 150);
   try {
-    pacifica.socket.send(JSON.stringify(bookMessage("pacifica", "SOL", 153.4)));
-    await expect(page.getByTestId("recommended-venue")).toHaveText("Phoenix");
-    await expect(page.getByTestId("route-row-pacifica")).toContainText(
+    bulk.socket.send(
+      JSON.stringify(bookMessage("bulk", "SOL", 153, Date.now(), true, 0.2)),
+    );
+    await expect(page.getByTestId("recommended-venue")).toHaveText("Pacifica");
+    await expect(page.getByTestId("route-row-bulk")).toContainText(
       "Lowest 5s average",
     );
     await page.getByRole("button", { name: "Place buy order" }).click();
     await expect(page.locator(".d-paper-table")).toContainText("Long");
     await expect(page.locator(".d-feedback-note")).toHaveCount(0);
-    await expect(page.locator(".d-paper-table")).toContainText("Phoenix");
+    await expect(page.locator(".d-paper-table")).toContainText("Pacifica");
     await page.getByLabel("Order size", { exact: true }).fill("300");
     await expect(page.getByTestId("analysis-status")).toHaveText(
       "Collecting 5s average",
@@ -162,7 +164,7 @@ test("average winner never drives live ticket or review, and new size resets his
       0,
     );
     await expect(page.locator(".d-cost-line")).toHaveCount(0);
-    await expect(page.getByTestId("recommended-venue")).toHaveText("Phoenix");
+    await expect(page.getByTestId("recommended-venue")).toHaveText("Pacifica");
   } finally {
     clearInterval(timer);
   }
@@ -173,7 +175,7 @@ test("stale venue is excluded immediately from averages while a healthy pair can
 }) => {
   const data = await mockMarketData(page, { stream: true, phoenix: true });
   await page.goto("/demo?mode=auto&analysis=average");
-  await expect(page.getByTestId("route-row-pacifica")).toContainText(
+  await expect(page.getByTestId("route-row-bulk")).toContainText(
     "Lowest 5s average",
     { timeout: 9000 },
   );
@@ -189,8 +191,8 @@ test("stale venue is excluded immediately from averages while a healthy pair can
     /d-best-row/,
   );
   await expect(page.getByTestId("curve-pacifica")).toHaveCount(0);
-  await expect(page.getByTestId("recommended-venue")).toHaveText("Phoenix");
-  await expect(page.getByTestId("route-row-phoenix")).toContainText(
+  await expect(page.getByTestId("recommended-venue")).toHaveText("BULK");
+  await expect(page.getByTestId("route-row-bulk")).toContainText(
     "Lowest 5s average",
   );
 });

@@ -92,8 +92,18 @@ export function PaperDialog({
           ),
           ...(o.execution
             ? ([
-                ["Decision reference", money(o.execution.reference)],
-                ["Entry cost", `${o.execution.costBps.toFixed(2)} bps`],
+                [
+                  o.execution.costBasis === "venue-midpoint"
+                    ? "Venue midpoint"
+                    : "Recorded reference (legacy)",
+                  money(o.execution.reference),
+                ],
+                [
+                  o.execution.costBasis === "venue-midpoint"
+                    ? "Execution cost"
+                    : "Benchmark cost (legacy)",
+                  `${o.execution.costBps.toFixed(2)} bps`,
+                ],
                 ["Effective price", money(o.execution.effectivePrice)],
                 ["Applied fee rate", `${o.execution.feeBps.toFixed(2)} bps`],
                 ["Cinder pricing", "Not included"],

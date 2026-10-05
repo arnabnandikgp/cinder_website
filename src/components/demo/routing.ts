@@ -42,6 +42,8 @@ const fixtures: Partial<
 
 export type Quote = {
   venue: Venue;
+  // Midpoint of this venue's book, never a cross-venue benchmark.
+  reference: number;
   quantity: number;
   averageFill: number;
   worstFill: number;
@@ -63,7 +65,8 @@ export type RouteInput = {
   market: Market;
   side: Side;
   quantity: number;
-  // Optional USDC intent; live comparison converts once at its shared reference.
+  // USDC exposure valued at each candidate's own midpoint. The selected route
+  // supplies the base quantity; leverage does not multiply this intent.
   notional?: number;
   leverage: number;
   slippage: number;
@@ -144,6 +147,7 @@ export function quoteVenue(
   const totalCost = priceCost + totalFees;
   return {
     venue,
+    reference: markets[market].price,
     quantity,
     averageFill,
     worstFill,

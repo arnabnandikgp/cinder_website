@@ -90,6 +90,12 @@ function validBook(book: Book) {
   );
 }
 
+export function bookMidpoint(book: Book) {
+  return validBook(book)
+    ? book.bids[0].price + (book.asks[0].price - book.bids[0].price) / 2
+    : NaN;
+}
+
 export function bookIssue(
   feed: FeedState,
   now: number,
@@ -186,23 +192,27 @@ export function walkBook(
   book: Book,
   side: Side,
   quantity: number,
-  reference: number,
   feeBps: number,
 ): Quote | null {
+  const reference = bookMidpoint(book);
   if (
     ![quantity, reference, feeBps].every(Number.isFinite) ||
     quantity <= 0 ||
     reference <= 0 ||
-    feeBps < 0 ||
-    !validBook(book)
+    feeBps < 0
   )
     return null;
   let remaining = quantity,
     notional = 0,
+    priceCost = 0,
     worstFill = 0;
+  const direction = side === "Buy" ? 1 : -1;
   for (const level of side === "Buy" ? book.asks : book.bids) {
     const consumed = Math.min(remaining, level.size);
     notional += consumed * level.price;
+    // Every valid ask is above its own midpoint (and every bid below it).
+    // Sum the actual spread/depth friction, without cancellation or clamping.
+    priceCost += consumed * direction * (level.price - reference);
     remaining -= consumed;
     worstFill = level.price;
     if (remaining <= quantity * 1e-12) break;
@@ -210,11 +220,15 @@ export function walkBook(
   if (remaining > quantity * 1e-12 || !Number.isFinite(notional)) return null;
   const averageFill = notional / quantity;
   const venueFee = (notional * feeBps) / 10000;
-  const direction = side === "Buy" ? 1 : -1;
-  const priceCost = direction * (notional - quantity * reference);
   const totalCost = priceCost + venueFee;
+  if (
+    ![totalCost, quantity * reference].every(Number.isFinite) ||
+    quantity * reference <= 0
+  )
+    return null;
   return {
     venue,
+    reference,
     quantity,
     averageFill,
     worstFill,
@@ -292,29 +306,8 @@ export function compareLiveRoutes(
     (o) => !o.reason && input.allowed.includes(o.venue),
   );
   const aligned = comparable.length > 1;
-  // Freeze one reference for this entire calculation. Same quantity on every
-  // venue. No fallback to the old fictional market prices on feed failure.
-  const reference = comparable.length
-    ? comparable.reduce((sum, o) => {
-        const book = selected[o.venue]!.book;
-        return sum + (book.bids[0].price + book.asks[0].price) / 2;
-      }, 0) / comparable.length
-    : NaN;
-  if (input.notional !== undefined) {
-    // One USDC exposure becomes the same base quantity for every candidate.
-    // Never treat the entered USDC value as SOL/BTC or apply leverage to it.
-    input = {
-      ...input,
-      quantity:
-        Number.isFinite(input.notional) && input.notional > 0 && reference > 0
-          ? input.notional / reference
-          : NaN,
-    };
-  }
-  const sizeValid =
-    Number.isFinite(input.quantity) &&
-    input.quantity > 0 &&
-    Number.isFinite(input.quantity * reference);
+  // Each venue prices the same entered USDC exposure against its own midpoint.
+  // Adding/removing another venue cannot change an existing venue's baseline.
   const candidates: Candidate[] = comparisonVenues.map((venue) => {
     const observation = observations.find((o) => o.venue === venue)!;
     let reason = !input.allowed.includes(venue)
@@ -325,43 +318,67 @@ export function compareLiveRoutes(
           venue,
           selected[venue]!.book,
           input.side,
-          input.quantity,
-          reference,
+          input.notional !== undefined
+            ? input.notional / bookMidpoint(selected[venue]!.book)
+            : input.quantity,
           observation.fee!.takerBps,
         )
       : null;
-    if (!reason) reason = quoteIssue(input, quote, reference);
+    if (!reason) reason = quoteIssue(input, quote);
     return { venue, quote, reason };
   });
   const ranked = candidates
     .filter((c) => c.quote && !c.reason)
     .map((c) => c.quote!)
-    .sort(
-      (a, b) => a.totalCost - b.totalCost || a.venue.localeCompare(b.venue),
-    );
+    .sort((a, b) => a.costBps - b.costBps || a.venue.localeCompare(b.venue));
   const difference =
-    ranked.length > 1 ? ranked[1].totalCost - ranked[0].totalCost : null;
+    ranked.length > 1 ? ranked[1].costBps - ranked[0].costBps : null;
+  const rankedNotional = ranked[0]
+    ? ranked[0].quantity * ranked[0].reference
+    : NaN;
   const tied =
     difference !== null &&
-    difference <=
-      Math.max(0.01, (input.quantity * reference * SIMILAR_COST_BPS) / 10000);
+    difference <= Math.max(SIMILAR_COST_BPS, (0.01 / rankedNotional) * 10000);
   // Stable preference within the similarity band, never a "saving" claim.
   const best =
     (tied
       ? ranked.find(
           (q) =>
             q.venue ===
-            input.allowed.find((v) => ranked.some((r) => r.venue === v)),
+            input.allowed.find((v) =>
+              ranked.some(
+                (r) =>
+                  r.venue === v &&
+                  r.costBps - ranked[0].costBps <=
+                    Math.max(SIMILAR_COST_BPS, (0.01 / rankedNotional) * 10000),
+              ),
+            ),
         )
       : ranked[0]) ?? null;
-  const savings = tied ? null : difference;
+  const savings =
+    tied || difference === null ? null : (difference * rankedNotional) / 10000;
+  // Context for the selected intent only, not a denominator shared by quotes.
+  const reference =
+    best?.reference ??
+    (comparable.length
+      ? bookMidpoint(selected[comparable[0].venue]!.book)
+      : NaN);
+  if (input.notional !== undefined)
+    input = {
+      ...input,
+      quantity:
+        best?.quantity ??
+        (Number.isFinite(input.notional) && input.notional > 0
+          ? input.notional / reference
+          : NaN),
+    };
   const explanation = !best
     ? "No comparable estimate. Check the venue status, order size and price tolerance."
     : tied
       ? "Estimates are within 0.5 bps or one cent. No clear cost advantage; venue preference is retained."
       : ranked.length === 1
         ? "Only one complete estimate is available. This does not establish a cheaper venue."
-        : `Lowest estimated entry cost using visible books and assumed lowest volume-tier taker fees where available. ${venues[ranked[1].venue]} is the next comparable venue.`;
+        : `Lowest venue-local execution cost: spread, depth impact and modeled taker fees. Not a guarantee of the best absolute fill price. ${venues[ranked[1].venue]} is the next comparable venue.`;
   const displayBooks: Partial<Record<LiveVenue, Book>> = {};
   for (const o of observations) {
     if (!input.allowed.includes(o.venue)) continue;
@@ -379,10 +396,7 @@ export function compareLiveRoutes(
   const displayReference = Number.isFinite(reference)
     ? reference
     : displayValues.length
-      ? displayValues.reduce(
-          (sum, b) => sum + (b.bids[0].price + b.asks[0].price) / 2,
-          0,
-        ) / displayValues.length
+      ? bookMidpoint(displayValues[0])
       : NaN;
   const displayQuantity =
     input.notional !== undefined
@@ -396,8 +410,9 @@ export function compareLiveRoutes(
         o.venue,
         book,
         input.side,
-        displayQuantity,
-        displayReference,
+        input.notional !== undefined
+          ? input.notional / bookMidpoint(book)
+          : input.quantity,
         o.fee!.takerBps,
       );
       if (quote) delayedQuotes[o.venue] = quote;
@@ -408,7 +423,7 @@ export function compareLiveRoutes(
       (input.side === "Buy" ? book!.asks : book!.bids).reduce(
         (sum, l) => sum + l.size,
         0,
-      ) * displayReference,
+      ) * bookMidpoint(book!),
   );
   const maxCapacity = Math.max(0, ...capacities.filter(Number.isFinite));
   // Keep small books legible instead of drawing a few pixels on a fixed $150k axis.
@@ -416,7 +431,12 @@ export function compareLiveRoutes(
     1000,
     Math.min(
       250000,
-      Math.max(maxCapacity, sizeValid ? input.quantity * reference * 1.1 : 0),
+      Math.max(
+        maxCapacity,
+        Number.isFinite(displayQuantity * displayReference)
+          ? displayQuantity * displayReference * 1.1
+          : 0,
+      ),
     ),
   );
   const magnitude = 10 ** Math.floor(Math.log10(targetMax));
@@ -430,12 +450,12 @@ export function compareLiveRoutes(
       ? []
       : comparisonVenues.map((venue) => {
           const observation = observations.find((o) => o.venue === venue)!;
-          if (!displayBooks[venue] || !Number.isFinite(displayReference))
-            return { venue, capacity: 0, points: [] };
+          if (!displayBooks[venue]) return { venue, capacity: 0, points: [] };
           const book = displayBooks[venue]!;
+          const midpoint = bookMidpoint(book);
           const levels = input.side === "Buy" ? book.asks : book.bids;
           const capacity =
-            levels.reduce((sum, l) => sum + l.size, 0) * displayReference;
+            levels.reduce((sum, l) => sum + l.size, 0) * midpoint;
           const end = Math.min(capacity, chartMax);
           const sizes = [
             ...Array.from({ length: 121 }, (_, i) =>
@@ -460,8 +480,7 @@ export function compareLiveRoutes(
                 venue,
                 book,
                 input.side,
-                notional / displayReference,
-                displayReference,
+                notional / midpoint,
                 observation.fee!.takerBps,
               );
               return q ? [{ notional, cost: q.costBps }] : [];
@@ -500,17 +519,9 @@ export function compareLiveRoutes(
 }
 
 /** Same intent gates for live estimates and historical analytical samples. */
-export function quoteIssue(
-  input: RouteInput,
-  quote: Quote | null,
-  reference: number,
-) {
-  if (
-    !Number.isFinite(input.quantity) ||
-    input.quantity <= 0 ||
-    !Number.isFinite(input.quantity * reference)
-  )
-    return "Enter a valid order size";
+export function quoteIssue(input: RouteInput, quote: Quote | null) {
+  const size = input.notional ?? input.quantity;
+  if (!Number.isFinite(size) || size <= 0) return "Enter a valid order size";
   if (!quote) return "Insufficient visible depth for this size";
   if (input.account === "stale") return "Account updates paused";
   if (input.account === "empty") return "No sample collateral available";
@@ -523,7 +534,9 @@ export function quoteIssue(
   )
     return "Enter a valid price tolerance";
   if (
-    (input.side === "Buy" ? 1 : -1) * (quote.worstFill / reference - 1) * 100 >
+    (input.side === "Buy" ? 1 : -1) *
+      (quote.worstFill / quote.reference - 1) *
+      100 >
     input.slippage + 1e-10
   )
     return "Beyond price tolerance";

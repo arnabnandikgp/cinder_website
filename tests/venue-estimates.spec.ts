@@ -13,11 +13,10 @@ function quote(venue: LiveVenue, levels: [number, number][], feeBps: number) {
     venue,
     {
       time: Date.now(),
-      bids: [{ price: 99.9, size: 100 }],
+      bids: [{ price: 200 - levels[0][0], size: 100 }],
       asks: levels.map(([price, size]) => ({ price, size })),
     },
     "Buy",
-    100,
     100,
     feeBps,
   )!;
@@ -50,9 +49,9 @@ const quotes = [
   ),
 ];
 
-test("bps components use the plotted common notional, not the published fee rate", () => {
+test("bps components use the venue midpoint notional, not the published fee rate", () => {
   const q = quotes[0];
-  const costs = entryCostBreakdown(q, 100)!;
+  const costs = entryCostBreakdown(q)!;
   expect(costs.priceBps).toBeCloseTo(5.6, 10);
   expect(costs.feeBps).toBeCloseTo(4.00224, 10);
   expect(costs.totalBps).toBeCloseTo(9.60224, 10);
@@ -64,7 +63,7 @@ test("bps components use the plotted common notional, not the published fee rate
   );
 });
 
-test("sell price cost uses the reversed direction and can be negative", () => {
+test("sell spread and impact is positive even when that venue is above another benchmark", () => {
   const q = walkBook(
     "bulk",
     {
@@ -77,13 +76,13 @@ test("sell price cost uses the reversed direction and can be negative", () => {
     },
     "Sell",
     100,
-    100,
     3.5,
   )!;
-  const costs = entryCostBreakdown(q, 100)!;
-  expect(costs.priceBps).toBeCloseTo(-3.7, 10);
-  expect(costs.feeBps).toBeCloseTo(3.501295, 10);
-  expect(costs.totalBps).toBeCloseTo(-0.198705, 10);
+  const costs = entryCostBreakdown(q)!;
+  expect(q.reference).toBe(100.045);
+  expect(costs.priceBps).toBeCloseTo(0.799640162, 8);
+  expect(costs.feeBps).toBeCloseTo(3.499720126, 8);
+  expect(costs.totalBps).toBeCloseTo(4.299360288, 8);
   expect(costs.priceBps + costs.feeBps).toBeCloseTo(q.costBps, 10);
 });
 
@@ -146,10 +145,10 @@ test("delayed, excluded, missing and non-finite quotes follow eligible rows in s
   ]);
 });
 
-test("negative costs rank before positive costs and exact ties retain venue order", () => {
+test("lower costs rank first and exact ties retain venue order", () => {
   const candidates: Candidate[] = quotes.map((q) => ({
     venue: q.venue,
-    quote: { ...q, costBps: q.venue === "pacifica" ? 1 : -1 },
+    quote: { ...q, costBps: q.venue === "pacifica" ? 2 : 1 },
     reason: null,
   }));
   expect(orderVenueEstimates(candidates).map((c) => c.venue)).toEqual([
@@ -164,10 +163,10 @@ test("negative costs rank before positive costs and exact ties retain venue orde
 
 test("invalid basis values are unavailable, and display rounding avoids negative zero", () => {
   for (const reference of [0, -100, NaN, Infinity])
-    expect(entryCostBreakdown(quotes[0], reference)).toBeNull();
+    expect(entryCostBreakdown({ ...quotes[0], reference })).toBeNull();
   for (const field of ["priceCost", "venueFee", "costBps"] as const)
     expect(
-      entryCostBreakdown({ ...quotes[0], [field]: NaN } as Quote, 100),
+      entryCostBreakdown({ ...quotes[0], [field]: NaN } as Quote),
     ).toBeNull();
   expect(formatCostBps(-0.004)).toBe("0.00");
   expect(formatCostBps(-0.005)).toBe("-0.01");

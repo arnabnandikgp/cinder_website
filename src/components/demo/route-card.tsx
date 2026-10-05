@@ -3,6 +3,7 @@ import { DetailList } from "./controls";
 import { number, usdcSize, venues } from "./data";
 import { VenueIcon } from "./venue-select";
 import { FeeTierInfo } from "./fee-tier-info";
+import { entryCostBreakdown } from "./venue-estimates";
 import {
   money,
   snapshotLabels,
@@ -46,7 +47,7 @@ export function RouteCard({
               ? "Similar estimates"
               : ranked.length === 1
                 ? "Only available estimate"
-                : "Lowest estimated cost"
+                : "Lowest local execution cost"
             : "Check venue status"}
         </span>
       </div>
@@ -57,14 +58,14 @@ export function RouteCard({
             <DetailList
               rows={[
                 [
-                  "Entry cost",
+                  "Execution cost",
                   `${number(best.costBps)} bps · ${money(best.totalCost)}`,
                 ],
                 ["Average fill", money(best.averageFill)],
                 ["Effective price", money(best.effectivePrice)],
                 [
-                  "Price cost",
-                  `${number((best.priceCost / (comparison.input.quantity * comparison.reference)) * 10000)} bps`,
+                  "Spread & impact",
+                  `${number(entryCostBreakdown(best)?.priceBps ?? NaN)} bps`,
                 ],
                 ...(appliedFee
                   ? [
@@ -84,7 +85,7 @@ export function RouteCard({
       )}
       {best && savings !== null && savings >= 0.01 && (
         <div className="d-route-saving">
-          Est. {money(savings)} below{" "}
+          Est. execution cost {money(savings)} below{" "}
           {venues[ranked.find((q) => q.venue !== best.venue)!.venue]}
         </div>
       )}
@@ -97,7 +98,7 @@ export function RouteCard({
         </button>
       </div>
       <span className="d-route-fixture">
-        Live estimate · Rechecked on paper submission
+        Venue-local cost · Rechecked on paper submission
       </span>
     </section>
   );
@@ -106,6 +107,7 @@ export function RouteCard({
 export function RouteReceiptDetails({ route }: { route: RouteReceipt }) {
   if (!route.best) return null;
   const q = route.best;
+  const local = Number.isFinite(q.reference);
   return (
     <section className="d-route-receipt" aria-label="Saved route estimate">
       <h3>Route estimate at review</h3>
@@ -123,12 +125,18 @@ export function RouteReceiptDetails({ route }: { route: RouteReceipt }) {
           ["Venue fee", money(q.venueFee)],
           ["Cinder pricing", route.live ? "Not included" : money(q.cinderFee)],
           ["Effective price", money(q.effectivePrice)],
-          ["Price cost vs reference", money(q.priceCost)],
           [
-            "Total estimated entry cost",
+            local ? "Spread & impact" : "Legacy price cost vs benchmark",
+            money(q.priceCost),
+          ],
+          [
+            local ? "Estimated execution cost" : "Legacy benchmark cost",
             `${money(q.totalCost)} · ${number(q.costBps)} bps`,
           ],
-          ["Common reference", money(route.reference)],
+          [
+            local ? "Venue midpoint" : "Recorded shared reference",
+            money(local ? q.reference : route.reference),
+          ],
           [
             "Market snapshot",
             route.live

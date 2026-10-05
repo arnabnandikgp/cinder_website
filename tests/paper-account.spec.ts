@@ -11,6 +11,10 @@ import {
 } from "../src/components/demo/paper-account";
 import type { Draft } from "../src/components/demo/data";
 import { MarketFeed } from "../src/components/demo/market-data/feed";
+import {
+  compareLiveRoutes,
+  type ComparisonFeeds,
+} from "../src/components/demo/live-routing";
 const now = Date.UTC(2026, 9, 5, 12);
 const wallet = "11111111111111111111111111111111";
 const feed = (mid = 100, size = 10000) => ({
@@ -72,6 +76,109 @@ test("paper credit, fill, netting and margin conservation", () => {
   expect(closed.cash).toBeCloseTo(9999.24, 6);
   expect(paperTotals(closed).available).toBe(closed.cash);
   expect(closed.events[0].title).toBe("Paper margin returned");
+});
+
+test("router sizing, preview, paper fill and persisted local-cost receipt reconcile for buys and sells", () => {
+  for (const side of ["Buy", "Sell"] as const) {
+    const f: ComparisonFeeds = {
+      pacifica: feed(100),
+      bulk: { ...feed(120), fee: { ...feed().fee, takerBps: 2.2 } },
+      phoenix: { ...feed(110), connection: "offline" },
+    };
+    const comparison = compareLiveRoutes(
+      {
+        market: "SOL",
+        side,
+        quantity: NaN,
+        notional: 1000,
+        leverage: 10,
+        slippage: 0.5,
+        allowed: ["pacifica", "bulk"],
+        snapshot: "balanced",
+        account: "funded",
+        availableCollateral: 10000,
+      },
+      f,
+      now,
+    );
+    const selected = comparison.best!;
+    expect(selected.venue).toBe("bulk");
+    expect(selected.quantity).toBeCloseTo(1000 / 120, 12);
+    const a = newPaperAccount(wallet, now);
+    const d = draft({
+      venue: "bulk",
+      mode: "auto",
+      side,
+      route: { ...comparison, savedAt: new Date(now).toISOString() },
+    });
+    const preview = previewPaperOrder(
+      a,
+      d,
+      f.bulk,
+      now,
+      selected.reference,
+      selected.quantity,
+    )!;
+    const result = placePaperOrder(
+      a,
+      d,
+      f.bulk,
+      now,
+      selected.reference,
+      selected.quantity,
+    );
+    expect(result.order.quantity).toBe(selected.quantity);
+    expect(result.account.fills[0].quantity).toBe(selected.quantity);
+    expect(result.account.fills[0].fee).toBeCloseTo(selected.venueFee, 10);
+    expect(result.order.execution).toMatchObject({
+      costBasis: "venue-midpoint",
+      reference: 120,
+      costBps: selected.costBps,
+    });
+    // Ledger cash is settled to six decimals before the final margin total.
+    expect(preview.availableAfter).toBeCloseTo(
+      paperTotals(result.account).available,
+      5,
+    );
+    expect(decodePaperAccount(JSON.stringify(result.account), wallet)).toEqual(
+      result.account,
+    );
+    // Previously recorded benchmark values must not be silently recalculated.
+    delete result.order.execution!.costBasis;
+    result.order.execution!.costBps = -2;
+    const legacy = decodePaperAccount(JSON.stringify(result.account), wallet)!;
+    expect(legacy.orders[0].execution!.costBps).toBe(-2);
+    expect(legacy.orders[0].execution!.costBasis).toBeUndefined();
+    // A fresh, widened book can reject the same intent; old preview is no authority.
+    expect(() =>
+      placePaperOrder(
+        a,
+        d,
+        {
+          ...f.bulk,
+          book: {
+            ...f.bulk.book!,
+            bids: [{ price: 118, size: 1000 }],
+            asks: [{ price: 122, size: 1000 }],
+          },
+        },
+        now,
+        selected.reference,
+        selected.quantity,
+      ),
+    ).toThrow(/slippage/);
+    const moved = side === "Buy" ? 125 : 115;
+    expect(() =>
+      placePaperOrder(
+        a,
+        d,
+        { ...f.bulk, book: feed(moved).book },
+        now,
+        selected.reference,
+        selected.quantity,
+      ),
+    ).toThrow(/slippage/);
+  }
 });
 test("fees, depth, freshness, slippage, margin and reduce-only are enforced", () => {
   const a = newPaperAccount(wallet, now);

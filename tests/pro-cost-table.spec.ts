@@ -21,12 +21,12 @@ test("table shows bps contributions and total cost matching the plotted estimate
   await expect(table.locator(".d-entry-cost")).toHaveCount(3);
   await expect(table.getByRole("columnheader")).toHaveText([
     "Venue",
-    "Price cost",
-    "Fee cost",
-    "Entry cost¹",
+    "Spread & impact",
+    "Fees",
+    "Execution cost¹",
   ]);
   await expect(
-    table.getByRole("columnheader", { name: "Entry cost¹" }),
+    table.getByRole("columnheader", { name: "Execution cost¹" }),
   ).toHaveAttribute("aria-sort", "ascending");
   for (const venue of ["pacifica", "bulk", "phoenix"]) {
     const row = page.getByTestId(`route-row-${venue}`);
@@ -54,7 +54,7 @@ test("table shows bps contributions and total cost matching the plotted estimate
   });
   await page.locator(".d-comparison-method summary").click();
   await expect(page.locator(".d-comparison-method")).toContainText(
-    "same shared-reference order notional",
+    "each venue’s midpoint-valued notional",
   );
   await expect(table).not.toContainText("Avg. fill");
   await expect(table).not.toContainText("Effective price");
@@ -78,16 +78,16 @@ test("buy and sell rows reorder cheapest first and keep the clear winner blue", 
     await expect(rows.first()).toHaveClass(/d-best-row/);
   };
   await expect(rows.locator("strong.d-venue-key")).toHaveText([
+    "BULK",
     "Pacifica",
     "Phoenix",
-    "BULK",
   ]);
   await assertRanked();
   await page.getByRole("radio", { name: "Sell / Short" }).check();
   await expect(rows.locator("strong.d-venue-key")).toHaveText([
     "BULK",
-    "Phoenix",
     "Pacifica",
+    "Phoenix",
   ]);
   await assertRanked();
   await expect(page.getByTestId("recommended-venue")).toHaveText("BULK");
@@ -108,8 +108,8 @@ test("a delayed cheap venue stays below fresh estimates and is never highlighted
   );
   const rows = page.locator(".d-comparison-table tbody tr");
   await expect(rows.locator("strong.d-venue-key")).toHaveText([
-    "Phoenix",
     "BULK",
+    "Phoenix",
     "Pacifica",
   ]);
   await expect(rows.first()).toHaveClass(/d-best-row/);
@@ -119,12 +119,12 @@ test("a delayed cheap venue stays below fresh estimates and is never highlighted
   await expect(
     page.getByTestId("route-row-pacifica").locator(".d-entry-cost"),
   ).toContainText("bps");
-  await expect(page.getByTestId("recommended-venue")).toHaveText("Phoenix");
+  await expect(page.getByTestId("recommended-venue")).toHaveText("BULK");
   socket.paused = false;
   await expect(rows.locator("strong.d-venue-key")).toHaveText([
+    "BULK",
     "Pacifica",
     "Phoenix",
-    "BULK",
   ]);
 });
 
@@ -155,8 +155,8 @@ test("incomplete and excluded estimates follow ranked venues without false blue 
   await page.getByRole("checkbox", { name: "Pacifica" }).uncheck();
   await page.getByRole("button", { name: "Save preferences" }).click();
   await expect(rows.locator("strong.d-venue-key")).toHaveText([
-    "Phoenix",
     "BULK",
+    "Phoenix",
     "Pacifica",
   ]);
   await expect(page.getByTestId("route-row-pacifica")).toContainText(
@@ -172,8 +172,8 @@ test("near ties are sorted but do not imply a clear cheapest venue", async ({
 }) => {
   await page.goto("/demo?mode=auto&market=BTC");
   await expect(page.getByTestId("curve-phoenix")).toHaveCount(1);
-  // At the new volume-tier fees, equal BTC midpoints no longer make a near
-  // tie. A $5 higher BULK fill offsets its 0.6 bp fee advantage in this case.
+  // Widen BULK's actual spread to offset its 0.6 bp fee advantage. Moving its
+  // midpoint alone must no longer manufacture a near tie.
   const socket = marketData.sockets.find(
     (s) => s.venue === "bulk" && !s.closed,
   )!;
@@ -181,7 +181,7 @@ test("near ties are sorted but do not imply a clear cheapest venue", async ({
   const timer = setInterval(() => {
     if (!page.isClosed())
       socket.socket.send(
-        JSON.stringify(bookMessage("bulk", "BTC", 86005, Date.now(), true)),
+        JSON.stringify(bookMessage("bulk", "BTC", 86000, Date.now(), true, 5)),
       );
   }, 150);
   try {

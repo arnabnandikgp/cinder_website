@@ -133,7 +133,7 @@ export function MarketStatistics({
             <>
               <p>
                 Venue-reported funding rate, shown without an hourly conversion.
-                Funding is separate from Pro’s estimated entry cost.
+                Funding is separate from Pro’s estimated execution cost.
               </p>
               <a
                 href="https://docs.phoenix.trade/phoenix/margin-and-risk/funding-rate"

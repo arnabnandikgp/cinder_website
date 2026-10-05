@@ -217,6 +217,8 @@ test("live comparison, five-second average and saved preview share the modeled f
   await expect(page.locator(".d-feedback-note")).toHaveCount(0);
   await page.getByRole("tab", { name: "Order history" }).click();
   await page.locator(".d-paper-table .d-cell-link").first().click();
-  await expect(page.getByRole("dialog")).toContainText("2.80 bps");
+  await expect(page.getByRole("dialog")).toContainText("2.20 bps");
+  await expect(page.getByRole("dialog")).toContainText("Venue midpoint");
+  await expect(page.getByRole("dialog")).toContainText("Execution cost");
   await expect(page.getByRole("dialog")).toContainText("Modeled venue fee");
 });

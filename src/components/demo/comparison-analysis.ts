@@ -7,6 +7,7 @@ import { feeBasisKey, type VenueFee } from "./market-data/fees";
 import type { Quote, RouteComparison, RouteInput } from "./routing";
 import {
   bookIssue,
+  bookMidpoint,
   comparisonVenues,
   focusedChartMax,
   quoteIssue,
@@ -77,7 +78,7 @@ export function liveAnalysis(comparison: RouteComparison): AnalysisFrame {
       const quote = candidate.reason ? delayed : candidate.quote;
       return {
         venue,
-        costs: quote ? entryCostBreakdown(quote, reference) : null,
+        costs: quote ? entryCostBreakdown(quote) : null,
         dollars: quote?.totalCost ?? null,
         reason: candidate.reason,
         delayed: Boolean(delayed),
@@ -96,27 +97,18 @@ export function liveAnalysis(comparison: RouteComparison): AnalysisFrame {
   };
 }
 
-function referenceFor(sample: Sample, cohort: LiveVenue[]) {
-  return (
-    cohort.reduce((sum, venue) => {
-      const book = sample.books[venue]!.book;
-      return sum + (book.bids[0].price + book.asks[0].price) / 2;
-    }, 0) / cohort.length
-  );
-}
 function sampleQuote(
   sample: Sample,
   venue: LiveVenue,
   input: RouteInput,
-  reference: number,
-  notional: number,
+  notional = input.notional,
 ) {
+  const book = sample.books[venue]!.book;
   return walkBook(
     venue,
-    sample.books[venue]!.book,
+    book,
     input.side,
-    notional / reference,
-    reference,
+    notional !== undefined ? notional / bookMidpoint(book) : input.quantity,
     sample.fees[venue]!.takerBps,
   );
 }
@@ -182,14 +174,8 @@ export class ComparisonWindow {
       if (subset.length < Math.min(2, input.allowed.length)) continue;
       const paired = samples.filter((s) => {
         if (!subset.every((v) => s.books[v] && s.fees[v])) return false;
-        const reference = referenceFor(s, subset);
         return subset.every(
-          (v) =>
-            !quoteIssue(
-              { ...input, quantity: notional / reference },
-              sampleQuote(s, v, input, reference, notional),
-              reference,
-            ),
+          (v) => !quoteIssue(input, sampleQuote(s, v, input)),
         );
       });
       if (
@@ -202,16 +188,13 @@ export class ComparisonWindow {
       }
     }
     const ready = warmed && cohort.length > 0;
-    const references = ready ? shared.map((s) => referenceFor(s, cohort)) : [];
     const rows: AnalysisRow[] = comparisonVenues.map((venue) => {
       const reason = current.candidates.find((c) => c.venue === venue)!.reason;
       const eligible = ready && cohort.includes(venue);
       const quotes = eligible
-        ? shared.map((s, i) =>
-            sampleQuote(s, venue, input, references[i], notional)!,
-          )
+        ? shared.map((s) => sampleQuote(s, venue, input)!)
         : [];
-      const costs = quotes.map((q, i) => entryCostBreakdown(q, references[i])!);
+      const costs = quotes.map((q) => entryCostBreakdown(q)!);
       return {
         venue,
         costs: eligible
@@ -241,11 +224,12 @@ export class ComparisonWindow {
         ready
           ? Math.min(
               ...shared.map(
-                (s, i) =>
+                (s) =>
                   (input.side === "Buy"
                     ? s.books[v]!.book.asks
                     : s.books[v]!.book.bids
-                  ).reduce((sum, l) => sum + l.size, 0) * references[i],
+                  ).reduce((sum, l) => sum + l.size, 0) *
+                  bookMidpoint(s.books[v]!.book),
               ),
             )
           : 0,
@@ -283,9 +267,7 @@ export class ComparisonWindow {
         venue,
         capacity,
         points: sizes.flatMap((size) => {
-          const quotes = shared.map((s, i) =>
-            sampleQuote(s, venue, input, references[i], size),
-          );
+          const quotes = shared.map((s) => sampleQuote(s, venue, input, size));
           // Do not average just the fillable periods: thin-book periods count too.
           return quotes.every((q): q is Quote => q !== null)
             ? [{ notional: size, cost: mean(quotes.map((q) => q.costBps)) }]
@@ -296,7 +278,8 @@ export class ComparisonWindow {
     return {
       mode: "average",
       input,
-      reference: ready ? mean(references) : NaN,
+      // Selected-route context only. Every sample uses its own venue midpoint.
+      reference: ready ? current.reference : NaN,
       rows,
       curves,
       chartMax,
@@ -431,14 +414,22 @@ export function rankAnalysis(frame: AnalysisFrame) {
   const ranked = rows.filter(eligible);
   const notional =
     frame.input.notional ?? frame.input.quantity * frame.reference;
+  const similarityBps = Math.max(SIMILAR_COST_BPS, (0.01 / notional) * 10000);
   const tied =
     ranked.length > 1 &&
-    ranked[1].costs!.totalBps - ranked[0].costs!.totalBps <=
-      Math.max(SIMILAR_COST_BPS, (0.01 / notional) * 10000);
+    ranked[1].costs!.totalBps - ranked[0].costs!.totalBps <= similarityBps;
   return {
     rows,
     count: ranked.length,
     tied,
+    similar: tied
+      ? ranked
+          .filter(
+            (r) =>
+              r.costs!.totalBps - ranked[0].costs!.totalBps <= similarityBps,
+          )
+          .map((r) => r.venue)
+      : [],
     lowest: ranked.length > 1 && !tied ? ranked[0].venue : null,
   };
 }

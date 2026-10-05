@@ -500,7 +500,7 @@ test.describe("first visit", () => {
           await expect(page.locator(".d-mode-switch")).toBeInViewport();
         } else {
           await expect(tour(page)).toContainText("in basis points");
-          await expect(tour(page)).toContainText("not guaranteed fills");
+          await expect(tour(page)).toContainText("not a guarantee");
           await tour(page)
             .getByRole("button", { name: "Back", exact: true })
             .click();

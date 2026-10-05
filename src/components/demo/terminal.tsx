@@ -374,8 +374,8 @@ export function Terminal() {
           draft,
           feed,
           Date.now(),
-          draft.route?.reference,
-          closing ? Math.abs(closing.quantity) : draft.route?.input.quantity,
+          draft.route?.best?.reference,
+          closing ? Math.abs(closing.quantity) : draft.route?.best?.quantity,
           bracket,
         );
         record =

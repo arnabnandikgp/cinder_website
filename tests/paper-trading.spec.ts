@@ -179,7 +179,7 @@ test("Pro is continuous and compact; submits a freshly recomputed paper route wi
     "No estimate",
   );
   await expect(page.locator(".d-route-card details")).toHaveCount(0);
-  await expect(page.locator(".d-route-card")).toContainText("Entry cost");
+  await expect(page.locator(".d-route-card")).toContainText("Execution cost");
   await page.getByRole("button", { name: "Place buy order" }).click();
   await expect(page.locator(".d-paper-table")).toContainText("Long");
   await expect(page.locator(".d-feedback-note")).toHaveCount(0);
@@ -188,7 +188,7 @@ test("Pro is continuous and compact; submits a freshly recomputed paper route wi
     PAPER_PREFIX + address,
   );
   expect(a.fills).toHaveLength(1);
-  expect(a.positions[0].venue).toBe("pacifica");
+  expect(a.positions[0].venue).toBe("bulk");
   expect(await page.evaluate(() => window.cinderWalletTest.calls)).toEqual([
     "connect",
   ]);

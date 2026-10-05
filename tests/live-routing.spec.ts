@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import {
   compareLiveRoutes,
   walkBook,
+  bookMidpoint,
   BOOK_MAX_AGE_MS,
   BOOK_MAX_SKEW_MS,
   alignedBooks,
@@ -88,8 +89,7 @@ test("focused chart range is presentation-only and samples use real visible book
         curve.venue,
         f[curve.venue].book!,
         input.side,
-        point.notional / comparison.reference,
-        comparison.reference,
+        point.notional / bookMidpoint(f[curve.venue].book!),
         f[curve.venue].fee!.takerBps,
       );
       expect(point.cost).toBe(quote!.costBps);
@@ -102,17 +102,18 @@ test("focused chart range is presentation-only and samples use real visible book
   expect(comparison.input.notional).toBe(300);
 });
 
-test("USDC intent converts at one shared reference without leverage multiplication or input mutation", () => {
+test("USDC intent converts at each venue midpoint and propagates the selected quantity without multiplying leverage", () => {
   const requested = { ...input, notional: 10000, quantity: NaN };
   const comparison = compareLiveRoutes(requested, feeds(), now);
-  expect(comparison.reference).toBe(86010);
+  expect(comparison.reference).toBe(86020);
   expect(comparison.input.notional).toBe(10000);
-  expect(comparison.input.quantity).toBeCloseTo(10000 / 86010, 12);
+  expect(comparison.input.quantity).toBeCloseTo(10000 / 86020, 12);
   expect(requested.quantity).toBeNaN();
   expect(comparison.ranked).toHaveLength(2);
-  expect(
-    comparison.ranked.every((q) => q.quantity === comparison.input.quantity),
-  ).toBe(true);
+  for (const q of comparison.ranked)
+    expect(q.quantity * q.reference).toBeCloseTo(10000, 10);
+  expect(comparison.input.quantity).toBe(comparison.best!.quantity);
+  expect(comparison.ranked[0].quantity).not.toBe(comparison.ranked[1].quantity);
   const lowerLeverage = compareLiveRoutes(
     { ...requested, leverage: 5 },
     feeds(),
@@ -124,13 +125,17 @@ test("USDC intent converts at one shared reference without leverage multiplicati
   f.pacifica.book = book(87000);
   f.bulk.book = book(87020);
   const updated = compareLiveRoutes(requested, f, now);
-  expect(updated.input.quantity).toBeCloseTo(10000 / 87010, 12);
-  expect(comparison.input.quantity).toBeCloseTo(10000 / 86010, 12);
+  expect(updated.input.quantity).toBeCloseTo(10000 / 87020, 12);
+  expect(comparison.input.quantity).toBeCloseTo(10000 / 86020, 12);
   expect(updated.input.notional).toBe(10000);
   for (const notional of [NaN, Infinity, 0, -1]) {
     const invalid = compareLiveRoutes({ ...input, notional }, feeds(), now);
     expect(invalid.best).toBeNull();
-    expect(invalid.input.quantity).toBeNaN();
+    expect(
+      invalid.candidates.every(
+        (c) => c.reason === "Enter a valid order size" || !c.quote,
+      ),
+    ).toBe(true);
   }
   const stale = compareLiveRoutes(
     requested,
@@ -147,6 +152,55 @@ test("USDC size formatting preserves small amounts without NaN or scientific not
   expect(usdcSize(0.000001)).toBe("0.000001 USDC");
   expect(usdcSize(0.000000001)).toBe("<0.00000001 USDC");
   expect(usdcSize(NaN)).toBe("—");
+});
+
+test("adding, repricing or losing a third venue cannot change another venue’s quote or curve", () => {
+  for (const side of ["Buy", "Sell"] as const) {
+    const f = feeds();
+    const intent = { ...input, side, notional: 10000 };
+    const pair = compareLiveRoutes(intent, f, now);
+    for (const midpoint of [80000, 100000]) {
+      f.phoenix.book = book(midpoint);
+      const triple = compareLiveRoutes(
+        { ...intent, allowed: [...input.allowed, "phoenix"] },
+        f,
+        now,
+      );
+      for (const venue of ["pacifica", "bulk"] as const) {
+        expect(triple.candidates.find((c) => c.venue === venue)).toEqual(
+          pair.candidates.find((c) => c.venue === venue),
+        );
+        // Sampled points can vary with the viewport; the exact ticket point cannot.
+        const point = (r: typeof pair) =>
+          r
+            .live!.curves.find((c) => c.venue === venue)!
+            .points.find((p) => p.notional === 10000);
+        expect(point(triple)).toEqual(point(pair));
+      }
+      f.phoenix.connection = "offline";
+      const lost = compareLiveRoutes(
+        { ...intent, allowed: [...input.allowed, "phoenix"] },
+        f,
+        now,
+      );
+      expect(lost.ranked).toEqual(pair.ranked);
+      f.phoenix.connection = "connected";
+    }
+  }
+});
+
+test("tie preference cannot select a third venue outside the similarity band", () => {
+  const f = feeds();
+  f.pacifica.fee!.takerBps = 3.6;
+  f.phoenix.fee!.takerBps = 10;
+  const result = compareLiveRoutes(
+    { ...input, allowed: ["phoenix", "pacifica", "bulk"] },
+    f,
+    now,
+  );
+  expect(result.live!.tied).toBe(true);
+  expect(result.best!.venue).toBe("pacifica");
+  expect(result.savings).toBeNull();
 });
 
 test("public fees select the lowest active taker tier and respect instrument overrides", () => {
@@ -208,13 +262,27 @@ test("public fees select the lowest active taker tier and respect instrument ove
   ).toBeNull();
 });
 
-test("handoff golden VWAP cases reproduce fees, signs and different buy/sell leaders", () => {
+test("golden VWAP cases use local midpoints, positive buy/sell friction and fill-notional fees", () => {
   // Published aggregate VWAP fixture, not a claimed replay of unavailable raw L2.
-  const reference = 86271.1850000025,
-    quantity = 10000 / reference;
-  for (const [venue, buy, sell, fee, buyCost, sellCost] of [
-    ["bulk", 86269.87000001, 86259.20369113, 3.5, 3.347520323, 4.888310062],
-    ["pacifica", 86273, 86265.92430366, 4, 4.210467261, 4.609542115],
+  for (const [venue, buy, sell, fee, midpoint, buyCost, sellCost] of [
+    [
+      "bulk",
+      86269.87000001,
+      86259.20369113,
+      3.5,
+      86264.53684557,
+      4.118448929,
+      4.118016166,
+    ],
+    [
+      "pacifica",
+      86273,
+      86265.92430366,
+      4,
+      86269.46215183,
+      4.410256796,
+      4.409928721,
+    ],
   ] as const) {
     const depth: Book = {
       time: now,
@@ -222,39 +290,45 @@ test("handoff golden VWAP cases reproduce fees, signs and different buy/sell lea
       asks: [{ price: buy, size: 1 }],
     };
     expect(
-      walkBook(venue, depth, "Buy", quantity, reference, fee)!.costBps,
+      walkBook(venue, depth, "Buy", 10000 / midpoint, fee)!.costBps,
     ).toBeCloseTo(buyCost, 6);
     expect(
-      walkBook(venue, depth, "Sell", quantity, reference, fee)!.costBps,
+      walkBook(venue, depth, "Sell", 10000 / midpoint, fee)!.costBps,
     ).toBeCloseTo(sellCost, 6);
   }
 });
 
 test("walking consumes partial last levels, fees on fills and exact full-size depth only", () => {
   const b = book(100, 2);
-  const q = walkBook("bulk", b, "Buy", 3, 100, 4)!;
+  const q = walkBook("bulk", b, "Buy", 3, 4)!;
+  expect(q.reference).toBe(100);
   expect(q.notional).toBe(304);
   expect(q.venueFee).toBeCloseTo(0.1216, 10);
   expect(q.totalCost).toBeCloseTo(4.1216, 10);
   expect(q.effectivePrice).toBeCloseTo((304 + 0.1216) / 3, 10);
-  expect(walkBook("bulk", b, "Buy", 4, 100, 4)).not.toBeNull();
-  expect(walkBook("bulk", b, "Buy", 4.00001, 100, 4)).toBeNull();
-  const sell = walkBook("bulk", b, "Sell", 3, 100, 4)!;
+  expect(walkBook("bulk", b, "Buy", 4, 4)).not.toBeNull();
+  expect(walkBook("bulk", b, "Buy", 4.00001, 4)).toBeNull();
+  const sell = walkBook("bulk", b, "Sell", 3, 4)!;
   expect(sell.notional).toBe(296);
   expect(sell.effectivePrice).toBeCloseTo((296 - sell.venueFee) / 3, 10);
   for (const qty of [NaN, Infinity, 0, -1])
-    expect(walkBook("bulk", b, "Buy", qty, 100, 4)).toBeNull();
+    expect(walkBook("bulk", b, "Buy", qty, 4)).toBeNull();
 });
 
-test("ranking is side-aware and adverse-only tolerance allows favourable fills", () => {
+test("router minimizes local friction rather than absolute price; tolerance is local and side-aware", () => {
   const f = feeds();
-  expect(compareLiveRoutes(input, f, now).best?.venue).toBe("pacifica");
+  const buy = compareLiveRoutes(input, f, now);
+  expect(buy.best?.venue).toBe("bulk");
+  expect(buy.best!.averageFill).toBeGreaterThan(buy.ranked[1].averageFill);
   expect(
     compareLiveRoutes({ ...input, side: "Sell" }, f, now).best?.venue,
   ).toBe("bulk");
   expect(
-    compareLiveRoutes({ ...input, slippage: 0.00001 }, f, now).best?.venue,
-  ).toBe("pacifica");
+    compareLiveRoutes({ ...input, slippage: 0.00001 }, f, now).best,
+  ).toBeNull();
+  expect(
+    compareLiveRoutes({ ...input, slippage: 0.002 }, f, now).best?.venue,
+  ).toBe("bulk");
   expect(
     compareLiveRoutes({ ...input, quantity: 0.01 }, f, now).ranked.every(
       (q) => q.quantity === 0.01,
@@ -330,7 +404,7 @@ test("a delayed third venue cannot veto an aligned pair", () => {
     "pacifica",
   ]);
   expect(result.live?.aligned).toBe(true);
-  expect(result.reference).toBe(86010);
+  expect(result.reference).toBe(86020);
   expect(
     result.candidates.find((c) => c.venue === "phoenix")?.quote,
   ).toBeNull();
@@ -407,9 +481,8 @@ test("delayed presentation expires and never bypasses bad books, fees, exclusion
     expect(
       delayed.live?.curves.every((c) => c.points.length === 0 || c.delayed),
     ).toBe(true);
-    expect(delayed.live?.delayedQuotes.bulk?.quantity).toBe(
-      delayed.live?.delayedQuotes.pacifica?.quantity,
-    );
+    for (const q of Object.values(delayed.live!.delayedQuotes))
+      expect(q!.quantity * q!.reference).toBeCloseTo(1000, 10);
     const expired = compareLiveRoutes(request, f, now + 10001);
     expect(expired.live?.curves.every((c) => !c.points.length)).toBe(true);
     expect(expired.live?.delayedQuotes).toEqual({});
@@ -458,11 +531,11 @@ test("partial visible depth is not a liquidity judgement or a savings claim", ()
   expect(result.candidates[0].quote).toBeNull();
   expect(result.savings).toBeNull();
   const curve = result.live!.curves[0];
-  expect(curve.points.at(-1)!.notional).toBeCloseTo(0.02 * result.reference, 8);
+  expect(curve.points.at(-1)!.notional).toBeCloseTo(0.02 * 86000, 8);
   expect(curve.points.every((p) => p.notional <= curve.capacity)).toBe(true);
 });
 
-test("near ties retain venue preference and suppress savings; curves preserve negative costs", () => {
+test("near ties retain venue preference and suppress savings; costs stay positive despite dislocated venue prices", () => {
   const f = feeds();
   f.bulk.book = book(86000);
   f.bulk.fee!.takerBps = 4.01;
@@ -475,8 +548,15 @@ test("near ties retain venue preference and suppress savings; curves preserve ne
   expect(result.best!.venue).toBe("bulk");
   expect(result.savings).toBeNull();
   f.bulk.book = book(86200);
-  const negative = compareLiveRoutes(input, f, now);
-  expect(negative.live!.curves[0].points.some((p) => p.cost < 0)).toBe(true);
+  for (const side of ["Buy", "Sell"] as const) {
+    const result = compareLiveRoutes({ ...input, side }, f, now);
+    expect(result.ranked.every((q) => q.priceCost > 0 && q.totalCost > 0)).toBe(
+      true,
+    );
+    expect(
+      result.live!.curves.flatMap((c) => c.points).every((p) => p.cost > 0),
+    ).toBe(true);
+  }
   expect(money(-0.001)).toBe("−<$0.01");
 });
 

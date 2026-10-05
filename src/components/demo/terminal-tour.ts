@@ -27,7 +27,7 @@ export const tourSteps: readonly TourStep[] = [
       {
         name: "Pro",
         description:
-          "Compare estimated price cost and venue fees across venues for your order size.",
+          "Compare estimated spread, depth impact and fees against each venue’s own midpoint for your USDC order size.",
       },
     ],
     target: ".d-mode-switch",
@@ -81,7 +81,7 @@ export const tourSteps: readonly TourStep[] = [
     label: "PRO MODE",
     title: "Compare before you commit.",
     description:
-      "Entry cost adds price cost and venue fees, in basis points. The lowest comparable estimate comes first. Your order size drives the comparison; these are estimates, not guaranteed fills.",
+      "Execution cost adds spread and depth impact to venue fees, in basis points against each venue’s own midpoint. The lowest comparable estimate comes first; it is not a guarantee of the best absolute fill price or a live fill.",
     target: "#d-route-comparison",
     context: {
       view: "trade",

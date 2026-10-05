@@ -139,7 +139,7 @@ test("warmup and interrupted coverage never manufacture a five-second average", 
   );
 });
 
-test("healthy pair uses matching slots and a fixed pair reference despite missing third venue", () => {
+test("healthy pair uses matching slots and keeps local costs independent of a missing third venue", () => {
   const window = new ComparisonWindow();
   const current = fill(window, (t) => {
     const f = feeds(t, [150, 151, 157]);
@@ -149,7 +149,6 @@ test("healthy pair uses matching slots and a fixed pair reference despite missin
   });
   const frame = window.average(current, start + 5000);
   expect(frame.ready).toBe(true);
-  expect(frame.reference).toBe(150.5);
   expect(frame.coverage).toBe(20);
   expect(frame.rows.find((r) => r.venue === "phoenix")!.reason).toBe(
     "Insufficient shared coverage",
@@ -267,18 +266,32 @@ test("curve stops at minimum observed depth, never averaging only fillable perio
   const frame = window.average(current, start + 5000);
   expect(frame.coverage).toBe(20);
   for (const curve of frame.curves) {
-    expect(curve.capacity).toBeCloseTo(451.5, 10);
-    expect(curve.points.at(-1)!.notional).toBeCloseTo(451.5, 10);
+    const midpoint = { pacifica: 150, bulk: 151, phoenix: 150.5 }[curve.venue];
+    expect(curve.capacity).toBeCloseTo(3 * midpoint, 10);
+    expect(curve.points.at(-1)!.notional).toBeCloseTo(3 * midpoint, 10);
     expect(curve.points.every((p) => p.notional <= curve.capacity)).toBe(true);
   }
 });
 
 test("lowest average may differ from best now; failures immediately remove historical eligibility", () => {
   const window = new ComparisonWindow();
-  fill(window);
+  fill(window, (t) => {
+    const f = feeds(t);
+    f.bulk.book!.bids[0].price = 150.95;
+    f.bulk.book!.asks[0].price = 151.05;
+    f.phoenix.book!.bids[0].price = 150.4;
+    f.phoenix.book!.asks[0].price = 150.6;
+    return f;
+  });
   const t = start + 5250,
     f = feeds(t, [151.4, 150, 150.5]),
-    live = compare(t, f);
+    live = (() => {
+      f.pacifica.book!.bids[0].price = 151.32;
+      f.pacifica.book!.asks[0].price = 151.48;
+      f.phoenix.book!.bids[0].price = 150.4;
+      f.phoenix.book!.asks[0].price = 150.6;
+      return compare(t, f);
+    })();
   window.capture(live, t);
   const frame = window.average(live, t);
   expect(rankAnalysis(frame).lowest).toBe("pacifica");
@@ -324,10 +337,18 @@ test("near ties and single-venue averages do not claim a clear cheapest venue", 
     ["pacifica"],
   ] as const) {
     const window = new ComparisonWindow();
-    const current = fill(window, (t) => feeds(t, [150, 150, 150]), {
-      ...input,
-      allowed: [...allowed],
-    });
+    const current = fill(
+      window,
+      (t) => {
+        const f = feeds(t, [150, 150, 150]);
+        f.pacifica.fee!.takerBps = 3.9;
+        return f;
+      },
+      {
+        ...input,
+        allowed: [...allowed],
+      },
+    );
     expect(
       rankAnalysis(window.average(current, start + 5000)).lowest,
     ).toBeNull();

@@ -77,7 +77,7 @@ export function CostChart({ analysis }: { analysis: AnalysisFrame }) {
         <h3>
           {analysis.mode === "average"
             ? "5s average by size"
-            : "Entry cost by size"}
+            : "Execution cost by size"}
         </h3>
         <div
           className="d-chart-range"
@@ -137,15 +137,18 @@ export function CostChart({ analysis }: { analysis: AnalysisFrame }) {
         data-published-at={analysis.publishedAt}
         data-analysis-mode={analysis.mode}
       >
-        <title id={`${id}-title`}>Estimated entry cost versus order size</title>
+        <title id={`${id}-title`}>
+          Estimated execution cost versus order size
+        </title>
         <desc id={`${id}-desc`}>
-          Estimated {input.side.toLowerCase()} entry costs using observed
-          visible books and modeled venue fees. Pacifica and BULK assume their
-          lowest volume-tier taker rates; Phoenix uses its public market fee.
-          Solid curves are fresh; dashed curves are delayed or unaligned and
-          excluded from recommendations. Cinder pricing is excluded. The table
-          contains estimates for your order. Lower is better. Curves end at
-          observed depth and do not establish full venue liquidity.
+          Estimated {input.side.toLowerCase()} execution costs against each
+          venue’s own midpoint using observed visible books and modeled venue
+          fees. Pacifica and BULK assume their lowest volume-tier taker rates;
+          Phoenix uses its public market fee. Solid curves are fresh; dashed
+          curves are delayed or unaligned and excluded from recommendations.
+          Cinder pricing is excluded. The table contains estimates for your
+          order. Lower is better. Curves end at observed depth and do not
+          establish full venue liquidity.
           {analysis.mode === "average" &&
             " Five-second averages use matched 250ms observations. The live order ticket does not use these averages."}
         </desc>
@@ -257,7 +260,7 @@ export function CostChart({ analysis }: { analysis: AnalysisFrame }) {
 }
 
 export function VenueComparison({ analysis }: { analysis: AnalysisFrame }) {
-  const { rows: sorted, count, tied, lowest } = rankAnalysis(analysis);
+  const { rows: sorted, count, similar, lowest } = rankAnalysis(analysis);
   return (
     <div
       id="d-route-comparison"
@@ -272,26 +275,27 @@ export function VenueComparison({ analysis }: { analysis: AnalysisFrame }) {
         <h3>
           {analysis.mode === "average"
             ? "5s average · bps"
-            : "Entry cost · bps"}
+            : "Execution cost · bps"}
         </h3>
         <span>Lowest first · {count} comparable</span>
       </div>
       <table>
         <caption className="d-sr-only">
-          Estimated entry costs for the same order quantity, in basis points
-          against the shared reference notional. Price cost plus fee cost equals
-          entry cost. Eligible venues are sorted from lowest to highest cost;
-          delayed, excluded and unavailable venues follow and are not ranked.
-          Lowest published volume-tier taker fees are assumed for Pacifica and
-          BULK; Phoenix uses its public market fee. Cinder pricing is excluded.
+          Estimated execution costs for the entered USDC exposure, in basis
+          points against each venue’s own midpoint-valued notional. Spread and
+          depth impact plus fees equals execution cost. Eligible venues are
+          sorted from lowest to highest cost; delayed, excluded and unavailable
+          venues follow and are not ranked. Lowest published volume-tier taker
+          fees are assumed for Pacifica and BULK; Phoenix uses its public market
+          fee. Cinder pricing is excluded.
         </caption>
         <thead>
           <tr>
             <th scope="col">Venue</th>
-            <th scope="col">Price cost</th>
-            <th scope="col">Fee cost</th>
+            <th scope="col">Spread &amp; impact</th>
+            <th scope="col">Fees</th>
             <th scope="col" aria-sort="ascending">
-              Entry cost¹
+              Execution cost¹
             </th>
           </tr>
         </thead>
@@ -320,7 +324,7 @@ export function VenueComparison({ analysis }: { analysis: AnalysisFrame }) {
                         ? "Unaligned · not compared"
                         : "Delayed · not compared"
                       : (reason ??
-                        (tied
+                        (similar.includes(venue)
                           ? "Similar estimate"
                           : count === 1
                             ? "Only complete estimate"
@@ -410,7 +414,6 @@ export function ProWorkspace({
   canEdit?: boolean;
 }) {
   const { input } = comparison;
-  const reference = analysis.reference;
   return (
     <section
       className="d-panel d-pro-workspace"
@@ -483,14 +486,7 @@ export function ProWorkspace({
                       : "Enter order size"}
                   </span>
                 </h2>
-                <p>
-                  {analysis.mode === "average"
-                    ? "5s mean reference"
-                    : Number.isFinite(reference)
-                      ? "Shared reference"
-                      : "Last observed reference"}
-                  <strong>{money(reference)}</strong>
-                </p>
+                <p>Each venue’s midpoint · Spread, impact + fees</p>
               </div>
               <div className="d-quick-size">
                 <span>Quick size · USDC</span>
@@ -504,7 +500,9 @@ export function ProWorkspace({
                       key={value}
                       type="button"
                       onClick={() => onNotional(value)}
-                      disabled={!canEdit || !Number.isFinite(comparison.reference)}
+                      disabled={
+                        !canEdit || !Number.isFinite(comparison.reference)
+                      }
                       aria-label={`Set order notional to ${value} USDC`}
                       aria-pressed={input.notional === value}
                     >
@@ -554,36 +552,40 @@ export function ProWorkspace({
                 </span>
               </summary>
               <p>
-                ¹ Entry cost = price cost + fee cost. Each is expressed in basis
-                points of the same shared-reference order notional; 1 bp is
-                0.01%. Price cost compares the average fill with the shared
-                midpoint reference. Fee cost is the modeled taker fee on the
-                estimated fill, normalized to that same reference notional.
-                Values are rounded for display; ranking uses full precision.
-                Negative reference cost is not guaranteed profit.
+                ¹ Execution cost = spread &amp; depth impact + fees. Each venue
+                uses its own midpoint (best bid + best ask, divided by two). The
+                entered USDC exposure is divided by that midpoint to size its
+                book sweep; leverage does not multiply the order size. Impact
+                measures the average fill’s distance from that midpoint,
+                including spread crossing. Fees apply to the estimated fill
+                notional. Both are normalized to each venue’s midpoint-valued
+                notional; 1 bp is 0.01%. Values are rounded for display; ranking
+                uses full precision. The router minimizes this venue-local
+                friction, not the absolute fill price across venues.
               </p>
               <p>
                 Feeds continue updating independently. Analysis samples aligned
                 books on a common 250ms clock; graph and table publish together
                 every second. The optional 5s view averages calculated costs,
                 not order books, using at least 16 of 20 matching time slots.
-                Each ranked venue uses the same slots and reference cohort.
-                Missing or invalid samples are not zero-filled. Average curves
-                end at the minimum observed depth across those samples. Changing
-                order intent resets the window. Stale or invalid data is
-                excluded immediately. The ticket and order review always
-                recompute from live books; the lowest average need not be best
-                now.
+                Each ranked venue uses the same slots, with its own midpoint at
+                each sample. Missing or invalid samples are not zero-filled.
+                Average curves end at the minimum observed depth across those
+                samples. Changing order intent resets the window. Stale or
+                invalid data is excluded immediately. The ticket and order
+                review always recompute from live books; the lowest average need
+                not be best now.
               </p>
               <p>
-                Same quantity across compared venues; no extrapolated liquidity.
-                Pacifica and BULK assume qualification for the lowest published
-                taker tier in their active schedules through pooled account
-                volume; Cinder’s qualifying volume is not verified. Phoenix uses
-                its public market fee without a volume discount. Funding, exit
-                costs, maker rebates, referral discounts and Cinder pricing are
-                excluded. Differences under 0.5 bps or one cent are treated as
-                similar, not as a measured confidence interval.
+                Same USDC exposure across compared venues, so base quantities
+                can differ. No extrapolated liquidity. Pacifica and BULK assume
+                qualification for the lowest published taker tier in their
+                active schedules through pooled account volume; Cinder’s
+                qualifying volume is not verified. Phoenix uses its public
+                market fee without a volume discount. Funding, exit costs, maker
+                rebates, referral discounts and Cinder pricing are excluded.
+                Differences under 0.5 bps or one cent are treated as similar,
+                not as a measured confidence interval.
               </p>
               <p>
                 Ranked books must be received within {BOOK_MAX_AGE_MS / 1000}s

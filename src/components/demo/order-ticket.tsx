@@ -172,8 +172,8 @@ export function OrderTicket({
           },
           executionFeed,
           executionFeed.now,
-          mode === "auto" ? comparison.reference : undefined,
-          mode === "auto" ? comparison.input.quantity : closingQuantity,
+          mode === "auto" ? comparison.best?.reference : undefined,
+          mode === "auto" ? comparison.best?.quantity : closingQuantity,
         )
       : null;
   const previewStatus =
@@ -658,7 +658,7 @@ export function OrderTicket({
                           <span>
                             Est.{" "}
                             {quote
-                              ? `${Math.max(0, (ticket.side === "Buy" ? 1 : -1) * (quote.averageFill / (mode === "auto" ? comparison.reference : estimate!.reference) - 1) * 100).toFixed(2)}%`
+                              ? `${((ticket.side === "Buy" ? 1 : -1) * (quote.averageFill / quote.reference - 1) * 100).toFixed(2)}%`
                               : "—"}
                           </span>
                           <span> / </span>

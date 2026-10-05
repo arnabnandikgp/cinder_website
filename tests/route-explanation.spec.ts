@@ -47,11 +47,11 @@ test.beforeEach(async ({ page }) => {
 });
 
 for (const [a, b, expected] of [
-  [[1, 2], [4, 1], "better fill price outweighs the higher fee"],
-  [[2, 1], [1, 4], "Lower fees outweigh the higher price cost"],
-  [[1, 1], [2, 2], "better fill price and lower fees"],
-  [[1, 1], [2, 1], "better fill price at similar fees"],
-  [[1, 1], [1, 2], "Lower fees at a similar price cost"],
+  [[1, 2], [4, 1], "spread and depth impact outweighs the higher fee"],
+  [[2, 1], [1, 4], "Lower fees outweigh the higher spread and depth impact"],
+  [[1, 1], [2, 2], "spread and depth impact and lower fees"],
+  [[1, 1], [2, 1], "spread and depth impact at similar fees"],
+  [[1, 1], [1, 2], "Lower fees at similar spread and depth impact"],
 ] as const) {
   test(`live explanation distinguishes ${expected}`, () => {
     const result = explainRoute(
@@ -67,9 +67,9 @@ for (const [a, b, expected] of [
 }
 
 test("sell-side explanations are side-neutral and never call a lower sell price better", () => {
-  const value = comparison(quote("bulk", -3, 1), quote("pacifica", -1, 1));
+  const value = comparison(quote("bulk", 1, 1), quote("pacifica", 3, 1));
   value.input.side = "Sell";
-  expect(explainRoute(value).text).toContain("better fill price");
+  expect(explainRoute(value).text).toContain("spread and depth impact");
   expect(explainRoute(value).text).not.toContain("lower fill price");
 });
 
@@ -107,14 +107,14 @@ test("compact Pro shows cost drivers without a hidden breakdown", async ({
   await mockMarketData(page, { stream: true, phoenix: true });
   await page.goto("/demo?mode=auto&analysis=average");
   await connectWallet(page);
-  await expect(page.getByTestId("recommended-venue")).toHaveText("Pacifica");
+  await expect(page.getByTestId("recommended-venue")).toHaveText("BULK");
   const card = page.getByTestId("route-card");
   await expect(card.locator("details")).toHaveCount(0);
   for (const label of [
-    "Entry cost",
+    "Execution cost",
     "Average fill",
     "Effective price",
-    "Price cost",
+    "Spread & impact",
     "Venue fee rate",
   ])
     await expect(card).toContainText(label);

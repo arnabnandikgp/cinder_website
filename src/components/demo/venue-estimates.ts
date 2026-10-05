@@ -16,16 +16,16 @@ export function orderVenueEstimates(candidates: readonly Candidate[]) {
   });
 }
 
-export function entryCostBreakdown(quote: Quote, reference: number) {
-  const referenceNotional = quote.quantity * reference;
+export function entryCostBreakdown(quote: Quote) {
+  const referenceNotional = quote.quantity * quote.reference;
   if (
     !Number.isFinite(referenceNotional) ||
     referenceNotional <= 0 ||
     ![quote.priceCost, quote.venueFee, quote.costBps].every(Number.isFinite)
   )
     return null;
-  // Both contributions use the same denominator as the plotted entry cost.
-  // A venue's published fee rate applies to fill notional, not this benchmark.
+  // Both contributions use this quote's own midpoint-valued denominator.
+  // A venue's published fee rate applies to fill notional, not midpoint notional.
   return {
     priceBps: (quote.priceCost / referenceNotional) * 10_000,
     feeBps: (quote.venueFee / referenceNotional) * 10_000,

@@ -60,8 +60,8 @@ export function FeeTierInfo({
           />
           <p>
             Fee cost is calculated on the estimated fill and normalized to the
-            shared reference, so its bps can differ slightly from this rate.
-            Maker rebates and Cinder pricing are not included.
+            venue’s midpoint-valued notional, so its bps can differ slightly
+            from this rate. Maker rebates and Cinder pricing are not included.
           </p>
           <a
             className="d-button d-fee-doc-link"
