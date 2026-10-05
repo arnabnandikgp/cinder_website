@@ -7,7 +7,6 @@ import { RouteCard } from "./route-card";
 import { VenueSelect } from "./venue-select";
 import { TradingModeSwitch } from "./trading-mode-switch";
 import { parseAmount, type RouteComparison } from "./routing";
-import { money } from "./routing";
 import { SlippageDialog } from "./slippage-dialog";
 import {
   BracketControls,
@@ -15,7 +14,13 @@ import {
   resolveBracket,
   type BracketInputs,
 } from "./bracket-controls";
-import type { Bracket, paperQuote } from "./paper-account";
+import {
+  previewPaperOrder,
+  type Bracket,
+  type PaperAccount,
+  type paperQuote,
+} from "./paper-account";
+import type { FeedState } from "./market-data/feed";
 import type { VenueFee } from "./market-data/fees";
 import { FeeTierInfo } from "./fee-tier-info";
 import {
@@ -34,6 +39,7 @@ import {
   markets,
   number,
   usdcSize,
+  venues,
   type Draft,
   type Market,
   type Scenario,
@@ -46,12 +52,14 @@ export type Ticket = Omit<
 > & {
   strategyConfig: StrategyConfig;
   bracket?: BracketInputs;
+  limitTouched?: boolean;
 };
+export type TicketUpdate = Ticket | ((current: Ticket) => Ticket);
 export const initialTicket: Ticket = {
   side: "Buy",
   type: "Limit",
   size: "300",
-  limit: "151.50",
+  limit: "",
   slippage: "0.5",
   leverage: "25",
   reduceOnly: false,
@@ -82,6 +90,10 @@ export function OrderTicket({
   onConnect,
   estimate,
   venueFee,
+  paper,
+  marks = {},
+  executionFeed,
+  closingQuantity,
 }: {
   market: Market;
   mode: "manual" | "auto";
@@ -89,7 +101,7 @@ export function OrderTicket({
   allowed: Venue[];
   scenario: Scenario;
   ticket: Ticket;
-  onTicket: (value: Ticket) => void;
+  onTicket: (value: TicketUpdate) => void;
   onMode: (value: "manual" | "auto") => void;
   onVenue: (value: Venue) => void;
   onAllowed: () => void;
@@ -108,6 +120,10 @@ export function OrderTicket({
   onConnect?: () => void;
   estimate?: ReturnType<typeof paperQuote>;
   venueFee?: VenueFee;
+  paper?: PaperAccount | null;
+  marks?: Partial<Record<string, number>>;
+  executionFeed?: FeedState;
+  closingQuantity?: number;
 }) {
   const ready = useClientReady();
   const editable = ready && canTrade;
@@ -133,9 +149,52 @@ export function OrderTicket({
           ticket.strategyConfig,
         )
       : undefined;
+  const executionVenue = mode === "auto" ? comparison.best?.venue : venue;
+  const position = paper?.positions.find(
+    (p) => p.market === market && p.venue === executionVenue,
+  );
+  const positionMark = position ? marks[position.id] : undefined;
+  const preview =
+    (!advanced || result?.plan) &&
+    executionFeed &&
+    executionVenue &&
+    (mode === "manual" || comparison.best)
+      ? previewPaperOrder(
+          paper ?? null,
+          {
+            id: "",
+            market,
+            mode,
+            venue: executionVenue,
+            allowed,
+            ...ticket,
+            ...(result?.plan ? { strategy: result.plan } : {}),
+          },
+          executionFeed,
+          executionFeed.now,
+          mode === "auto" ? comparison.reference : undefined,
+          mode === "auto" ? comparison.input.quantity : closingQuantity,
+        )
+      : null;
+  const previewStatus =
+    canTrade && positive(ticket.size)
+      ? advanced && !result?.plan
+        ? "Complete the strategy inputs to preview its reservation."
+        : (preview?.reason ??
+          (!preview && !(hasLimit && !positive(ticket.limit))
+            ? mode === "auto"
+              ? "Waiting for a comparable route. Inputs are preserved."
+              : (estimate?.reason ??
+                "Waiting for a fresh book and fee estimate. Inputs are preserved.")
+            : null))
+      : null;
 
   const update = (key: keyof Ticket, value: string | boolean) => {
-    onTicket({ ...ticket, [key]: value });
+    onTicket((current) => ({
+      ...current,
+      [key]: value,
+      ...(key === "limit" ? { limitTouched: true } : {}),
+    }));
     setErrors({});
   };
   function selectType(type: string) {
@@ -156,12 +215,12 @@ export function OrderTicket({
       if (!config.tip && positive(ticket.size))
         config.tip = (Number(ticket.size) / 5).toFixed(8).replace(/\.?0+$/, "");
     }
-    onTicket({
-      ...ticket,
+    onTicket((current) => ({
+      ...current,
       type,
       strategyConfig: config,
-      tif: type === "Iceberg" && ticket.tif === "IOC" ? "GTC" : ticket.tif,
-    });
+      tif: type === "Iceberg" && current.tif === "IOC" ? "GTC" : current.tif,
+    }));
     setErrors({});
   }
   function submit(event: FormEvent) {
@@ -341,13 +400,13 @@ export function OrderTicket({
         </div>
         <fieldset className="d-ticket-fields" disabled={!editable}>
           <legend className="d-sr-only">Paper order controls</legend>
-          <div className="d-ticket-available">
-            <span>Available</span>
-            <strong>{number(available)} USDC</strong>
-          </div>
           <div className="d-risk-controls">
-            <div className="d-margin-context" aria-label="Margin mode: Cross">
-              Cross
+            <div
+              className="d-margin-context"
+              aria-label="Margin mode: Cross preview"
+              aria-describedby="d-cross-hint"
+            >
+              Cross <small>Preview</small>
             </div>
             <div className="d-leverage-control">
               <label htmlFor="d-leverage">Leverage</label>
@@ -369,6 +428,9 @@ export function OrderTicket({
               </span>
             </div>
           </div>
+          <p className="d-cross-hint" id="d-cross-hint">
+            Paper margin model · No cross-venue offsets.
+          </p>
           {mode === "manual" ? (
             <OrderTypes
               value={ticket.type}
@@ -392,6 +454,40 @@ export function OrderTicket({
             ]}
             onChange={(value) => update("side", value)}
           />
+          <div className="d-ticket-account-context">
+            <div
+              className="d-ticket-available"
+              title="Account-wide cash after position requirements and pending reservations. Not notional buying power or withdrawable funds."
+            >
+              <span>Available margin</span>
+              <strong>{number(available)} USDC</strong>
+            </div>
+            <div className="d-ticket-position" aria-label="Current position">
+              <span>
+                Current position{" "}
+                <small>
+                  {market} ·{" "}
+                  {executionVenue ? venues[executionVenue] : "Route pending"}
+                </small>
+              </span>
+              <strong>
+                {!canTrade || !executionVenue ? (
+                  "—"
+                ) : position ? (
+                  <>
+                    {position.quantity > 0 ? "Long" : "Short"}
+                    <small>
+                      {positionMark === undefined
+                        ? "Mark unavailable"
+                        : `${number(Math.abs(position.quantity) * positionMark)} USDC exposure`}
+                    </small>
+                  </>
+                ) : (
+                  "No position"
+                )}
+              </strong>
+            </div>
+          </div>
           {hasLimit && (
             <div className="d-price-field">
               {input("limit", "Limit price", "USD")}
@@ -437,7 +533,7 @@ export function OrderTicket({
               disabled={!editable}
               errors={errors}
               onChange={(value) => {
-                onTicket({ ...ticket, strategyConfig: value });
+                onTicket((current) => ({ ...current, strategyConfig: value }));
                 setErrors({});
               }}
             />
@@ -459,11 +555,14 @@ export function OrderTicket({
                 checked={
                   !advanced && !ticket.reduceOnly && bracketInputs.enabled
                 }
-                onChange={(e) =>
-                  onTicket({
-                    ...ticket,
-                    bracket: { ...bracketInputs, enabled: e.target.checked },
-                  })
+                onChange={({ target: { checked } }) =>
+                  onTicket((current) => ({
+                    ...current,
+                    bracket: {
+                      ...(current.bracket ?? emptyBracket),
+                      enabled: checked,
+                    },
+                  }))
                 }
               />
               Take profit / Stop loss
@@ -489,7 +588,15 @@ export function OrderTicket({
           {bracketInputs.enabled && !advanced && !ticket.reduceOnly && (
             <BracketControls
               value={bracketInputs}
-              onChange={(value) => onTicket({ ...ticket, bracket: value })}
+              onChange={(value) =>
+                onTicket((current) => ({
+                  ...current,
+                  bracket:
+                    typeof value === "function"
+                      ? value(current.bracket ?? emptyBracket)
+                      : value,
+                }))
+              }
               entry={entry}
               side={ticket.side}
               disabled={!editable}
@@ -530,16 +637,19 @@ export function OrderTicket({
                     : "—",
                 ],
                 [
-                  "Margin required",
-                  canTrade && Number.isFinite(orderValue) && orderValue > 0
-                    ? money(
-                        (hasLimit
-                          ? orderValue
-                          : (quote?.notional ?? orderValue)) /
-                          parseAmount(ticket.leverage),
-                      )
-                    : "—",
+                  preview?.reservation
+                    ? "Est. margin reservation"
+                    : "Estimated additional margin",
+                  preview ? `${number(preview.margin)} USDC` : "—",
                 ],
+                ...(preview && preview.released > 0
+                  ? [
+                      [
+                        "Est. margin released",
+                        `${number(preview.released)} USDC`,
+                      ] as [string, React.ReactNode],
+                    ]
+                  : []),
                 ...(ticket.type === "Market"
                   ? [
                       [
@@ -566,14 +676,16 @@ export function OrderTicket({
                     ]
                   : []),
                 [
-                  "Est. venue fee",
+                  "Estimated fees",
                   mode === "auto" ? (
-                    money(quote?.venueFee)
+                    preview ? (
+                      `${number(preview.fees)} USDC`
+                    ) : (
+                      "—"
+                    )
                   ) : (
                     <span key="fee">
-                      {hasLimit && Number.isFinite(orderValue) && venueFee
-                        ? money((orderValue * venueFee.takerBps) / 10000)
-                        : money(quote?.venueFee)}{" "}
+                      {preview ? `${number(preview.fees)} USDC` : "—"}{" "}
                       {venueFee && (
                         <>
                           <small>{venueFee.takerBps.toFixed(2)} bps</small>
@@ -586,10 +698,15 @@ export function OrderTicket({
               ]}
             />
             <p className="d-field-help">
-              Paper margin · Venue fees modeled
+              Estimates · Venue fees modeled
               {hasLimit ? " at taker rate" : ""} · Cinder pricing excluded
             </p>
           </div>
+          {previewStatus && (
+            <p className="d-order-readiness" role="status">
+              {previewStatus}
+            </p>
+          )}
           <button
             className={`d-button d-trade-submit d-wide ${ticket.side === "Buy" ? "d-buy-action" : "d-sell-action"}`}
             disabled={

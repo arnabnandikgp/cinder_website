@@ -139,9 +139,20 @@ export function subscriptions(
   venue: LiveVenue,
   market: Market,
   interval: Interval,
-  purpose: "chart" | "comparison" = "chart",
+  purpose: "chart" | "comparison" | "valuation" = "chart",
 ) {
   const s = symbol(venue, market);
+  if (purpose === "valuation")
+    return venue === "phoenix"
+      ? [{ type: "subscribe", subscription: { channel: "market", symbol: s } }]
+      : venue === "pacifica"
+        ? [{ method: "subscribe", params: { source: "prices" } }]
+        : [
+            {
+              method: "subscribe",
+              subscription: [{ type: "ticker", symbol: s }],
+            },
+          ];
   if (venue === "phoenix") {
     const book = {
       type: "subscribe",

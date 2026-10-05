@@ -27,7 +27,7 @@ for (const width of [375, 768, 1001, 1280, 1440]) {
     const row = page.locator(".d-account-actions");
     const actions = [
       row.getByRole("button", {
-        name: "View account balance (simulated)",
+        name: "View account equity (simulated)",
         exact: true,
       }),
       row.getByRole("button", { name: "Deposit", exact: true }),

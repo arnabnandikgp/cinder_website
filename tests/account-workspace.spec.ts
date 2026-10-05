@@ -42,7 +42,7 @@ for (const view of ["account", "activity", "agents"]) {
   }
 }
 
-test("allocation meters show only venue shares of committed margin", async ({
+test("read-only meters show only venue shares of position requirements", async ({
   page,
 }) => {
   await page.goto("/demo");
@@ -55,17 +55,19 @@ test("allocation meters show only venue shares of committed margin", async ({
   await expect(page.locator(".d-feedback-note")).toHaveCount(0);
   await page.getByRole("button", { name: "Account", exact: true }).click();
   const meter = page.getByRole("meter", {
-    name: "Pacifica share of committed margin",
+    name: "Pacifica share of position margin requirements",
   });
   expect(Number(await meter.getAttribute("value"))).toBeGreaterThan(40);
   expect(await meter.getAttribute("value")).toBe(
     await meter.getAttribute("max"),
   );
   await expect(
-    page.getByRole("meter", { name: "BULK share of committed margin" }),
+    page.getByRole("meter", {
+      name: "BULK share of position margin requirements",
+    }),
   ).toHaveAttribute("value", "0");
   await expect(page.locator(".d-allocation-note")).toContainText(
-    "not account equity",
+    "not editable allocations or separate venue accounts",
   );
 });
 

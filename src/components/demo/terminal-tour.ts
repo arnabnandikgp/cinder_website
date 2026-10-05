@@ -97,7 +97,7 @@ export const tourSteps: readonly TourStep[] = [
     label: "ACCOUNT",
     title: "Your account at a glance.",
     description:
-      "Connect a wallet to start with 10,000 simulated USDC. Your paper balance, available collateral and positions stay together, saved for this wallet in this browser.",
+      "Connect a wallet to start with 10,000 simulated USDC. Estimated account equity, available margin and positions stay together, saved for this wallet in this browser.",
     target: ".d-workspace",
     presentation: "overview",
     navigationTarget: 'button[aria-labelledby="d-nav-account-label"]',
@@ -108,7 +108,7 @@ export const tourSteps: readonly TourStep[] = [
     label: "ACCOUNT",
     title: "Know where your margin is.",
     description:
-      "See margin committed to positions at each venue. One Cinder account keeps the records together; margin is still separate by venue.",
+      "See position margin requirements grouped by execution venue. These are read-only requirements, not separate venue accounts or editable allocations. Pending order reservations appear in Balance breakdown.",
     target: ".d-margin-group",
     context: { view: "account", scope: "all" },
   },

@@ -41,7 +41,7 @@ test("venue-first ticket has prominent types, live price shortcuts and a static 
   await chooseVenue(page, "Execution venue", "bulk");
   await expect(page.getByTestId("manual-chart-source")).toHaveText("BULK");
   const margin = page.locator(".d-margin-context");
-  await expect(margin).toHaveText("Cross");
+  await expect(margin).toHaveText("Cross Preview");
   expect(await margin.evaluate((element) => element.tagName)).toBe("DIV");
   expect(
     await margin.evaluate((element) => (element as HTMLElement).tabIndex),

@@ -72,6 +72,195 @@ export function paperTotals(account: PaperAccount | null) {
     available: roundCash((account?.cash ?? 0) - margin - reserved),
   };
 }
+
+// Valuation and spending capacity are deliberately different. The paper risk
+// model reserves against settled cash; unrealised gains are not spendable.
+export function paperValuation(
+  account: PaperAccount | null,
+  marks: Partial<Record<string, number>>,
+) {
+  const missing =
+    account?.positions.filter(
+      (p) => !Number.isFinite(marks[p.id]) || !(marks[p.id]! > 0),
+    ) ?? [];
+  const unrealized = missing.length
+    ? null
+    : roundCash(
+        account?.positions.reduce(
+          (sum, p) => sum + (marks[p.id]! - p.entry) * p.quantity,
+          0,
+        ) ?? 0,
+      );
+  return {
+    unrealized,
+    equity:
+      unrealized === null ? null : roundCash((account?.cash ?? 0) + unrealized),
+    missing,
+  };
+}
+
+/** Shared by the inline preview and confirmed local fills. Positions only net
+ * on the same market AND venue. A reduction releases margin; a reversal can
+ * both release old margin and require margin for the newly opened remainder. */
+export function paperFillImpact(
+  previous: PaperPosition | undefined,
+  side: string,
+  quantity: number,
+  price: number,
+  leverage: number,
+) {
+  const signed = quantity * (side === "Buy" ? 1 : -1);
+  const oldQuantity = previous?.quantity ?? 0;
+  const opposite = oldQuantity * signed < 0;
+  const closing = opposite ? Math.min(Math.abs(oldQuantity), quantity) : 0;
+  const remainingOld = opposite
+    ? Math.max(0, Math.abs(oldQuantity) - closing)
+    : Math.abs(oldQuantity);
+  const opening = quantity - closing;
+  const released =
+    previous && closing
+      ? (previous.margin * closing) / Math.abs(oldQuantity)
+      : 0;
+  const added = (opening * price) / leverage;
+  const realized =
+    closing * (price - (previous?.entry ?? 0)) * Math.sign(oldQuantity);
+  return {
+    signed,
+    oldQuantity,
+    closing,
+    remainingOld,
+    opening,
+    released,
+    added,
+    realized,
+    delta: added - released,
+    nextQuantity: oldQuantity + signed,
+  };
+}
+
+export type PaperPreview = {
+  margin: number;
+  released: number;
+  fees: number;
+  availableAfter: number;
+  reservation: boolean;
+  reason: string | null;
+};
+
+// No simulated funding status or native venue capacity is invented here. This
+// previews only the local paper engine; live eligibility must come from Cinder.
+export function previewPaperOrder(
+  account: PaperAccount | null,
+  draft: Draft,
+  feed: FeedState,
+  now = Date.now(),
+  reference?: number,
+  quantity?: number,
+): PaperPreview | null {
+  if (!account) return null;
+  const notional = parseAmount(draft.size),
+    leverage = parseAmount(draft.leverage);
+  const limit = draft.type === "Limit" ? parseAmount(draft.limit) : undefined;
+  if (
+    !(notional > 0) ||
+    !Number.isFinite(notional) ||
+    notional > 1e9 ||
+    !Number.isFinite(leverage) ||
+    leverage < 1 ||
+    leverage > 25 ||
+    (limit !== undefined && (!(limit > 0) || !Number.isFinite(limit)))
+  )
+    return null;
+  const result = paperQuote(
+    draft.venue,
+    feed,
+    draft.side,
+    notional,
+    now,
+    quantity ?? (limit ? notional / limit : undefined),
+    reference,
+  );
+  if (!Number.isFinite(result.reference)) return null;
+  const qty =
+    quantity ?? (limit ? notional / limit : notional / result.reference);
+  const previous = account.positions.find(
+    (p) => p.market === draft.market && p.venue === draft.venue,
+  );
+  const direction = draft.side === "Buy" ? 1 : -1;
+  const reduceIssue =
+    draft.reduceOnly &&
+    (!previous ||
+      Math.sign(previous.quantity) === direction ||
+      qty > Math.abs(previous.quantity) + 1e-10)
+      ? "Reduce-only size must reduce an existing position on this venue"
+      : null;
+  const crosses =
+    limit !== undefined &&
+    direction *
+      ((draft.side === "Buy"
+        ? feed.book!.asks[0].price
+        : feed.book!.bids[0].price) -
+        limit) <=
+      0;
+  const fills =
+    result.quote &&
+    (limit === undefined ||
+      (crosses && direction * (result.quote.worstFill - limit) <= 1e-10));
+  const available = paperTotals(account).available;
+  if (draft.strategy || (limit !== undefined && !fills)) {
+    const margin =
+      draft.strategy || !draft.reduceOnly ? notional / leverage : 0;
+    const fees = (notional * feed.fee!.takerBps) / 10000;
+    const cancelled = !draft.strategy && draft.tif === "IOC";
+    const required = cancelled ? 0 : roundCash(margin + fees);
+    return {
+      margin: cancelled ? 0 : margin,
+      released: 0,
+      fees: cancelled ? 0 : fees,
+      availableAfter: roundCash(available - required),
+      reservation: true,
+      reason:
+        reduceIssue ??
+        (limit !== undefined && draft.tif === "ALO" && crosses
+          ? "Post-only order would cross the book. Change the limit price."
+          : cancelled
+            ? "IOC will cancel unfilled: the full size is not available within this limit."
+            : required > available
+              ? "Not enough available margin for this paper reservation. Reduce size or cancel an open order."
+              : null),
+    };
+  }
+  if (!result.quote) return null;
+  const impact = paperFillImpact(
+    previous,
+    draft.side,
+    qty,
+    result.quote.averageFill,
+    leverage,
+  );
+  const after = roundCash(
+    available - impact.delta - result.quote.venueFee + impact.realized,
+  );
+  const tolerance = parseAmount(draft.slippage);
+  return {
+    margin: Math.max(0, impact.delta),
+    released: Math.max(0, -impact.delta),
+    fees: result.quote.venueFee,
+    availableAfter: after,
+    reservation: false,
+    reason:
+      reduceIssue ??
+      (limit !== undefined && draft.tif === "ALO" && crosses
+        ? "Post-only order would cross the book. Change the limit price."
+        : limit === undefined &&
+            direction * (result.quote.worstFill / result.reference - 1) * 100 >
+              tolerance + 1e-10
+          ? "Fresh fill exceeds maximum slippage. Reduce size or adjust slippage."
+          : after < -1e-6
+            ? "Not enough available margin for this paper order. Reduce size or choose higher leverage."
+            : null),
+  };
+}
 function event(
   a: PaperAccount,
   at: string,
@@ -320,29 +509,26 @@ function applyFill(
 ) {
   const at = new Date(now).toISOString();
   const d = order.draft;
-  const signed = quote.quantity * (d.side === "Buy" ? 1 : -1);
   const previous = a.positions.find(
     (p) => p.market === d.market && p.venue === d.venue,
   );
-  const oldQuantity = previous?.quantity ?? 0;
-  const opposite = oldQuantity * signed < 0;
-  const closing = opposite
-    ? Math.min(Math.abs(oldQuantity), Math.abs(signed))
-    : 0;
-  const realized =
-    closing *
-    (quote.averageFill - (previous?.entry ?? 0)) *
-    Math.sign(oldQuantity);
-  const nextQuantity = oldQuantity + signed;
-  const remainingOld = opposite
-    ? Math.max(0, Math.abs(oldQuantity) - closing)
-    : Math.abs(oldQuantity);
-  const opening = Math.abs(signed) - closing;
-  const released =
-    previous && closing
-      ? (previous.margin * closing) / Math.abs(oldQuantity)
-      : 0;
-  const added = (opening * quote.averageFill) / parseAmount(d.leverage);
+  const {
+    signed,
+    oldQuantity,
+    closing,
+    realized,
+    nextQuantity,
+    remainingOld,
+    opening,
+    released,
+    added,
+  } = paperFillImpact(
+    previous,
+    d.side,
+    quote.quantity,
+    quote.averageFill,
+    parseAmount(d.leverage),
+  );
   const allocation = Math.max(0, added - released) + quote.venueFee;
   // Released margin can pay a closing fee or realized loss. Do not block a
   // reduction simply because the rest of the wallet's cash is committed.

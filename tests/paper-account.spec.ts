@@ -6,6 +6,8 @@ import {
   paperTotals,
   placePaperOrder,
   tickPaperAccount,
+  paperValuation,
+  previewPaperOrder,
 } from "../src/components/demo/paper-account";
 import type { Draft } from "../src/components/demo/data";
 import { MarketFeed } from "../src/components/demo/market-data/feed";
@@ -215,4 +217,112 @@ test("persisted records reject corruption and cross-wallet reuse", () => {
   ).toBeNull();
   a.positions[0].margin = -1;
   expect(decodePaperAccount(JSON.stringify(a), wallet)).toBeNull();
+});
+
+test("equity values every position, but unrealised PnL never expands paper spending capacity", () => {
+  const a = newPaperAccount(wallet, now);
+  a.positions = [
+    {
+      id: "pacifica-SOL",
+      venue: "pacifica",
+      market: "SOL",
+      quantity: 10,
+      entry: 100,
+      margin: 100,
+      leverage: 10,
+    },
+    {
+      id: "bulk-BTC",
+      venue: "bulk",
+      market: "BTC",
+      quantity: -0.01,
+      entry: 80000,
+      margin: 80,
+      leverage: 10,
+    },
+  ];
+  expect(
+    paperValuation(a, { "pacifica-SOL": 102, "bulk-BTC": 79000 }),
+  ).toMatchObject({ equity: 10030, unrealized: 30, missing: [] });
+  expect(paperTotals(a).available).toBe(9820);
+  for (const invalid of [undefined, 0, NaN, Infinity]) {
+    const result = paperValuation(a, {
+      "pacifica-SOL": 102,
+      "bulk-BTC": invalid,
+    });
+    expect(result.equity).toBeNull();
+    expect(result.unrealized).toBeNull();
+    expect(result.missing.map((p) => p.id)).toEqual(["bulk-BTC"]);
+  }
+  expect(
+    paperValuation(a, { "pacifica-SOL": 90, "bulk-BTC": 81000 }).equity,
+  ).toBe(9890);
+  expect(paperValuation(newPaperAccount(wallet, now), {}).equity).toBe(10000);
+});
+
+test("inline fill impact matches the ledger for increases, reductions, reversals and other venues", () => {
+  const a = placePaperOrder(
+    newPaperAccount(wallet, now),
+    draft(),
+    feed(),
+    now,
+  ).account;
+  for (const intent of [
+    draft({ size: "500" }),
+    draft({ side: "Sell", size: "500", reduceOnly: true }),
+    draft({ side: "Sell", size: "2000" }),
+    draft({ venue: "bulk", side: "Sell", size: "1000" }),
+  ]) {
+    const preview = previewPaperOrder(a, intent, feed(), now)!;
+    const after = placePaperOrder(a, intent, feed(), now).account;
+    expect(preview.reservation).toBe(false);
+    expect(preview.reason).toBeNull();
+    expect(preview.availableAfter).toBeCloseTo(paperTotals(after).available, 5);
+    const delta = paperTotals(after).margin - paperTotals(a).margin;
+    expect(preview.margin).toBeCloseTo(Math.max(0, delta), 5);
+    expect(preview.released).toBeCloseTo(Math.max(0, -delta), 5);
+    expect(preview.fees).toBeCloseTo(after.fills[0].fee, 5);
+  }
+  const reducing = previewPaperOrder(
+    a,
+    draft({ side: "Sell", size: "500", reduceOnly: true }),
+    feed(),
+    now,
+  )!;
+  expect(reducing.margin).toBe(0);
+  expect(reducing.released).toBeGreaterThan(50);
+});
+
+test("resting reservation is not a prematurely released position requirement", () => {
+  const a = placePaperOrder(
+    newPaperAccount(wallet, now),
+    draft({ side: "Sell" }),
+    feed(),
+    now,
+  ).account;
+  const intent = draft({ type: "Limit", limit: "90", size: "500" });
+  const preview = previewPaperOrder(a, intent, feed(), now)!;
+  const after = placePaperOrder(a, intent, feed(), now).account;
+  expect(preview.reservation).toBe(true);
+  expect(preview.released).toBe(0);
+  expect(preview.availableAfter).toBeCloseTo(paperTotals(after).available, 5);
+  expect(paperTotals(after).margin).toBe(paperTotals(a).margin);
+  expect(paperTotals(after).reserved).toBeCloseTo(
+    preview.margin + preview.fees,
+    5,
+  );
+  expect(
+    previewPaperOrder(a, draft({ size: "1000000" }), feed(), now)?.reason,
+  ).toContain("Not enough available margin");
+  expect(
+    previewPaperOrder(a, draft(), { ...feed(), bookAt: now - 10000 }, now),
+  ).toBeNull();
+  expect(
+    previewPaperOrder(
+      a,
+      draft({ type: "Limit", limit: "101", tif: "ALO" }),
+      feed(),
+      now,
+    )?.reason,
+  ).toContain("Post-only");
 });

@@ -183,8 +183,9 @@ export function PaperRecords({
                           <td className={p.quantity > 0 ? "d-up" : "d-down"}>
                             {p.quantity > 0 ? "Long" : "Short"}
                             <small>
-                              {money(Math.abs(p.quantity) * (mark ?? p.entry))}{" "}
-                              USDC
+                              {mark === undefined
+                                ? "Exposure unavailable"
+                                : `${money(Math.abs(p.quantity) * mark)} USDC`}
                             </small>
                           </td>
                           <td>{money(p.entry)}</td>

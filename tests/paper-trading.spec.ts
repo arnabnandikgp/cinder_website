@@ -28,7 +28,7 @@ test("wallet gates both tickets and size presets; connecting grants only paper f
   await expect(page.getByLabel("Order size", { exact: true })).toBeDisabled();
   await expect(page.getByLabel("Limit price", { exact: true })).toBeDisabled();
   await expect(
-    page.getByRole("button", { name: "View account balance (simulated)" }),
+    page.getByRole("button", { name: "View account equity (simulated)" }),
   ).toContainText("0.00");
   await page.getByRole("radio", { name: "Pro", exact: true }).check();
   await expect(page.getByLabel("Order size", { exact: true })).toBeDisabled();
@@ -37,7 +37,7 @@ test("wallet gates both tickets and size presets; connecting grants only paper f
   ).toBeDisabled();
   await connect(page);
   await expect(
-    page.getByRole("button", { name: "View account balance (simulated)" }),
+    page.getByRole("button", { name: "View account equity (simulated)" }),
   ).toContainText("10,000.00");
   expect(await page.evaluate(() => window.cinderWalletTest.calls)).toEqual([
     "connect",
@@ -45,7 +45,7 @@ test("wallet gates both tickets and size presets; connecting grants only paper f
   await page.evaluate(() => window.cinderWalletTest.change());
   await expect(page.getByLabel("Order size", { exact: true })).toBeDisabled();
   await expect(
-    page.getByRole("button", { name: "View account balance (simulated)" }),
+    page.getByRole("button", { name: "View account equity (simulated)" }),
   ).toContainText("0.00");
 });
 test("direct paper fill appears in positions, history, Account and Activity; reconnect restores records", async ({
@@ -159,7 +159,7 @@ test("brackets, slippage dialog, resting limits, cancellations and reset", async
     .getByRole("button", { name: "Reset paper account", exact: true })
     .click();
   await expect(
-    page.getByRole("button", { name: "View account balance (simulated)" }),
+    page.getByRole("button", { name: "View account equity (simulated)" }),
   ).toContainText("10,000.00");
   const a = await page.evaluate(
     (key) => JSON.parse(localStorage.getItem(key)!),
@@ -219,6 +219,15 @@ test("wallet changes isolate balances and records, unregister locks orders, dupl
     ),
   ).toBe(1);
   await page.getByRole("button", { name: "Reduce", exact: true }).click();
+  await expect(
+    page
+      .locator(".d-ticket-summary .d-detail-list > div")
+      .filter({ hasText: "Estimated additional margin" })
+      .locator("dd"),
+  ).toHaveText("0.00 USDC");
+  await expect(page.locator(".d-ticket-summary")).toContainText(
+    "Est. margin released",
+  );
   await page.getByRole("button", { name: "Place sell order" }).click();
   await expect(page.getByRole("tabpanel")).toContainText("No positions");
   const cash = await page.locator(".d-header-balance strong").innerText();
@@ -281,8 +290,17 @@ test("corrupt paper records are reset safely with a notice, and storage failure 
   }
   // A subsequent account-monitor tick must not reload the old 10k stored
   // ledger over the newer in-memory fill when writes have been denied.
-  // The venue mark-price ticker is a different stream; this injected change
-  // updates the observed book midpoint used by the paper-position monitor.
+  // Positions/equity now use the published mark, not a book-midpoint fallback.
+  for (const socket of marketData.sockets.filter(
+    (s) => s.venue === "pacifica" && !s.closed,
+  )) {
+    socket.socket.send(
+      JSON.stringify({
+        channel: "prices",
+        data: [{ symbol: "SOL", mark: "153", timestamp: Date.now() }],
+      }),
+    );
+  }
   await expect(page.locator(".d-paper-table")).toContainText("$153.00");
   await expect(page.locator(".d-header-balance")).not.toContainText(
     "10,000.00",

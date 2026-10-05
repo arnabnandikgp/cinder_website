@@ -107,7 +107,7 @@ export class MarketFeed {
     readonly venue: Venue,
     readonly market: Market,
     readonly interval: Interval,
-    readonly purpose: "chart" | "comparison" = "chart",
+    readonly purpose: "chart" | "comparison" | "valuation" = "chart",
   ) {
     this.state = this.initial = {
       connection: venue === "velocity" ? "unsupported" : "connecting",
@@ -248,7 +248,7 @@ export class MarketFeed {
     this.tradeCandles = null;
     this.openedAt = Date.now();
     this.receivedAt = 0;
-    void this.loadInfo(venue, generation);
+    if (this.purpose !== "valuation") void this.loadInfo(venue, generation);
     if (this.purpose === "chart")
       void this.loadHistory(venue, generation, true);
     if (this.purpose === "comparison") void this.loadFee(venue, generation);
@@ -538,8 +538,10 @@ export class MarketFeed {
         ticker &&
         ticker.time <= now + 5000 &&
         (!this.state.ticker || ticker.time >= this.state.ticker.time)
-      )
+      ) {
+        if (this.purpose === "valuation") this.receivedAt = now;
         this.publish({ ticker, tickerAt: now });
+      }
     }
     if (
       venue === "phoenix" &&

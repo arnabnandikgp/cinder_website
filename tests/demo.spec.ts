@@ -237,7 +237,7 @@ test("leverage and directional colors follow the order without executing it", as
   const review = page.getByRole("button", { name: "Place sell order" });
   await expect(review).toHaveClass(/d-sell-action/);
   await expect(page.locator(".d-ticket-summary")).toContainText(
-    "Margin required",
+    "Est. margin reservation",
   );
   await expect(page.getByRole("dialog")).toHaveCount(0);
   const workspace = page.getByTestId("demo-workspace");

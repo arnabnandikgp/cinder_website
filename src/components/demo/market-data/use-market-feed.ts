@@ -10,7 +10,7 @@ export function useMarketFeed(
   market: Market,
   interval: Interval,
   enabled: boolean,
-  purpose: "chart" | "comparison" = "chart",
+  purpose: "chart" | "comparison" | "valuation" = "chart",
 ) {
   const feed = useMemo(
     () => new MarketFeed(venue, market, interval, purpose),

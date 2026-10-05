@@ -19,14 +19,15 @@ import { agentsFor } from "./agents";
 import { RoutePreferences } from "./route-preferences";
 import { MarketChart, OrderBook } from "./market-chart";
 import { OrderTicket, initialTicket, type Ticket } from "./order-ticket";
-import { initialStrategy } from "./strategies";
 import { PaperRecords } from "./paper-records";
 import { PaperDialog } from "./paper-dialogs";
 import { usePaperAccount } from "./use-paper-account";
+import { usePaperMarks } from "./use-paper-marks";
 import {
   cancelPaperOrder,
   paperQuote,
   paperTotals,
+  paperValuation,
   placePaperOrder,
   tickPaperAccount,
   type Bracket,
@@ -170,16 +171,34 @@ export function Terminal() {
     ["all", "you", "system", ...agentsFor(scenario).map((agent) => agent.id)],
     "all",
   );
-  const [standardTicket, setStandardTicket] = useState<Ticket>(() =>
-    market === "BTC" ? { ...initialTicket, limit: "61750.00" } : initialTicket,
-  );
-  const [proTicket, setProTicket] = useState<Ticket>(() => ({
-    ...initialTicket,
-    type: "Market",
-    size: "10000",
-    slippage: "0.5",
-  }));
-  const [proVisited, setProVisited] = useState(params.get("mode") === "auto");
+  const visitedMarkets = useRef(new Set<Market>([market]));
+  const [standardTickets, setStandardTickets] = useState<
+    Record<Market, Ticket>
+  >({
+    SOL: { ...initialTicket },
+    BTC: { ...initialTicket },
+  });
+  const [proTickets, setProTickets] = useState<Record<Market, Ticket>>({
+    SOL: { ...initialTicket, type: "Market", size: "10000" },
+    BTC: { ...initialTicket, type: "Market", size: "10000" },
+  });
+  const standardTicket = standardTickets[market];
+  const proTicket = proTickets[market];
+  const setStandardTicket = (update: Ticket | ((current: Ticket) => Ticket)) =>
+    setStandardTickets((current) => ({
+      ...current,
+      [market]: typeof update === "function" ? update(current[market]) : update,
+    }));
+  const setProTicket = (update: Ticket | ((current: Ticket) => Ticket)) =>
+    setProTickets((current) => ({
+      ...current,
+      [market]: typeof update === "function" ? update(current[market]) : update,
+    }));
+  const [proVisited, setProVisited] = useState<
+    Partial<Record<Market, boolean>>
+  >({
+    [market]: params.get("mode") === "auto",
+  });
   const ticket = mode === "auto" ? proTicket : standardTicket;
   const setTicket = mode === "auto" ? setProTicket : setStandardTicket;
   const [allowed, setAllowed] = useState<Venue[]>([...comparisonVenues]);
@@ -260,12 +279,23 @@ export function Terminal() {
   const updatePaper = paper.update;
   const feeds = { pacifica, bulk, phoenix };
   const manualFeed = venue === "velocity" ? live : feeds[venue];
+  const closingQuantity =
+    ticket.reduceOnly &&
+    reduceIntent.current?.id === `${venue}-${market}` &&
+    reduceIntent.current.size === ticket.size
+      ? Math.abs(
+          paper.account?.positions.find(
+            (p) => p.id === reduceIntent.current?.id,
+          )?.quantity ?? 0,
+        ) || undefined
+      : undefined;
   const estimate = paperQuote(
     venue,
     manualFeed,
     ticket.side,
     parseAmount(ticket.size),
     manualFeed.now,
+    mode === "manual" ? closingQuantity : undefined,
   );
   useEffect(() => {
     if (!canTrade) return;
@@ -273,12 +303,39 @@ export function Terminal() {
       tickPaperAccount(a, market, { pacifica, bulk, phoenix }),
     );
   }, [canTrade, market, pacifica, bulk, phoenix, updatePaper]);
-  const marks: Record<string, number> = {};
-  for (const [v, feed] of Object.entries(feeds)) {
-    if (channelHealth(feed, "book") === "Live" && feed.book)
-      marks[`${v}-${market}`] =
-        (feed.book.bids[0].price + feed.book.asks[0].price) / 2;
-  }
+  const marks = usePaperMarks(paper.account, {
+    venue: chart,
+    market,
+    feed: live,
+  });
+  const valuation = paperValuation(paper.account, marks);
+  const initialPrice =
+    channelHealth(manualFeed, "book") === "Live" && manualFeed.book
+      ? (manualFeed.book.bids[0].price + manualFeed.book.asks[0].price) / 2
+      : undefined;
+  useEffect(() => {
+    if (
+      !canTrade ||
+      !initialPrice ||
+      !Number.isFinite(initialPrice) ||
+      standardTickets[market].limit ||
+      standardTickets[market].limitTouched
+    )
+      return;
+    // Initialise once when an external book arrives; never chase subsequent
+    // prices or replace a deliberately cleared/user-entered field.
+    const frame = requestAnimationFrame(() =>
+      setStandardTickets((current) =>
+        current[market].limit || current[market].limitTouched
+          ? current
+          : {
+              ...current,
+              [market]: { ...current[market], limit: initialPrice.toFixed(2) },
+            },
+      ),
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [canTrade, initialPrice, market, standardTickets]);
   function place(draft: Draft, bracket: Bracket, submittedAt: number) {
     if (!canTrade) {
       walletTrigger.current?.click();
@@ -353,12 +410,29 @@ export function Terminal() {
     else window.history.replaceState(null, "", `/demo?${next}`);
   }
   function changeMarket(value: Market) {
+    if (!visitedMarkets.current.has(value)) {
+      visitedMarkets.current.add(value);
+      // Carry market-independent intent on first visit, then restore each
+      // market's own draft. Never carry a SOL price or bracket into BTC.
+      const shared = (t: Ticket) => ({
+        size: t.size,
+        side: t.side,
+        type: t.type,
+        leverage: t.leverage,
+        slippage: t.slippage,
+        tif: t.tif,
+      });
+      setStandardTickets((current) => ({
+        ...current,
+        [value]: { ...current[value], ...shared(current[market]) },
+      }));
+      setProTickets((current) => ({
+        ...current,
+        [value]: { ...current[value], ...shared(current[market]) },
+      }));
+      setProVisited((current) => ({ ...current, [value]: current[market] }));
+    }
     updateQuery({ market: value });
-    setStandardTicket((current) => ({
-      ...current,
-      limit: value === "SOL" ? "151.50" : "61750.00",
-      strategyConfig: { ...initialStrategy },
-    }));
   }
   const actions = {
     onCancel: (id: string) => {
@@ -378,19 +452,23 @@ export function Terminal() {
         (p) => p.market === m && p.venue === v,
       );
       if (!p) return;
+      visitedMarkets.current.add(m);
       const mark = marks[p.id] ?? p.entry;
       reduceIntent.current = {
         id: p.id,
         size: String(Math.abs(p.quantity) * mark),
       };
-      setStandardTicket((current) => ({
+      setStandardTickets((current) => ({
         ...current,
-        side: p.quantity > 0 ? "Sell" : "Buy",
-        type: "Market",
-        size: String(Math.abs(p.quantity) * mark),
-        reduceOnly: true,
-        leverage: String(Math.round(p.leverage)),
-        slippage: "0.5",
+        [m]: {
+          ...current[m],
+          side: p.quantity > 0 ? "Sell" : "Buy",
+          type: "Market",
+          size: String(Math.abs(p.quantity) * mark),
+          reduceOnly: true,
+          leverage: String(Math.round(p.leverage)),
+          slippage: "0.5",
+        },
       }));
       updateQuery({
         view: "trade",
@@ -427,6 +505,23 @@ export function Terminal() {
         <header className="d-header">
           <div className="d-brand-tools">
             <Brand />
+            <details
+              className="d-demo-indicator"
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  event.currentTarget.open = false;
+                  event.currentTarget.querySelector("summary")?.focus();
+                }
+              }}
+            >
+              <summary>
+                Demo <Info size={12} aria-hidden="true" />
+              </summary>
+              <p>
+                Live market data where available. Simulated account and
+                execution. No live orders or real transfers.
+              </p>
+            </details>
             <button
               ref={tourTrigger}
               type="button"
@@ -467,13 +562,14 @@ export function Terminal() {
           <div className="d-account-actions">
             <button
               className="d-header-balance"
-              title="Paper account balance, not your wallet's real USDC"
-              aria-label="View account balance (simulated)"
+              title="Estimated paper equity: cash plus unrealised PnL at fresh venue marks. Not your wallet's real USDC."
+              aria-label="View account equity (simulated)"
               onClick={() => updateQuery({ view: "account" }, true)}
             >
-              <span>Balance</span>
+              <span>Account equity</span>
               <strong>
-                {number(totals.cash)} <small>USDC</small>
+                {valuation.equity === null ? "—" : number(valuation.equity)}{" "}
+                <small>USDC</small>
               </strong>
             </button>
             <button
@@ -572,6 +668,14 @@ export function Terminal() {
                 ticket={ticket}
                 canTrade={canTrade}
                 available={totals.available}
+                paper={paper.account}
+                marks={marks}
+                executionFeed={
+                  mode === "auto" && comparison.best
+                    ? feeds[comparison.best.venue as keyof typeof feeds]
+                    : manualFeed
+                }
+                closingQuantity={closingQuantity}
                 onConnect={() => walletTrigger.current?.click()}
                 estimate={estimate}
                 venueFee={manualFeed.fee ?? undefined}
@@ -594,7 +698,7 @@ export function Terminal() {
                     : undefined
                 }
                 onMode={(value) => {
-                  if (value === "auto" && !proVisited) {
+                  if (value === "auto" && !proVisited[market]) {
                     setProTicket((current) => ({
                       ...current,
                       side: standardTicket.side,
@@ -602,7 +706,10 @@ export function Terminal() {
                       leverage: standardTicket.leverage,
                       slippage: standardTicket.slippage || "0.5",
                     }));
-                    setProVisited(true);
+                    setProVisited((current) => ({
+                      ...current,
+                      [market]: true,
+                    }));
                   }
                   updateQuery({
                     mode: value,
@@ -647,8 +754,8 @@ export function Terminal() {
             {view === "account" ? (
               <>
                 <AccountOverview
-                  scenario={scenario}
                   paper={paper.account}
+                  marks={marks}
                   onReset={() => setPaperDialog("reset")}
                   onTransfer={(kind) => {
                     if (canTrade) setPaperDialog(kind);

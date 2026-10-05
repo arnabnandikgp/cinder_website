@@ -43,7 +43,9 @@ export function BracketControls({
   disabled,
 }: {
   value: BracketInputs;
-  onChange: (v: BracketInputs) => void;
+  onChange: (
+    v: BracketInputs | ((current: BracketInputs) => BracketInputs),
+  ) => void;
   entry: number;
   side: string;
   disabled: boolean;
@@ -87,8 +89,12 @@ export function BracketControls({
                     : "")
                 }
                 placeholder="0.00"
-                onChange={(e) =>
-                  onChange({ ...value, [key]: e.target.value, [pctKey]: "" })
+                onChange={({ target: { value: text } }) =>
+                  onChange((current) => ({
+                    ...current,
+                    [key]: text,
+                    [pctKey]: "",
+                  }))
                 }
               />
               <span>USD</span>
@@ -106,8 +112,12 @@ export function BracketControls({
                 autoComplete="off"
                 value={pct}
                 placeholder="0"
-                onChange={(e) =>
-                  onChange({ ...value, [pctKey]: e.target.value, [key]: "" })
+                onChange={({ target: { value: text } }) =>
+                  onChange((current) => ({
+                    ...current,
+                    [pctKey]: text,
+                    [key]: "",
+                  }))
                 }
               />
               <span>%</span>

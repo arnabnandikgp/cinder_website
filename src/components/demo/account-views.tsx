@@ -19,7 +19,6 @@ import {
   type ActivityEvent,
 } from "./activity";
 import {
-  marginByVenue,
   number,
   venues,
   type CancelState,
@@ -27,80 +26,61 @@ import {
   type Scenario,
 } from "./data";
 import { VenueIcon } from "./venue-select";
-import { paperTotals, type PaperAccount } from "./paper-account";
+import {
+  paperTotals,
+  paperValuation,
+  type PaperAccount,
+} from "./paper-account";
 import { paperTime } from "./paper-records";
 
 export function AccountOverview({
-  scenario,
   onTransfer,
   paper,
+  marks,
   onReset,
 }: {
-  scenario: Scenario;
   onTransfer: (kind: "deposit" | "withdraw") => void;
-  paper?: PaperAccount | null;
+  paper: PaperAccount | null;
+  marks: Partial<Record<string, number>>;
   onReset?: () => void;
 }) {
-  const empty = paper !== undefined ? !paper : scenario === "empty";
-  const totals = paperTotals(paper ?? null);
-  const allocations =
-    paper !== undefined
-      ? Object.keys(venues).map((v) => ({
-          venue: v as keyof typeof venues,
-          positions: paper?.positions.filter((p) => p.venue === v).length ?? 0,
-          margin:
-            (paper?.positions
-              .filter((p) => p.venue === v)
-              .reduce((sum, p) => sum + p.margin, 0) ?? 0) +
-            (paper?.orders
-              .filter(
-                (o) =>
-                  o.draft.venue === v &&
-                  ["Open", "Scheduled plan"].includes(o.status),
-              )
-              .reduce((sum, o) => sum + o.reserve, 0) ?? 0),
-        }))
-      : marginByVenue(scenario);
-  const committed = allocations.reduce(
-    (sum, allocation) => sum + allocation.margin,
-    0,
-  );
+  const empty = !paper;
+  const totals = paperTotals(paper);
+  const valuation = paperValuation(paper, marks);
+  const requirements = Object.keys(venues).map((v) => ({
+    venue: v as keyof typeof venues,
+    positions: paper?.positions.filter((p) => p.venue === v).length ?? 0,
+    margin:
+      paper?.positions
+        .filter((p) => p.venue === v)
+        .reduce((sum, p) => sum + p.margin, 0) ?? 0,
+  }));
+  const amount = (value: number | null) =>
+    value === null ? "—" : `${number(value)} USDC`;
   return (
     <div className="d-account-overview">
-      <div className="d-view-heading">
+      <div className="d-view-heading d-account-heading">
         <div>
-          <span className="d-overline">YOUR CINDER ACCOUNT</span>
-          <h1>Capital, with context.</h1>
-          <p>
-            Your individual account, separate from the shared venue accounts.
-          </p>
+          <h1>Account overview</h1>
+          <p>One Cinder account. Execution across venues.</p>
         </div>
         <span className="d-private-label">
-          <LockKeyhole size={14} aria-hidden="true" />{" "}
-          {paper !== undefined
-            ? "Paper account · This browser"
-            : "Sample private account"}
+          <LockKeyhole size={14} aria-hidden="true" /> Paper account · This
+          browser
         </span>
       </div>
       <div className="d-account-capital">
         <div className="d-capital-grid">
-          <section
-            className="d-equity"
-            aria-label={
-              paper !== undefined ? "Paper account balance" : "Account equity"
-            }
-          >
-            <span className="d-overline">
-              {paper !== undefined ? "PAPER BALANCE" : "ACCOUNT EQUITY"}
-            </span>
+          <section className="d-equity" aria-label="Account equity">
+            <span className="d-overline">ACCOUNT EQUITY</span>
             <div>
-              {number(paper !== undefined ? totals.cash : empty ? 0 : 12024)}{" "}
+              {valuation.equity === null ? "—" : number(valuation.equity)}{" "}
               <span>USDC</span>
             </div>
             <p>
-              {paper !== undefined
-                ? "Paper balance · Realized PnL and modeled fees included; unrealized PnL excluded"
-                : "Illustrative snapshot · Includes sample unrealized PnL"}
+              {valuation.missing.length
+                ? `Valuation unavailable · Waiting for ${valuation.missing.length} fresh position mark${valuation.missing.length === 1 ? "" : "s"}.`
+                : "Estimated at live venue marks · Cash plus unrealised PnL"}
             </p>
             <div className="d-capital-actions">
               <button
@@ -137,61 +117,94 @@ export function AccountOverview({
             <h2>Capital availability</h2>
             <dl className="d-detail-list">
               <div>
-                <dt>Available to trade</dt>
-                <dd>
-                  {number(
-                    paper !== undefined ? totals.available : empty ? 0 : 7400,
-                  )}{" "}
-                  USDC
-                </dd>
+                <dt>Available margin</dt>
+                <dd>{amount(totals.available)}</dd>
               </div>
               <div>
-                <dt>
-                  {paper !== undefined
-                    ? "Reserved for open orders"
-                    : "Available to withdraw"}
-                </dt>
-                <dd>
-                  {number(
-                    paper !== undefined ? totals.reserved : empty ? 0 : 5000,
-                  )}{" "}
-                  USDC
+                <dt>Available to withdraw</dt>
+                <dd className="d-withdraw-unavailable">
+                  Unavailable <small>Simulated funds only</small>
                 </dd>
               </div>
             </dl>
             <p>
-              {paper !== undefined
-                ? "Free paper collateral after position margin and order reservations. Simulated funds cannot be withdrawn."
-                : "Different measures, not an equity breakdown. Eligibility and risk calculations are not implemented in this demo."}
+              Available margin is account-wide cash after requirements and
+              reservations, not leveraged buying power or guaranteed venue
+              capacity.
             </p>
           </section>
         </div>
+        <details className="d-balance-breakdown">
+          <summary>
+            Balance breakdown <ChevronRight size={16} aria-hidden="true" />
+          </summary>
+          <div className="d-balance-breakdown-grid">
+            <section aria-label="Equity valuation">
+              <h2>Equity valuation</h2>
+              <DetailList
+                rows={[
+                  ["Cash balance", amount(totals.cash)],
+                  ["Unrealised PnL", amount(valuation.unrealized)],
+                  ["Estimated account equity", amount(valuation.equity)],
+                ]}
+              />
+              <p>
+                Cash already includes realised PnL and booked modeled fees.
+                Funding payments are not simulated.
+              </p>
+              {valuation.missing.length > 0 && (
+                <p className="d-mark-unavailable" role="status">
+                  Fresh mark missing:{" "}
+                  {valuation.missing
+                    .map((p) => `${p.market} · ${venues[p.venue]}`)
+                    .join(", ")}
+                  . No entry-price fallback is used.
+                </p>
+              )}
+            </section>
+            <section aria-label="Paper margin capacity">
+              <h2>Paper margin capacity</h2>
+              <DetailList
+                rows={[
+                  ["Cash balance", amount(totals.cash)],
+                  ["Position margin requirements", amount(totals.margin)],
+                  ["Pending reservations", amount(totals.reserved)],
+                  ["Available margin", amount(totals.available)],
+                ]}
+              />
+              <p>
+                Available margin = cash minus position requirements and pending
+                reservations. Reservations include estimated fees. Unrealised
+                gains are not spendable in this paper model.
+              </p>
+            </section>
+          </div>
+        </details>
         <section
           className="d-capital-detail d-margin-group"
           aria-labelledby="d-margin-title"
         >
           <div className="d-allocation-heading">
             <div>
-              <h2 id="d-margin-title">Margin committed</h2>
+              <h2 id="d-margin-title">Position margin requirements</h2>
               <p>
-                {paper !== undefined
-                  ? "Position margin and order reservations, by venue."
-                  : "Allocated to open positions, by venue."}
+                Margin requirements for your positions, grouped by execution
+                venue.
               </p>
             </div>
             <strong data-testid="margin-committed">
-              {number(committed)} USDC
+              {number(totals.margin)} USDC
             </strong>
           </div>
           <div className="d-allocation-labels" aria-hidden="true">
             <span>Venue / positions</span>
-            <span>Share of committed margin</span>
+            <span>Position requirements · USDC</span>
           </div>
           <dl
             className="d-margin-breakdown"
-            aria-label="Margin committed by venue"
+            aria-label="Position margin requirements by venue"
           >
-            {allocations.map(({ venue, positions, margin }) => (
+            {requirements.map(({ venue, positions, margin }) => (
               <div key={venue} data-testid={`margin-${venue}`}>
                 <dt>
                   <VenueIcon venue={venue} size={24} />
@@ -207,10 +220,10 @@ export function AccountOverview({
                 <dd>
                   <meter
                     min={0}
-                    max={committed || 1}
+                    max={totals.margin || 1}
                     value={margin}
-                    aria-label={`${venues[venue]} share of committed margin`}
-                    aria-valuetext={`${number(margin)} of ${number(committed)} USDC committed`}
+                    aria-label={`${venues[venue]} share of position margin requirements`}
+                    aria-valuetext={`${number(margin)} of ${number(totals.margin)} USDC position requirements`}
                   />
                   <span>{number(margin)} USDC</span>
                 </dd>
@@ -218,19 +231,18 @@ export function AccountOverview({
             ))}
           </dl>
           <p className="d-allocation-note">
-            Margin stays separate by venue. These bars show committed margin,
-            not account equity.
+            Read-only requirements, not editable allocations or separate venue
+            accounts. Pending order reservations are shown in Balance breakdown,
+            not in these bars.
           </p>
         </section>
       </div>
       <div className="d-account-context">
         <Wallet size={18} aria-hidden="true" />
         <p>
-          {paper !== undefined
-            ? "Saved per wallet in this browser. Paper margin is not production venue risk: no cross-venue offsets, funding or liquidation simulation."
-            : scenario === "deposit"
-              ? "Sample deposit: 1,000 USDC received, awaiting account credit. It is not yet included in available funds."
-              : "The account view shows your Cinder records. It does not imply shared margin or freely transferable positions across venues."}
+          Saved per wallet in this browser. Paper requirements are not native
+          venue risk calculations. Funding, liquidation and cross-venue margin
+          offsets are not simulated.
         </p>
       </div>
     </div>

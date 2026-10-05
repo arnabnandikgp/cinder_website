@@ -797,6 +797,10 @@ test("replay preserves both order tickets, saved draft, URL and account, with no
     "Paper limit order resting",
   );
   await page.getByRole("button", { name: "Account", exact: true }).click();
-  await expect(page.getByTestId("margin-committed")).toHaveText("228.37 USDC");
+  await expect(page.getByTestId("margin-committed")).toHaveText("0.00 USDC");
+  await page.locator(".d-balance-breakdown summary").click();
+  await expect(
+    page.getByRole("region", { name: "Paper margin capacity" }),
+  ).toContainText("228.37 USDC");
   expect(writes).toEqual([]);
 });
