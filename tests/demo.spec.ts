@@ -1,7 +1,12 @@
+import { mockWallet, connectWallet } from "./helpers/wallet";
 import { expect, test } from "@playwright/test";
 import { chooseVenue } from "./helpers/venue-select";
 import AxeBuilder from "@axe-core/playwright";
 import { mockMarketData } from "./helpers/market-data";
+
+test.beforeEach(async ({ page }) => {
+  await mockWallet(page);
+});
 
 test.beforeEach(async ({ page }) => {
   await mockMarketData(page, { stream: true });
@@ -127,7 +132,7 @@ for (const [width, height] of [
     expect(records!.height).toBeGreaterThanOrEqual(256);
     const tablePanel = await page.locator("#records-panel").boundingBox();
     const firstPosition = await page
-      .locator("#records-panel tbody tr")
+      .locator("#records-panel .d-empty")
       .first()
       .boundingBox();
     expect(firstPosition!.y + firstPosition!.height).toBeLessThanOrEqual(
@@ -136,12 +141,12 @@ for (const [width, height] of [
     const chart = await page.locator(".d-chart-frame").boundingBox();
     expect(chart!.height).toBeGreaterThanOrEqual(130);
     // Long forms and records remain reachable without scrolling the workspace out of view.
-    await page.getByRole("button", { name: "Review buy order" }).click();
-    await expect(page.getByRole("dialog")).toBeVisible();
-    await page.keyboard.press("Escape");
+    await page
+      .getByRole("button", { name: "Connect wallet to trade" })
+      .scrollIntoViewIfNeeded();
     expect(await page.evaluate(() => scrollY)).toBe(0);
     await page.getByRole("tab", { name: "Trade history" }).click();
-    const lastFill = page.locator("#records-panel tbody tr").last();
+    const lastFill = page.locator("#records-panel .d-empty");
     await lastFill.scrollIntoViewIfNeeded();
     await expect(lastFill).toBeInViewport();
     expect(await page.evaluate(() => scrollY)).toBe(0);
@@ -168,6 +173,7 @@ test("short tablet viewports keep natural scrolling and a readable chart", async
 }) => {
   await page.setViewportSize({ width: 768, height: 640 });
   await page.goto("/demo");
+  await connectWallet(page);
   await expect(page.locator(".d-tv-chart")).toHaveAttribute(
     "data-chart-status",
     "ready",
@@ -176,8 +182,12 @@ test("short tablet viewports keep natural scrolling and a readable chart", async
   expect(chart!.height).toBeGreaterThanOrEqual(300);
   const workspace = await page.getByTestId("demo-workspace").boundingBox();
   expect(workspace!.height).toBeGreaterThan(640);
-  await page.getByRole("button", { name: "Review buy order" }).click();
-  await expect(page.getByRole("dialog")).toBeVisible();
+  await page
+    .getByRole("button", { name: "Place buy order" })
+    .scrollIntoViewIfNeeded();
+  await expect(
+    page.getByRole("button", { name: "Place buy order" }),
+  ).toBeInViewport();
 });
 
 test("order book depth accumulates outward on both sides of the spread", async ({
@@ -215,6 +225,7 @@ test("leverage and directional colors follow the order without executing it", as
   page,
 }) => {
   await page.goto("/demo");
+  await connectWallet(page);
   await expect(
     page.getByLabel("Order leverage 25x", { exact: true }),
   ).toHaveText("25x");
@@ -223,14 +234,12 @@ test("leverage and directional colors follow the order without executing it", as
     page.getByLabel("Order leverage 10x", { exact: true }),
   ).toHaveText("10x");
   await page.getByRole("radio", { name: "Sell / Short" }).check();
-  const review = page.getByRole("button", { name: "Review sell order" });
+  const review = page.getByRole("button", { name: "Place sell order" });
   await expect(review).toHaveClass(/d-sell-action/);
-  await review.click();
-  await expect(page.getByRole("dialog")).toContainText("10x");
-  await expect(page.getByRole("dialog")).toContainText(
-    "local draft, not an order",
+  await expect(page.locator(".d-ticket-summary")).toContainText(
+    "Margin required",
   );
-  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   const workspace = page.getByTestId("demo-workspace");
   await expect(workspace).not.toContainText(
     /Sample account|Review example|Synthetic|Sample day/,
@@ -383,7 +392,7 @@ test("manual chart follows execution and auto-route allows an independent refere
   await expect(page.locator(".d-book .d-panel-title")).toContainText("BULK");
   await expect(page.getByLabel("Venue", { exact: true })).toHaveValue("bulk");
   await page.getByRole("tab", { name: "Trade history", exact: true }).click();
-  await expect(page.getByRole("tabpanel")).toContainText("FL-203");
+  await expect(page.getByRole("tabpanel")).toContainText("Connect your wallet");
   await expect(page.getByRole("tabpanel")).not.toContainText("FL-202");
   await page.getByRole("radio", { name: "Pro", exact: true }).check();
   await page.getByRole("tab", { name: "Price chart", exact: true }).click();
@@ -402,7 +411,9 @@ test("manual chart follows execution and auto-route allows an independent refere
     "SOL-velocity-15m",
   );
   await expect(page.getByLabel("Venue", { exact: true })).toHaveValue("all");
-  await expect(page.locator("#records-panel")).toContainText("FL-202");
+  await expect(page.locator("#records-panel")).toContainText(
+    "Connect your wallet",
+  );
   await page.reload();
   await expect(page.getByLabel("Chart source")).toHaveAttribute(
     "data-value",
@@ -434,54 +445,14 @@ test("margin breakdown reconciles with venue-scoped positions and empty accounts
   page,
 }) => {
   await page.goto("/demo?view=account&scope=all");
-  await expect(page.getByTestId("margin-committed")).toHaveText(
-    "2,600.00 USDC",
-  );
-  for (const [venue, amount, position] of [
-    ["pacifica", "800.00", "SOL-PERP"],
-    ["bulk", "1,800.00", "BTC-PERP"],
-    ["velocity", "0.00", ""],
-  ]) {
-    const allocation = page.getByTestId(`margin-${venue}`);
-    await expect(allocation.locator("dd")).toHaveText(`${amount} USDC`);
-    await expect(allocation).toContainText(
-      position ? "1 open position" : "No open positions",
-    );
-    await page.getByLabel("Venue", { exact: true }).selectOption(venue);
-    if (position) {
-      await expect(page.locator(".d-records tbody tr")).toHaveCount(1);
-      await expect(page.getByRole("tabpanel")).toContainText(position);
-    } else {
-      await expect(page.getByRole("tabpanel")).toContainText("No positions");
-    }
-    await expect(page.getByTestId("margin-committed")).toHaveText(
-      "2,600.00 USDC",
-    );
-  }
-  const amounts = await page
-    .locator(".d-margin-breakdown dd")
-    .allTextContents();
-  const sum = amounts.reduce(
-    (total, text) =>
-      total + Number(text.replaceAll(",", "").replace(" USDC", "")),
-    0,
-  );
-  expect(sum).toBe(2600);
-  await page.getByLabel("Venue", { exact: true }).selectOption("bulk");
-  await page.getByRole("button", { name: "Reduce", exact: true }).click();
-  await expect(page.getByRole("dialog")).toContainText("BULK");
-  await page.keyboard.press("Escape");
-  await page.goto("/demo?view=account&scenario=empty");
+  await connectWallet(page);
   await expect(page.getByTestId("margin-committed")).toHaveText("0.00 USDC");
-  await expect(page.locator(".d-margin-breakdown dd")).toHaveText([
-    "0.00 USDC",
-    "0.00 USDC",
-    "0.00 USDC",
-    "0.00 USDC",
-  ]);
-  await expect(page.locator(".d-margin-breakdown")).not.toContainText(
-    "1 open position",
-  );
+  for (const v of ["pacifica", "bulk", "phoenix", "velocity"]) {
+    await page.getByLabel("Venue", { exact: true }).selectOption(v);
+    await expect(page.getByRole("tabpanel")).toContainText("No positions");
+    await expect(page.getByTestId("margin-committed")).toHaveText("0.00 USDC");
+  }
+  await expect(page.locator(".d-capital-grid")).toContainText("10,000.00");
 });
 
 test("all five record tabs, keyboard navigation and URL restoration work", async ({
@@ -493,167 +464,109 @@ test("all five record tabs, keyboard navigation and URL restoration work", async
   await tabs.getByRole("tab", { name: /Positions/ }).focus();
   await page.keyboard.press("ArrowRight");
   await expect(tabs.getByRole("tab", { name: /Open orders/ })).toBeFocused();
-  await expect(page.getByRole("tabpanel")).toContainText("EX-104");
+  await expect(page.getByRole("tabpanel")).toContainText("Connect your wallet");
   await page.keyboard.press("End");
   await expect(
     tabs.getByRole("tab", { name: "Funding history" }),
   ).toBeFocused();
-  await expect(page.getByRole("tabpanel")).toContainText("−0.36");
+  await expect(page.getByRole("tabpanel")).toContainText("Connect your wallet");
   await page.reload();
   await expect(
     tabs.getByRole("tab", { name: "Funding history" }),
   ).toHaveAttribute("aria-selected", "true");
   await tabs.getByRole("tab", { name: "Order history" }).click();
-  await expect(page.getByRole("tabpanel")).toContainText("EX-102");
+  await expect(page.getByRole("tabpanel")).toContainText("Connect your wallet");
 });
 
-test("order validation, draft review and account-wide Activity remain coherent", async ({
+test("order validation and paper Activity remain coherent", async ({
   page,
 }) => {
   await page.goto("/demo");
+  await connectWallet(page);
   const size = page.getByLabel("Order size", { exact: true });
   await size.fill("0");
-  await page
-    .getByRole("button", { name: "Review buy order", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Place buy order" }).click();
   await expect(size).toBeFocused();
   await expect(size).toHaveAttribute("aria-invalid", "true");
   await size.fill("3");
-  const review = page.getByRole("button", {
-    name: "Review buy order",
-    exact: true,
-  });
-  await review.click();
-  const dialog = page.getByRole("dialog");
-  await expect(dialog).toContainText("Buy 3.00 USDC");
-  await expect(dialog).toContainText("Not calculated");
-  const audit = await new AxeBuilder({ page })
-    .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
-    .analyze();
-  expect(audit.violations.map((violation) => violation.id)).toEqual([]);
-  await page.keyboard.press("Escape");
-  await expect(review).toBeFocused();
-  await review.click();
-  await dialog.getByRole("button", { name: "Save example draft" }).click();
-  await page
-    .getByRole("navigation", { name: "Workspace navigation" })
-    .getByRole("button", { name: "Activity", exact: true })
-    .click();
-  await page.getByRole("button", { name: /Drafts/ }).click();
-  await expect(page.locator(".d-events")).toContainText("DRAFT-1");
-  await expect(page.locator(".d-events")).toContainText("Not submitted");
-  await page.getByRole("button", { name: "DRAFT-1 · View details" }).click();
-  await expect(dialog).toContainText("Buy 3.00 USDC");
+  await page.getByRole("button", { name: "Place buy order" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByRole("button", { name: "Activity", exact: true }).click();
+  await expect(page.locator(".d-events")).toContainText(
+    "Paper limit order resting",
+  );
+  await page.locator(".d-event-inspect").first().click();
+  await expect(page.getByRole("dialog")).toContainText("$3.00");
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Funding", exact: true }).click();
-  await expect(page.locator(".d-events")).toContainText("−0.36 USDC");
-  await expect(page.locator(".d-events")).toContainText("+0.12 USDC");
+  await expect(page.locator(".d-events li")).toHaveCount(0);
   await page.getByRole("button", { name: "Trade", exact: true }).click();
   await expect(size).toHaveValue("3");
 });
 
-test("Pro validates compared venues and tolerance before reviewing a local draft", async ({
+test("Pro validates venues and slippage before direct paper submission", async ({
   page,
 }) => {
-  await page.goto("/demo");
-  await page.getByRole("radio", { name: "Pro", exact: true }).check();
-  await expect(page.getByTestId("route-card")).toContainText(
-    "Venue-only estimate",
-  );
+  await page.goto("/demo?mode=auto");
+  await connectWallet(page);
   await page.getByRole("button", { name: /Allowed venues/ }).click();
   const dialog = page.getByRole("dialog");
-  await dialog.getByRole("checkbox", { name: "Pacifica" }).uncheck();
-  await dialog.getByRole("checkbox", { name: "BULK" }).uncheck();
-  await dialog.getByRole("checkbox", { name: "Phoenix" }).uncheck();
+  for (const v of ["Pacifica", "BULK", "Phoenix"])
+    await dialog.getByRole("checkbox", { name: v, exact: true }).uncheck();
   await dialog.getByRole("button", { name: "Save preferences" }).click();
   await expect(dialog.getByRole("alert")).toContainText("Choose at least one");
   await dialog.getByRole("checkbox", { name: "BULK" }).check();
   await dialog.getByRole("button", { name: "Save preferences" }).click();
-  await page.getByLabel("Price tolerance").fill("");
-  await expect(
-    page.getByRole("button", { name: "Review buy order", exact: true }),
-  ).toBeDisabled();
-  await page.getByLabel("Price tolerance").fill("0.5");
-  await page
-    .getByRole("button", { name: "Review buy order", exact: true })
-    .click();
-  await expect(dialog).toContainText("BULK");
-  await expect(dialog).toContainText("Total estimated entry cost");
-  await expect(dialog).toContainText("0.5%");
+  await expect(page.getByTestId("recommended-venue")).toHaveText("BULK");
+  await page.getByRole("button", { name: /Set maximum slippage/ }).click();
+  await page.getByLabel("Custom percentage").fill("0");
+  await page.getByRole("button", { name: "Save slippage" }).click();
+  await expect(dialog).toContainText("above 0");
+  await page.getByLabel("Custom percentage").fill("0.5");
+  await page.getByRole("button", { name: "Save slippage" }).click();
+  await page.getByRole("button", { name: "Place buy order" }).click();
+  await expect(page.locator(".d-paper-table")).toContainText("BULK");
 });
 
-test("partial-fill cancellation preserves fills and waits for explicit sample confirmation", async ({
+test("paper cancellation retains order history without fabricating fills", async ({
   page,
 }) => {
-  await page.goto("/demo?scenario=partial&record=orders");
-  await expect(page.getByRole("tabpanel")).toContainText("2 / 5 SOL");
+  await page.goto("/demo");
+  await connectWallet(page);
+  await page.getByLabel("Limit price", { exact: true }).fill("100");
+  await page.getByRole("button", { name: "Place buy order" }).click();
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Simulate cancellation request" })
-    .click();
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("tabpanel")).toContainText("Cancel requested");
-  await page.getByRole("button", { name: "View request" }).click();
-  await page
-    .getByRole("button", { name: "Load sample cancellation confirmation" })
-    .click();
   await expect(page.getByRole("tabpanel")).toContainText("No open orders");
-  await page
-    .getByRole("button", { name: "View cancelled order in history" })
-    .click();
-  await expect(page.getByRole("tabpanel")).toContainText("3 SOL cancelled");
-  await page.getByRole("tab", { name: "Trade history", exact: true }).click();
-  await expect(page.getByRole("tabpanel")).toContainText("FL-204");
-  await expect(page.getByRole("tabpanel")).toContainText("Pending");
+  await page.getByRole("tab", { name: "Order history" }).click();
+  await expect(page.getByRole("tabpanel")).toContainText("Cancelled");
+  await page.getByRole("tab", { name: "Trade history" }).click();
+  await expect(page.getByRole("tabpanel")).toContainText("No trade history");
 });
 
-test("account balances and reduction previews do not mutate positions or transfer funds", async ({
+test("paper funds cannot be withdrawn or transferred on chain", async ({
   page,
 }) => {
   await page.goto("/demo?view=account");
-  await expect(
-    page.getByRole("heading", { name: "Capital, with context." }),
-  ).toBeVisible();
-  await expect(page.locator(".d-capital-grid")).toContainText("12,024.00");
-  await expect(page.locator(".d-capital-grid")).toContainText("5,000.00 USDC");
-  await page
-    .getByRole("button", { name: "Reduce", exact: true })
-    .first()
-    .click();
-  await page.getByRole("button", { name: "Preview reduction" }).click();
-  await expect(page.getByRole("dialog")).toContainText("Remaining: 4.00 SOL");
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("tabpanel")).toContainText("8 SOL");
+  await connectWallet(page);
+  await expect(page.locator(".d-capital-grid")).toContainText("10,000.00");
   await page.getByRole("button", { name: "Withdraw preview" }).click();
-  await page.getByLabel("Withdrawal amount (USDC)").fill("5001");
-  await page.getByRole("button", { name: "Preview withdrawal" }).click();
-  await expect(page.getByLabel("Withdrawal amount (USDC)")).toHaveAttribute(
-    "aria-invalid",
-    "true",
-  );
+  await expect(page.getByRole("dialog")).toContainText("not withdrawable");
+  await expect(page.getByRole("dialog").locator("input")).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("margin-committed")).toHaveText("0.00 USDC");
 });
 
-test("empty, stale and pending-deposit sample states remain distinguishable", async ({
+test("legacy scenario URLs cannot fabricate paper funds or unlock orders", async ({
   page,
 }) => {
-  await page.goto("/demo?scenario=empty");
-  await expect(page.getByRole("tabpanel")).toContainText(
-    "empty sample account",
-  );
-  await page.goto("/demo?scenario=stale");
-  await expect(
-    page.getByRole("button", { name: "Review buy order", exact: true }),
-  ).toBeDisabled();
-  await expect(page.getByRole("tabpanel")).toContainText("8 SOL");
-  await page.getByRole("button", { name: "Restore sample" }).click();
-  await expect(
-    page.getByRole("button", { name: "Review buy order", exact: true }),
-  ).toBeEnabled();
-  await page.goto("/demo?scenario=deposit");
-  await page.getByRole("button", { name: "Account", exact: true }).click();
-  await expect(page.locator(".d-account-context")).toContainText(
-    "awaiting account credit",
-  );
+  for (const scenario of ["empty", "stale", "deposit"]) {
+    await page.goto("/demo?scenario=" + scenario);
+    await expect(page.getByLabel("Order size", { exact: true })).toBeDisabled();
+    await expect(page.getByRole("tabpanel")).toContainText(
+      "Connect your wallet",
+    );
+    await expect(page.locator(".d-header-balance")).toContainText("0.00");
+  }
 });
 
 test("funding dialogs keep prototype safeguards and keyboard behavior without external writes", async ({
@@ -670,11 +583,10 @@ test("funding dialogs keep prototype safeguards and keyboard behavior without ex
       external.push(request.url());
   });
   await page.goto("/demo");
+  await connectWallet(page);
   const deposit = page.getByRole("button", { name: "Deposit", exact: true });
   await deposit.click();
-  await expect(page.getByRole("dialog")).toContainText(
-    "Demo only. Do not send funds.",
-  );
+  await expect(page.getByRole("dialog")).toContainText("10,000 simulated USDC");
   await expect(
     page.getByRole("button", { name: "Close dialog" }),
   ).toBeFocused();
@@ -683,7 +595,9 @@ test("funding dialogs keep prototype safeguards and keyboard behavior without ex
   expect(writes).toEqual([]);
   expect(
     external.every((url) =>
-      /^https:\/\/api\.pacifica\.fi\/api\/v1\/(info|kline)(\?|$)/.test(url),
+      /^https:\/\/(api\.pacifica\.fi|mainnet-api1\.bulk\.trade|perp-api\.phoenix\.trade)\//.test(
+        url,
+      ),
     ),
   ).toBe(true);
 });

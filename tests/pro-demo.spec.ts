@@ -1,9 +1,14 @@
+import { mockWallet, connectWallet } from "./helpers/wallet";
 import { expect, test } from "@playwright/test";
 import { chooseVenue } from "./helpers/venue-select";
 import AxeBuilder from "@axe-core/playwright";
 import { bookMessage, mockMarketData } from "./helpers/market-data";
 
 let marketData: Awaited<ReturnType<typeof mockMarketData>>;
+
+test.beforeEach(async ({ page }) => {
+  await mockWallet(page);
+});
 
 test.beforeEach(async ({ page }) => {
   marketData = await mockMarketData(page, { stream: true });
@@ -13,6 +18,7 @@ test("Pro compares exact sizes, changes direction and excludes stale venues", as
   page,
 }) => {
   await page.goto("/demo?mode=auto");
+  await connectWallet(page);
   await expect(
     page.getByRole("radio", { name: "Pro", exact: true }),
   ).toBeChecked();
@@ -54,19 +60,20 @@ test("Pro compares exact sizes, changes direction and excludes stale venues", as
   await page.getByRole("radio", { name: "Sell / Short" }).check();
   await expect(page.getByTestId("recommended-venue")).toHaveText("BULK");
   await expect(
-    page.getByRole("button", { name: "Review sell order" }),
+    page.getByRole("button", { name: "Place sell order" }),
   ).toHaveClass(/d-sell-action/);
-  await page.getByLabel("Price tolerance").fill("0");
-  await expect(page.getByTestId("recommended-venue")).toHaveText("No estimate");
-  await expect(
-    page.getByRole("button", { name: "Review sell order" }),
-  ).toBeDisabled();
+  await page.getByRole("button", { name: /Set maximum slippage/ }).click();
+  await page.getByLabel("Custom percentage").fill("0");
+  await page.getByRole("button", { name: "Save slippage" }).click();
+  await expect(page.getByRole("dialog")).toContainText("above 0");
+  await page.keyboard.press("Escape");
 });
 
 test("visibility does not change routing and Standard retains its instruction", async ({
   page,
 }) => {
   await page.goto("/demo");
+  await connectWallet(page);
   await expect(page.getByTestId("book-status")).toHaveText("Live");
   await chooseVenue(page, "Execution venue", "bulk");
   await expect(page).toHaveURL(/venue=bulk/);
@@ -94,24 +101,23 @@ test("visibility does not change routing and Standard retains its instruction", 
   await expect(page.getByTestId("manual-chart-source")).toHaveText("BULK");
 });
 
-test("route review preserves its breakdown in Activity after market inputs change", async ({
+test("paper fill receipt persists after comparison inputs change", async ({
   page,
 }) => {
   await page.goto("/demo?mode=auto");
-  await page.getByRole("button", { name: "Review buy order" }).click();
-  const dialog = page.getByRole("dialog");
-  const receipt = dialog.getByRole("region", { name: "Saved route estimate" });
-  const original = await receipt.innerText();
-  await expect(receipt).toContainText("Pacifica");
-  await expect(receipt).toContainText("No fills or fees were booked");
-  await expect(receipt).toContainText("10,000.00 USDC");
-  await dialog.getByRole("button", { name: "Save example draft" }).click();
+  await connectWallet(page);
+  await expect(page.getByTestId("recommended-venue")).toHaveText("Pacifica");
+  await page.getByRole("button", { name: "Place buy order" }).click();
+  await expect(page.locator(".d-paper-table")).toContainText("Long");
+  await expect(page.locator(".d-feedback-note")).toHaveCount(0);
+  await page.getByRole("tab", { name: "Order history" }).click();
+  await page.locator(".d-paper-table .d-cell-link").first().click();
+  const original = await page.getByRole("dialog").innerText();
+  await page.keyboard.press("Escape");
   await page.getByLabel("Order size", { exact: true }).fill("100000");
   await page.getByRole("button", { name: "Activity", exact: true }).click();
-  await expect(page.locator(".d-events")).toContainText("Pro route: Pacifica");
-  await page.getByRole("button", { name: "DRAFT-1 · View details" }).click();
-  expect(await receipt.innerText()).toBe(original);
-  await expect(dialog).toContainText("Not submitted");
+  await page.locator(".d-event-inspect").first().click();
+  expect(await page.getByRole("dialog").innerText()).toBe(original);
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Trade", exact: true }).click();
   await expect(page.getByLabel("Order size", { exact: true })).toHaveValue(
@@ -123,6 +129,7 @@ test("price chart remains independent and view comparison restores the cost tabl
   page,
 }) => {
   await page.goto("/demo?mode=auto");
+  await connectWallet(page);
   await expect(page.getByTestId("recommended-venue")).toHaveText("Pacifica");
   const best = await page.getByTestId("recommended-venue").innerText();
   await page.getByRole("tab", { name: "Execution cost", exact: true }).focus();
@@ -145,7 +152,7 @@ test("price chart remains independent and view comparison restores the cost tabl
   ).toHaveAttribute("aria-selected", "true");
 });
 
-test("live Pro fetches public fees, keeps depth gaps honest and stops feeds on Account", async ({
+test("live Pro fetches public fees, keeps depth gaps honest while retaining connected paper monitoring", async ({
   page,
 }) => {
   const writes: string[] = [];
@@ -153,6 +160,7 @@ test("live Pro fetches public fees, keeps depth gaps honest and stops feeds on A
     if (!["GET", "HEAD"].includes(request.method())) writes.push(request.url());
   });
   await page.goto("/demo?mode=auto");
+  await connectWallet(page);
   await expect(page.getByTestId("comparison-status")).toContainText(
     "Live books · 2 venues",
   );
@@ -181,12 +189,12 @@ test("live Pro fetches public fees, keeps depth gaps honest and stops feeds on A
   await page.getByLabel("Order size", { exact: true }).fill("1000000");
   await expect(page.getByTestId("recommended-venue")).toHaveText("No estimate");
   await expect(
-    page.getByRole("button", { name: "Review buy order" }),
+    page.getByRole("button", { name: "Place buy order" }),
   ).toBeDisabled();
   await page.getByRole("button", { name: "Account", exact: true }).click();
   await expect
     .poll(() => marketData.sockets.filter((s) => !s.closed).length)
-    .toBe(0);
+    .toBe(3);
   expect(writes).toEqual([]);
 });
 
@@ -339,6 +347,7 @@ for (const [width, height] of [
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(e.message));
     await page.goto("/demo?mode=auto");
+    await connectWallet(page);
     await expect(page.getByTestId("recommended-venue")).toHaveText("Pacifica");
     expect(
       await page.evaluate(
@@ -367,11 +376,10 @@ for (const [width, height] of [
       path: testInfo.outputPath("pro-workspace.png"),
       fullPage: true,
     });
-    await page.getByRole("button", { name: "Review buy order" }).click();
-    await expect(page.getByRole("dialog")).toContainText(
-      "Total estimated entry cost",
-    );
-    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "Place buy order" }).click();
+    await expect(page.locator(".d-paper-table")).toContainText("Long");
+    await expect(page.locator(".d-feedback-note")).toHaveCount(0);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
     expect(errors).toEqual([]);
   });
 }

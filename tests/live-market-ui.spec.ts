@@ -1,3 +1,4 @@
+import { mockWallet, connectWallet } from "./helpers/wallet";
 import { expect, test } from "@playwright/test";
 import { chooseVenue } from "./helpers/venue-select";
 import AxeBuilder from "@axe-core/playwright";
@@ -117,6 +118,7 @@ test("Standard streams venue data without resetting its chart and stays separate
 }) => {
   const { sockets } = await mockMarketData(page);
   await page.goto("/demo");
+  await connectWallet(page);
   const chart = page.locator(".d-tv-chart");
   await expect(chart).toHaveAttribute("data-last-close", "152");
   await expect(page.getByTestId("book-status")).toHaveText("Live");
@@ -153,7 +155,7 @@ test("Standard streams venue data without resetting its chart and stays separate
   await expect(page.getByTestId("market-mark")).toHaveText("86,000.00");
   await page.getByRole("radio", { name: "Pro", exact: true }).check();
   await expect(page.getByTestId("route-card")).toContainText(
-    "Venue-only estimate",
+    "Rechecked on paper submission",
   );
   await expect.poll(() => sockets.filter((s) => !s.closed).length).toBe(3);
 });
@@ -344,6 +346,10 @@ test("a malformed snapshot cannot overwrite the last valid book; empty books are
   );
   await expect(page.getByText("No resting liquidity.")).toBeVisible();
   await expect(page.locator(".d-bid")).toHaveCount(0);
+});
+
+test.beforeEach(async ({ page }) => {
+  await mockWallet(page);
 });
 
 for (const width of [375, 768, 1280]) {

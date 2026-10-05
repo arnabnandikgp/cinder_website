@@ -1,8 +1,13 @@
+import { mockWallet, connectWallet } from "./helpers/wallet";
 import { expect, test } from "@playwright/test";
 import { chooseVenue } from "./helpers/venue-select";
 import AxeBuilder from "@axe-core/playwright";
 import { mockMarketData } from "./helpers/market-data";
 import { strategies, type Strategy } from "../src/components/demo/strategies";
+
+test.beforeEach(async ({ page }) => {
+  await mockWallet(page);
+});
 
 test.beforeEach(async ({ page }) => {
   await mockMarketData(page, { stream: true });
@@ -12,6 +17,7 @@ test("venue-first ticket has prominent types, live price shortcuts and a static 
   page,
 }) => {
   await page.goto("/demo");
+  await connectWallet(page);
   await expect(page.getByTestId("book-status")).toHaveText("Live");
   const venue = await page.getByLabel("Execution venue").boundingBox();
   const type = await page
@@ -52,9 +58,11 @@ test("venue-first ticket has prominent types, live price shortcuts and a static 
     "306",
   );
   await page
-    .getByRole("button", { name: "Review buy order", exact: true })
+    .getByRole("button", { name: "Place buy order", exact: true })
     .click();
-  await expect(page.getByRole("dialog")).toContainText("Buy 306.00 USDC");
+  await expect(page.locator(".d-paper-table")).toContainText("Open");
+  await expect(page.locator(".d-feedback-note")).toHaveCount(0);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
 for (const kind of [
@@ -74,6 +82,7 @@ for (const kind of [
       if (!["GET", "HEAD"].includes(r.method())) writes.push(r.url());
     });
     await page.goto("/demo");
+    await connectWallet(page);
     await expect(page.getByTestId("book-status")).toHaveText("Live");
     await page
       .getByRole("button", { name: "Advanced order types", exact: true })
@@ -110,24 +119,28 @@ for (const kind of [
         ),
       ).toBeCloseTo(300, 6);
     }
-    await page.getByRole("checkbox", { name: "Reduce only" }).check();
     await page
-      .getByRole("button", { name: "Preview plan", exact: true })
+      .getByRole("button", { name: "Schedule paper plan", exact: true })
       .click();
+    await expect(page.locator(".d-paper-table")).toContainText(
+      "Scheduled plan",
+    );
+    await page.locator(".d-paper-table .d-cell-link").first().click();
     const dialog = page.getByRole("dialog");
     await expect(dialog).toContainText("Pacifica");
-    await expect(dialog).toContainText("Buy 300.00 USDC");
-    await expect(dialog).toContainText("customer position check not performed");
+    await expect(dialog).toContainText("$300.00");
     const saved = await dialog
       .getByRole("region", { name: "Strategy plan" })
       .innerText();
-    await dialog.getByRole("button", { name: "Save local plan" }).click();
+    await page.keyboard.press("Escape");
     await page.getByLabel("Order size", { exact: true }).fill("4");
     await page.getByRole("button", { name: "Activity", exact: true }).click();
-    await expect(page.locator(".d-events")).toContainText(`${kind} plan saved`);
-    await expect(page.locator(".d-events")).toContainText("Buy 300.00 USDC");
-    await page.getByRole("button", { name: "DRAFT-1 · View details" }).click();
-    await expect(dialog).toContainText("Not submitted");
+    await expect(page.locator(".d-events")).toContainText(
+      `${kind} · funds reserved locally`,
+    );
+    await expect(page.locator(".d-events")).toContainText("300.00 USDC");
+    await page.locator(".d-event-inspect").first().click();
+    await expect(dialog).toContainText("Scheduled plan");
     expect(
       await dialog.getByRole("region", { name: "Strategy plan" }).innerText(),
     ).toBe(saved);
@@ -140,6 +153,7 @@ test("strategy menu is keyboard operable and both mode drafts survive round trip
   page,
 }) => {
   await page.goto("/demo");
+  await connectWallet(page);
   await expect(page.getByTestId("book-status")).toHaveText("Live");
   const trigger = page.getByRole("button", { name: /Advanced order types/ });
   await trigger.focus();
@@ -184,6 +198,7 @@ for (const market of ["SOL", "BTC"]) {
     page,
   }) => {
     await page.goto(`/demo?market=${market}`);
+    await connectWallet(page);
     await expect(page.getByTestId("book-status")).toHaveText("Live");
     const size = page.getByLabel("Order size", { exact: true });
     await size.fill("1000.25");
@@ -195,20 +210,25 @@ for (const market of ["SOL", "BTC"]) {
     await chooseVenue(page, "Execution venue", "bulk");
     await expect(size).toHaveValue("1000.25");
     await page
-      .getByRole("button", { name: "Review buy order", exact: true })
+      .getByRole("button", { name: "Place buy order", exact: true })
       .click();
-    await expect(page.getByRole("dialog")).toContainText("Buy 1,000.25 USDC");
-    await page.keyboard.press("Escape");
+    await page.getByRole("tab", { name: "Order history" }).click();
+    await expect(page.locator(".d-paper-table")).toContainText("1,000.25");
+    await expect(page.locator(".d-feedback-note")).toHaveCount(0);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
     await page.getByRole("radio", { name: "Market", exact: true }).check();
-    await page.getByLabel("Maximum slippage").fill("1");
+    await page.getByRole("button", { name: /Set maximum slippage/ }).click();
+    await page.getByLabel("Custom percentage").fill("1");
+    await page.getByRole("button", { name: "Save slippage" }).click();
     await expect(
       page.locator(".d-field-size .d-amount-input > span"),
     ).toHaveText("USDC");
     await page
-      .getByRole("button", { name: "Review buy order", exact: true })
+      .getByRole("button", { name: "Place buy order", exact: true })
       .click();
-    await expect(page.getByRole("dialog")).toContainText("Buy 1,000.25 USDC");
-    await page.keyboard.press("Escape");
+    await expect(page.locator(".d-paper-table")).toContainText("Long");
+    await expect(page.locator(".d-feedback-note")).toHaveCount(0);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
     await page
       .getByRole("region", { name: "Market chart", exact: true })
       .getByLabel("Market", { exact: true })
@@ -221,13 +241,14 @@ test("invalid plan focuses the relevant field and Iceberg cannot retain IOC", as
   page,
 }) => {
   await page.goto("/demo");
+  await connectWallet(page);
   await expect(page.getByTestId("book-status")).toHaveText("Live");
   await page.getByLabel("Time in force").selectOption("IOC");
   await page.getByRole("button", { name: /Advanced order types/ }).click();
   await page.getByRole("menuitemradio", { name: /^Iceberg / }).click();
   await expect(page.getByLabel("Time in force")).toHaveValue("GTC");
   await page.getByLabel("Displayed size (USDC)").fill("301");
-  await page.getByRole("button", { name: "Preview plan" }).click();
+  await page.getByRole("button", { name: "Schedule paper plan" }).click();
   await expect(page.getByLabel("Displayed size (USDC)")).toBeFocused();
   await expect(page.getByLabel("Displayed size (USDC)")).toHaveAttribute(
     "aria-invalid",
@@ -242,6 +263,7 @@ for (const width of [375, 768, 1280, 1440]) {
   }, info) => {
     await page.setViewportSize({ width, height: 1000 });
     await page.goto("/demo");
+    await connectWallet(page);
     await expect(page.getByTestId("book-status")).toHaveText("Live");
     const margin = await page.locator(".d-margin-context").boundingBox();
     const leverage = await page
@@ -288,7 +310,11 @@ for (const width of [375, 768, 1280, 1440]) {
       path: info.outputPath("scale.png"),
       fullPage: true,
     });
-    await page.getByRole("button", { name: "Preview plan" }).click();
+    await page.getByRole("button", { name: "Schedule paper plan" }).click();
+    await expect(page.locator(".d-paper-table")).toContainText(
+      "Scheduled plan",
+    );
+    await page.locator(".d-paper-table .d-cell-link").first().click();
     await expect(page.getByRole("dialog")).toContainText("Scale plan");
     audit = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21aa"])

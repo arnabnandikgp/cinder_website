@@ -27,16 +27,40 @@ import {
   type Scenario,
 } from "./data";
 import { VenueIcon } from "./venue-select";
+import { paperTotals, type PaperAccount } from "./paper-account";
+import { paperTime } from "./paper-records";
 
 export function AccountOverview({
   scenario,
   onTransfer,
+  paper,
+  onReset,
 }: {
   scenario: Scenario;
   onTransfer: (kind: "deposit" | "withdraw") => void;
+  paper?: PaperAccount | null;
+  onReset?: () => void;
 }) {
-  const empty = scenario === "empty";
-  const allocations = marginByVenue(scenario);
+  const empty = paper !== undefined ? !paper : scenario === "empty";
+  const totals = paperTotals(paper ?? null);
+  const allocations =
+    paper !== undefined
+      ? Object.keys(venues).map((v) => ({
+          venue: v as keyof typeof venues,
+          positions: paper?.positions.filter((p) => p.venue === v).length ?? 0,
+          margin:
+            (paper?.positions
+              .filter((p) => p.venue === v)
+              .reduce((sum, p) => sum + p.margin, 0) ?? 0) +
+            (paper?.orders
+              .filter(
+                (o) =>
+                  o.draft.venue === v &&
+                  ["Open", "Scheduled plan"].includes(o.status),
+              )
+              .reduce((sum, o) => sum + o.reserve, 0) ?? 0),
+        }))
+      : marginByVenue(scenario);
   const committed = allocations.reduce(
     (sum, allocation) => sum + allocation.margin,
     0,
@@ -52,20 +76,36 @@ export function AccountOverview({
           </p>
         </div>
         <span className="d-private-label">
-          <LockKeyhole size={14} aria-hidden="true" /> Sample private account
+          <LockKeyhole size={14} aria-hidden="true" />{" "}
+          {paper !== undefined
+            ? "Paper account · This browser"
+            : "Sample private account"}
         </span>
       </div>
       <div className="d-account-capital">
         <div className="d-capital-grid">
-          <section className="d-equity" aria-label="Account equity">
-            <span className="d-overline">ACCOUNT EQUITY</span>
+          <section
+            className="d-equity"
+            aria-label={
+              paper !== undefined ? "Paper account balance" : "Account equity"
+            }
+          >
+            <span className="d-overline">
+              {paper !== undefined ? "PAPER BALANCE" : "ACCOUNT EQUITY"}
+            </span>
             <div>
-              {number(empty ? 0 : 12024)} <span>USDC</span>
+              {number(paper !== undefined ? totals.cash : empty ? 0 : 12024)}{" "}
+              <span>USDC</span>
             </div>
-            <p>Illustrative snapshot · Includes sample unrealized PnL</p>
+            <p>
+              {paper !== undefined
+                ? "Paper balance · Realized PnL and modeled fees included; unrealized PnL excluded"
+                : "Illustrative snapshot · Includes sample unrealized PnL"}
+            </p>
             <div className="d-capital-actions">
               <button
                 className="d-button d-primary"
+                disabled={empty}
                 onClick={() => onTransfer("deposit")}
               >
                 <ArrowDownLeft size={15} aria-hidden="true" />
@@ -73,11 +113,21 @@ export function AccountOverview({
               </button>
               <button
                 className="d-button"
+                disabled={empty}
                 onClick={() => onTransfer("withdraw")}
               >
                 <ArrowUpRight size={15} aria-hidden="true" />
                 Withdraw preview
               </button>
+              {onReset && (
+                <button
+                  className="d-text-button"
+                  disabled={empty}
+                  onClick={onReset}
+                >
+                  Reset paper account
+                </button>
+              )}
             </div>
           </section>
           <section
@@ -88,16 +138,31 @@ export function AccountOverview({
             <dl className="d-detail-list">
               <div>
                 <dt>Available to trade</dt>
-                <dd>{number(empty ? 0 : 7400)} USDC</dd>
+                <dd>
+                  {number(
+                    paper !== undefined ? totals.available : empty ? 0 : 7400,
+                  )}{" "}
+                  USDC
+                </dd>
               </div>
               <div>
-                <dt>Available to withdraw</dt>
-                <dd>{number(empty ? 0 : 5000)} USDC</dd>
+                <dt>
+                  {paper !== undefined
+                    ? "Reserved for open orders"
+                    : "Available to withdraw"}
+                </dt>
+                <dd>
+                  {number(
+                    paper !== undefined ? totals.reserved : empty ? 0 : 5000,
+                  )}{" "}
+                  USDC
+                </dd>
               </div>
             </dl>
             <p>
-              Different measures, not an equity breakdown. Eligibility and risk
-              calculations are not implemented in this demo.
+              {paper !== undefined
+                ? "Free paper collateral after position margin and order reservations. Simulated funds cannot be withdrawn."
+                : "Different measures, not an equity breakdown. Eligibility and risk calculations are not implemented in this demo."}
             </p>
           </section>
         </div>
@@ -108,7 +173,11 @@ export function AccountOverview({
           <div className="d-allocation-heading">
             <div>
               <h2 id="d-margin-title">Margin committed</h2>
-              <p>Allocated to open positions, by venue.</p>
+              <p>
+                {paper !== undefined
+                  ? "Position margin and order reservations, by venue."
+                  : "Allocated to open positions, by venue."}
+              </p>
             </div>
             <strong data-testid="margin-committed">
               {number(committed)} USDC
@@ -157,9 +226,11 @@ export function AccountOverview({
       <div className="d-account-context">
         <Wallet size={18} aria-hidden="true" />
         <p>
-          {scenario === "deposit"
-            ? "Sample deposit: 1,000 USDC received, awaiting account credit. It is not yet included in available funds."
-            : "The account view shows your Cinder records. It does not imply shared margin or freely transferable positions across venues."}
+          {paper !== undefined
+            ? "Saved per wallet in this browser. Paper margin is not production venue risk: no cross-venue offsets, funding or liquidation simulation."
+            : scenario === "deposit"
+              ? "Sample deposit: 1,000 USDC received, awaiting account credit. It is not yet included in available funds."
+              : "The account view shows your Cinder records. It does not imply shared margin or freely transferable positions across venues."}
         </p>
       </div>
     </div>
@@ -175,6 +246,7 @@ export function ActivityView({
   onFilter,
   onActor,
   onDetail,
+  events,
 }: {
   scenario: Scenario;
   cancel: CancelState;
@@ -184,9 +256,10 @@ export function ActivityView({
   onFilter: (value: string) => void;
   onActor: (value: string) => void;
   onDetail: (id: string) => void;
+  events?: ActivityEvent[];
 }) {
   const [detail, setDetail] = useState<ActivityEvent | null>(null);
-  const visible = activityFor(scenario, cancel, drafts).filter(
+  const visible = (events ?? activityFor(scenario, cancel, drafts)).filter(
     (event) =>
       (filter === "all" || filter === event.category) &&
       matchesActor(event, actor),
@@ -199,9 +272,12 @@ export function ActivityView({
           <h1>Every move. In context.</h1>
           <p>Follow an order, understand a charge, or find a transfer.</p>
         </div>
-        <span className="d-badge">All venues · Sample records</span>
+        <span className="d-badge">
+          All venues · {events ? "Paper records" : "Sample records"}
+        </span>
       </div>
       <section className="d-activity" aria-label="Account activity ledger">
+        <h2 className="d-sr-only">Activity records</h2>
         <div className="d-activity-actor">
           <label htmlFor="d-activity-actor">Initiated by</label>
           <select
@@ -252,7 +328,7 @@ export function ActivityView({
           ))}
         </div>
         <div className="d-activity-day">
-          <span>Sample day</span>
+          <span>{events ? "This paper account" : "Sample day"}</span>
           <span>UTC · Newest first</span>
         </div>
         <div className="d-ledger-columns" aria-hidden="true">
@@ -276,7 +352,12 @@ export function ActivityView({
                 data-actor={event.actor}
                 data-origin-agent={event.originAgent}
               >
-                <time className="d-event-time">{event.time}</time>
+                <time
+                  className="d-event-time"
+                  dateTime={events ? event.time : undefined}
+                >
+                  {events ? paperTime(event.time) : event.time}
+                </time>
                 <div className="d-event-content">
                   <h2>
                     <span className="d-event-icon" aria-hidden="true">
@@ -345,7 +426,7 @@ export function ActivityView({
       {detail && (
         <Modal
           title={detail.title}
-          eyebrow="SAMPLE ACTIVITY"
+          eyebrow={events ? "PAPER ACTIVITY" : "SAMPLE ACTIVITY"}
           onClose={() => setDetail(null)}
         >
           <p className="d-dialog-intro">{detail.detail}</p>
@@ -354,7 +435,12 @@ export function ActivityView({
               ["Event", detail.id],
               ["Initiated by", eventActorLabel(detail)],
               ["Venue", detail.venue ? venues[detail.venue] : "Cinder"],
-              ["Time", `${detail.time} UTC · Sample day`],
+              [
+                "Time",
+                events
+                  ? `${paperTime(detail.time)} UTC`
+                  : `${detail.time} UTC · Sample day`,
+              ],
               ["Result", detail.amount],
               ...(detail.order
                 ? [["Order", detail.order] as [string, string]]

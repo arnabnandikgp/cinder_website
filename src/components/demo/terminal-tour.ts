@@ -97,7 +97,7 @@ export const tourSteps: readonly TourStep[] = [
     label: "ACCOUNT",
     title: "Your account at a glance.",
     description:
-      "See account equity, available capital and positions across venues in one place. Check what you hold and where your capital is allocated.",
+      "Connect a wallet to start with 10,000 simulated USDC. Your paper balance, available collateral and positions stay together, saved for this wallet in this browser.",
     target: ".d-workspace",
     presentation: "overview",
     navigationTarget: 'button[aria-labelledby="d-nav-account-label"]',
@@ -128,7 +128,7 @@ export const tourSteps: readonly TourStep[] = [
     label: "ACTIVITY",
     title: "Follow the whole account.",
     description:
-      "Track fills, fees, funding and transfers across venues. Filter by event type, then open a record for its details. Local drafts are labelled separately from trading events.",
+      "Follow paper collateral allocations, orders, fills and modeled fees across venues. Filter by event type, then open a record for its details. Funding payments are not simulated.",
     target: ".d-activity",
     context: { view: "activity", filter: "all", actor: "all" },
   },

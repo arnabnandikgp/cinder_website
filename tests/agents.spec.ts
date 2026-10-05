@@ -111,11 +111,6 @@ test("View all activity opens the shared ledger filtered to the agent", async ({
   page,
 }) => {
   await page.goto("/demo?view=agents&filter=funding&actor=system");
-  const recentIds = await page
-    .locator(".d-agent-recent li")
-    .evaluateAll((nodes) =>
-      nodes.map((node) => node.getAttribute("data-event-id")),
-    );
   await page.getByRole("button", { name: "View all activity" }).click();
   await expect(page).toHaveURL(/view=activity/);
   await expect(page).toHaveURL(/actor=sol-execution/);
@@ -123,53 +118,36 @@ test("View all activity opens the shared ledger filtered to the agent", async ({
   await expect(
     page.getByRole("button", { name: "All activity", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
-  for (const id of recentIds)
-    await expect(
-      page.locator(`.d-events [data-event-id="${id}"]`),
-    ).toBeVisible();
   await expect(
     page.locator(
       '.d-events [data-event-id="FU-302"], .d-events [data-actor="you"], .d-events [data-actor="btc-hedger"]',
     ),
   ).toHaveCount(0);
-  await expect(page.locator(".d-events")).toContainText(
-    "System · for SOL execution",
-  );
+  // Illustrative grant actions are not mixed into the paper account ledger.
+  await expect(page.locator(".d-events > li")).toHaveCount(0);
   await page.getByRole("button", { name: "Fees", exact: true }).click();
-  await expect(page.locator(".d-events > li")).toHaveCount(2);
+  await expect(page.locator(".d-events > li")).toHaveCount(0);
   await page.reload();
   await expect(page.getByLabel("Initiated by")).toHaveValue("sol-execution");
-  await expect(page.locator(".d-events > li")).toHaveCount(2);
+  await expect(page.locator(".d-events > li")).toHaveCount(0);
   await page.getByRole("button", { name: "Funding", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "No activity in this view" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Clear actor filter" }).click();
-  await expect(page.locator(".d-events > li")).toHaveCount(2);
+  await expect(page.locator(".d-events > li")).toHaveCount(0);
 });
 
 test("actor filters compose and agent request details never fabricate orders", async ({
   page,
 }) => {
-  await page.goto("/demo?view=activity&actor=sol-execution");
-  await page
-    .getByRole("button", { name: "AG-103 · View event details" })
-    .click();
-  await expect(page.getByRole("dialog")).toContainText("No order admitted");
-  await expect(page.getByRole("dialog")).toContainText("SOL execution");
-  await page.keyboard.press("Escape");
+  await page.goto("/demo?view=activity&actor=sol-execution&filter=orders");
+  await expect(page.getByLabel("Initiated by")).toHaveValue("sol-execution");
+  await expect(page.locator(".d-events li")).toHaveCount(0);
   await page.getByLabel("Initiated by").selectOption("you");
-  await expect(
-    page.locator('.d-events [data-actor="sol-execution"]'),
-  ).toHaveCount(0);
-  await expect(
-    page.locator('.d-events [data-event-id="EX-104"]'),
-  ).toBeVisible();
+  await expect(page.locator(".d-events li")).toHaveCount(0);
   await page.getByLabel("Initiated by").selectOption("system");
-  await expect(
-    page.locator('.d-events [data-event-id="FU-302"]'),
-  ).toBeVisible();
-  await expect(page.locator('.d-events [data-actor="you"]')).toHaveCount(0);
+  await expect(page.locator(".d-events li")).toHaveCount(0);
   await page.goto("/demo?view=activity&actor=unknown");
   await expect(page.getByLabel("Initiated by")).toHaveValue("all");
 });
@@ -316,6 +294,8 @@ test("empty and stale accounts retain truthful agent states", async ({
   ).toBeVisible();
   await expect(page.locator(".d-agent-row")).toHaveCount(0);
   await page.goto("/demo?view=agents&scenario=stale");
-  await expect(page.getByRole("status")).toContainText("last-known records");
+  await expect(page.locator(".d-agents-summary")).toContainText(
+    "Sample authorizations",
+  );
   await expect(page.locator(".d-agent-row")).toHaveCount(2);
 });

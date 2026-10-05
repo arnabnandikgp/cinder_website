@@ -1,0 +1,302 @@
+.d-ticket-fields {
+  border: 0;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.d-ticket-fields
+  > :is(
+    .d-order-types,
+    .d-size-field,
+    .d-order-modifiers,
+    .d-price-field,
+    .d-risk-controls,
+    .d-segments
+  ) {
+  margin: 0;
+}
+.d-ticket-fields > .d-segments > div {
+  padding: 0;
+  gap: 8px;
+  background: transparent;
+}
+.d-ticket-fields > .d-segments label {
+  border: 1px solid var(--d-line);
+  border-radius: var(--d-radius);
+  background: transparent;
+}
+.d-ticket-fields:disabled :is(input, select) {
+  cursor: not-allowed;
+  color: var(--d-muted);
+}
+.d-ticket-fields > .d-segments legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.d-ticket-fields > .d-segments > div {
+  grid-template-columns: 1fr 1fr;
+}
+.d-ticket-fields > .d-segments label {
+  min-height: 40px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.d-ticket-fields > .d-segments label.is-selected:has(input[value="Buy"]) {
+  color: var(--d-green);
+  background: rgba(70, 214, 161, 0.1);
+  border-color: rgba(70, 214, 161, 0.3);
+}
+.d-ticket-fields > .d-segments label.is-selected:has(input[value="Sell"]) {
+  color: var(--d-red);
+  background: rgba(255, 112, 133, 0.1);
+  border-color: rgba(255, 112, 133, 0.3);
+}
+.d-ticket-available {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--d-muted);
+}
+.d-ticket-available strong {
+  font-weight: 500;
+  color: var(--off-white);
+}
+.d-ticket-summary {
+  padding-top: 10px;
+  border-top: 1px solid var(--d-line);
+}
+.d-ticket-summary .d-detail-list {
+  margin: 0;
+}
+.d-ticket-summary .d-detail-list > div {
+  padding: 4px 0;
+  gap: 10px;
+  margin: 0;
+  border: 0;
+  font-size: 12px;
+}
+.d-ticket-summary .d-detail-list dd {
+  font-size: 12px;
+  white-space: nowrap;
+}
+.demo :is(.d-ticket-summary, .d-route-compact-metrics) .d-fee-tier-info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  min-width: 26px;
+  min-height: 26px;
+}
+.d-ticket-summary small {
+  color: var(--d-muted);
+  margin-left: 4px;
+  font-size: 11px;
+}
+.d-ticket-summary .d-field-help {
+  font-size: 10px;
+  margin: 8px 0 0;
+}
+.d-slippage-trigger {
+  padding: 0;
+  background: transparent;
+  color: var(--off-white);
+  border: 0;
+  border-bottom: 1px dotted var(--d-muted);
+  cursor: pointer;
+  font-size: inherit;
+}
+.d-slippage-summary > span:first-child {
+  color: var(--d-muted);
+}
+.d-order-modifiers {
+  flex-wrap: wrap;
+  gap: 12px 16px;
+}
+.d-order-modifiers .d-ticket-check {
+  font-size: 12px;
+  min-height: 30px;
+}
+.d-brackets {
+  display: grid;
+  gap: 8px;
+}
+.d-bracket-row {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 8px;
+}
+.d-bracket-row label {
+  background: var(--d-input);
+  border-radius: var(--d-radius);
+  padding: 9px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--d-muted);
+  min-width: 0;
+}
+.d-bracket-row input {
+  min-width: 0;
+  width: 100%;
+  flex: 1 1 40px;
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: var(--off-white);
+  text-align: right;
+  font-size: 13px;
+  height: 24px;
+  min-height: 24px;
+  padding: 0;
+}
+.d-bracket-row label:focus-within {
+  outline: 2px solid var(--d-blue);
+  outline-offset: 2px;
+}
+.d-brackets .d-field-help {
+  font-size: 11px;
+  margin: 0;
+}
+.d-connect-to-trade {
+  margin-top: 12px;
+}
+.d-connect-to-trade p {
+  font-size: 11px;
+  color: var(--d-muted);
+  margin: 8px 0 0;
+  text-align: center;
+}
+.d-ticket-fields:disabled > .d-trade-submit {
+  display: none;
+}
+.d-ticket-pro .d-route-card {
+  padding: 8px 0;
+  margin: 0;
+}
+.d-ticket-fields > .d-pro-order-type {
+  min-height: 28px;
+  padding-bottom: 4px;
+  margin: 0;
+}
+.d-route-compact-metrics .d-detail-list {
+  margin: 6px 0;
+}
+.d-route-destination {
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+}
+.d-route-destination strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 23px;
+}
+.d-route-destination > span {
+  font-size: 10px;
+  text-align: right;
+}
+.d-route-compact-metrics .d-detail-list > div {
+  padding: 4px 0;
+  margin: 0;
+  font-size: 12px;
+  border: 0;
+}
+.d-route-compact-metrics .d-detail-list dd {
+  font-size: 12px;
+}
+.d-route-saving {
+  font-size: 11px;
+  padding: 6px 0;
+}
+.d-ticket-pro .d-route-saving {
+  padding: 2px 0;
+}
+.d-route-links {
+  padding-top: 6px;
+  gap: 8px;
+}
+.d-route-links button {
+  font-size: 11px;
+}
+.d-route-fixture {
+  font-size: 10px;
+  margin-top: 8px;
+}
+.d-slippage-dialog {
+  display: grid;
+  gap: 16px;
+}
+.d-slippage-dialog p {
+  margin: 0;
+}
+.d-slippage-dialog .d-size-presets {
+  display: flex;
+  gap: 8px;
+}
+.d-dialog:has(.d-slippage-dialog) {
+  width: min(420px, calc(100vw - 32px));
+}
+.d-slippage-dialog label input {
+  margin-top: 8px;
+}
+.d-paper-venue {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.d-paper-table small {
+  display: block;
+  margin-top: 4px;
+  color: var(--d-muted);
+  font-size: 11px;
+}
+.d-paper-table {
+  width: 100%;
+}
+.d-table-wrap {
+  overflow-x: auto;
+}
+.d-trading-grid .d-records .d-empty {
+  min-height: 0;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 16px;
+}
+.d-paper-table :is(td, th) {
+  white-space: nowrap;
+  padding: 12px;
+}
+.d-paper-table th {
+  font-weight: 500;
+}
+.d-paper-table :is(td, th):last-child {
+  text-align: right;
+}
+.d-paper-table td:not(:first-child),
+.d-ticket-summary dd,
+.d-ticket-available strong,
+.d-bracket-row input {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.demo .d-paper-table .d-cell-link {
+  font-family: inherit;
+}
+@media (max-width: 767px) {
+  .d-bracket-row input {
+    font-size: 16px;
+  }
+  .d-ticket-fields {
+    margin-top: 12px;
+  }
+}

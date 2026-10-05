@@ -1,3 +1,4 @@
+import { mockWallet, connectWallet } from "./helpers/wallet";
 import { expect, test } from "@playwright/test";
 import { explainRoute } from "../src/components/demo/route-explanation";
 import {
@@ -40,6 +41,10 @@ function comparison(best: Quote, next?: Quote): RouteComparison {
     candidates: ranked.map((q) => ({ venue: q.venue, quote: q, reason: null })),
   };
 }
+
+test.beforeEach(async ({ page }) => {
+  await mockWallet(page);
+});
 
 for (const [a, b, expected] of [
   [[1, 2], [4, 1], "better fill price outweighs the higher fee"],
@@ -96,38 +101,29 @@ test("rounding-resolution differences do not fabricate a meaningful fee advantag
   expect(explainRoute(invalid).against).toBeNull();
 });
 
-test("Pro exposes its actual live cost driver and reconciled contributions", async ({
+test("compact Pro shows cost drivers without a hidden breakdown", async ({
   page,
 }) => {
   await mockMarketData(page, { stream: true, phoenix: true });
   await page.goto("/demo?mode=auto&analysis=average");
-  const reason = page.getByTestId("route-reason");
+  await connectWallet(page);
   await expect(page.getByTestId("recommended-venue")).toHaveText("Pacifica");
-  await expect(reason).toContainText(
-    "better fill price and lower fees versus Phoenix",
-  );
-  const breakdown = page.locator(".d-route-breakdown");
-  await breakdown.locator("summary").click();
-  await expect(breakdown).toContainText("Advantage vs Phoenix");
-  const values = await breakdown
-    .locator(".d-route-reason-detail dd")
-    .allTextContents();
-  const dollars = values.map((value) =>
-    Number(value.replace(/[$+,]/g, "").replace("−", "-")),
-  );
-  expect(dollars[0]).toBeGreaterThan(0);
-  expect(dollars[1]).toBeGreaterThan(0);
-  expect(Math.abs(dollars[0] + dollars[1] - dollars[2])).toBeLessThanOrEqual(
-    0.011,
-  );
+  const card = page.getByTestId("route-card");
+  await expect(card.locator("details")).toHaveCount(0);
+  for (const label of [
+    "Entry cost",
+    "Average fill",
+    "Effective price",
+    "Price cost",
+    "Venue fee rate",
+  ])
+    await expect(card).toContainText(label);
   await page.getByRole("radio", { name: "Sell / Short" }).check();
   await expect(page.getByTestId("recommended-venue")).toHaveText("BULK");
-  await expect(reason).toContainText("better fill price");
-  await expect(reason).not.toContainText("lower fill price");
   await page.getByRole("button", { name: /Allowed venues:/ }).click();
   await page.getByRole("checkbox", { name: "Pacifica" }).uncheck();
   await page.getByRole("checkbox", { name: "Phoenix" }).uncheck();
   await page.getByRole("button", { name: "Save preferences" }).click();
-  await expect(reason).toContainText("Only one complete estimate");
-  await expect(page.locator(".d-route-reason-detail")).toHaveCount(0);
+  await expect(card).toContainText("Only available estimate");
+  await expect(page.locator(".d-route-saving")).toHaveCount(0);
 });

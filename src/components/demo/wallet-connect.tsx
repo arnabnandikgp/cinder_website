@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type RefObject,
+} from "react";
 import Image from "next/image";
 import { getWallets } from "@wallet-standard/app";
 import type {
@@ -24,7 +30,7 @@ import {
   LogOut,
   Wallet as WalletIcon,
 } from "lucide-react";
-import { Modal } from "./controls";
+import { Modal, useClientReady } from "./controls";
 
 type ConnectWallet = WalletWithFeatures<
   StandardConnectFeature &
@@ -84,8 +90,16 @@ function WalletGlyph({ wallet }: { wallet: Wallet }) {
 }
 
 // Only account authorization is requested. Deliberately no RPC client, signing
-// feature, auto-connect, address persistence, or transaction API is wired here.
-export function WalletConnect() {
+// feature, auto-connect or transaction API is wired here. The parent may keep
+// a wallet-scoped paper ledger locally; that is never an on-chain balance.
+export function WalletConnect({
+  onAccountChange,
+  triggerRef,
+}: {
+  onAccountChange?: (address: string | null) => void;
+  triggerRef?: RefObject<HTMLButtonElement | null>;
+}) {
+  const ready = useClientReady();
   const registered = useSyncExternalStore(subscribe, snapshot, serverWallets);
   const wallets = registered.filter(isCompatible);
   const [session, setSession] = useState<Session | null>(null);
@@ -97,6 +111,10 @@ export function WalletConnect() {
   const connected =
     session && wallets.includes(session.wallet) ? session : null;
   const wallet = connected?.wallet;
+  const address = connected?.account.address ?? null;
+  useEffect(() => {
+    onAccountChange?.(address);
+  }, [address, onAccountChange]);
 
   useEffect(() => {
     if (!wallet) return;
@@ -167,7 +185,9 @@ export function WalletConnect() {
     <>
       <button
         className="d-wallet-button"
+        ref={triggerRef}
         type="button"
+        disabled={!ready}
         aria-label={
           connected
             ? `Wallet ${shortAddress(connected.account.address)}`
@@ -200,8 +220,9 @@ export function WalletConnect() {
           onClose={close}
         >
           <p className="d-wallet-note">
-            Connection only. No signatures, deposits or trades. The account
-            shown in this workspace remains simulated.
+            Connection only. No signatures or real transactions. Unlock a paper
+            account with 10,000 simulated USDC, saved for this wallet in this
+            browser.
           </p>
           {connected ? (
             <div className="d-wallet-session">

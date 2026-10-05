@@ -1,6 +1,11 @@
+import { mockWallet, connectWallet } from "./helpers/wallet";
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { mockMarketData } from "./helpers/market-data";
+
+test.beforeEach(async ({ page }) => {
+  await mockWallet(page);
+});
 
 test.beforeEach(async ({ page }) => {
   await mockMarketData(page, { stream: true });
@@ -40,51 +45,45 @@ for (const view of ["account", "activity", "agents"]) {
 test("allocation meters show only venue shares of committed margin", async ({
   page,
 }) => {
-  await page.goto("/demo?view=account");
-  await expect(
-    page.getByRole("meter", { name: "Pacifica share of committed margin" }),
-  ).toHaveAttribute("value", "800");
+  await page.goto("/demo");
+  await connectWallet(page);
+  await page.getByRole("radio", { name: "Market", exact: true }).check();
+  await page.getByLabel("Order size", { exact: true }).fill("1000");
+  await expect(page.locator(".d-ticket-summary")).toContainText("2.80 bps");
+  await page.getByRole("button", { name: "Place buy order" }).click();
+  await expect(page.locator(".d-paper-table")).toContainText("Long");
+  await expect(page.locator(".d-feedback-note")).toHaveCount(0);
+  await page.getByRole("button", { name: "Account", exact: true }).click();
+  const meter = page.getByRole("meter", {
+    name: "Pacifica share of committed margin",
+  });
+  expect(Number(await meter.getAttribute("value"))).toBeGreaterThan(40);
+  expect(await meter.getAttribute("value")).toBe(
+    await meter.getAttribute("max"),
+  );
   await expect(
     page.getByRole("meter", { name: "BULK share of committed margin" }),
-  ).toHaveAttribute("value", "1800");
-  for (const meter of await page.locator(".d-margin-breakdown meter").all()) {
-    await expect(meter).toHaveAttribute("max", "2600");
-  }
+  ).toHaveAttribute("value", "0");
   await expect(page.locator(".d-allocation-note")).toContainText(
     "not account equity",
   );
-  await page.goto("/demo?view=account&scenario=empty");
-  for (const meter of await page.locator(".d-margin-breakdown meter").all()) {
-    await expect(meter).toHaveAttribute("value", "0");
-    await expect(meter).toHaveAttribute("max", "1");
-  }
 });
 
 test("ledger attributes venues and opens funding and transfer details without inventing orders", async ({
   page,
 }) => {
   await page.goto("/demo?view=activity");
-  await expect(
-    page.locator('.d-events [data-event-id="EX-104"] .d-event-venue'),
-  ).toHaveText("Pacifica");
-  await expect(
-    page.locator('.d-events [data-event-id="AG-103"] .d-event-venue'),
-  ).toHaveText("Cinder");
-  await page
-    .getByRole("button", { name: "TR-101 · View event details" })
-    .click();
+  await connectWallet(page);
+  await expect(page.locator(".d-events li")).toHaveCount(1);
+  await page.locator(".d-event-inspect").click();
   const dialog = page.getByRole("dialog");
-  await expect(dialog).toContainText("Deposit credited");
-  await expect(dialog).toContainText("+1,000.00 USDC");
+  await expect(dialog).toContainText("Paper account credited");
+  await expect(dialog).toContainText("+10,000.00 USDC");
   await expect(dialog).not.toContainText("EX-");
   await page.keyboard.press("Escape");
-  await expect(
-    page.getByRole("button", { name: "TR-101 · View event details" }),
-  ).toBeFocused();
+  await expect(page.locator(".d-event-inspect")).toBeFocused();
   await page.getByRole("button", { name: "Funding", exact: true }).click();
-  await page.locator(".d-events .d-event-inspect").first().click();
-  await expect(dialog).toContainText("Funding");
-  await expect(dialog).not.toContainText("EX-");
+  await expect(page.locator(".d-events li")).toHaveCount(0);
 });
 
 test("allowance meter remains historical when an agent grant is expired", async ({

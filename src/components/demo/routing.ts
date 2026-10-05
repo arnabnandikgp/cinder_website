@@ -70,6 +70,7 @@ export type RouteInput = {
   allowed: Venue[];
   snapshot: Snapshot;
   account: Scenario;
+  availableCollateral?: number;
 };
 export type RouteComparison = {
   input: RouteInput;
@@ -222,8 +223,10 @@ export function parseAmount(value: string) {
     : NaN;
 }
 
-export function money(value: number) {
+export function money(value: number | null | undefined) {
+  if (value == null) return "—";
   if (!Number.isFinite(value)) return "—";
+  if (value === 0) value = 0;
   if (value !== 0 && Math.abs(value) < 0.01)
     return value < 0 ? "−<$0.01" : "<$0.01";
   return new Intl.NumberFormat("en-US", {

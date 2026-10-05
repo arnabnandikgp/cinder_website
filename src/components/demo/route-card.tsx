@@ -1,7 +1,8 @@
 import { ArrowRight, Route } from "lucide-react";
 import { DetailList } from "./controls";
 import { number, usdcSize, venues } from "./data";
-import { explainRoute } from "./route-explanation";
+import { VenueIcon } from "./venue-select";
+import { FeeTierInfo } from "./fee-tier-info";
 import {
   money,
   snapshotLabels,
@@ -19,7 +20,6 @@ export function RouteCard({
   onAllowed: () => void;
 }) {
   const { best, ranked, savings, explanation } = comparison;
-  const reason = explainRoute(comparison);
   const appliedFee = comparison.live?.observations.find(
     (o) => o.venue === best?.venue,
   )?.fee;
@@ -37,6 +37,7 @@ export function RouteCard({
       </div>
       <div className="d-route-destination">
         <strong data-testid="recommended-venue">
+          {best && <VenueIcon venue={best.venue} size={22} />}
           {best ? venues[best.venue] : "No estimate"}
         </strong>
         <span>
@@ -52,58 +53,33 @@ export function RouteCard({
       {!best && <p>{explanation}</p>}
       {best && (
         <>
-          <p className="d-route-reason" data-testid="route-reason">
-            {reason.text}
-          </p>
-          <div className="d-effective-price">
-            <span>Effective price · modeled venue fees included</span>
-            <strong>{money(best.effectivePrice)}</strong>
-          </div>
-          <details className="d-route-breakdown">
-            <summary>Fill & fee breakdown</summary>
-            <p>{explanation}</p>
+          <div className="d-route-compact-metrics">
             <DetailList
               rows={[
+                [
+                  "Entry cost",
+                  `${number(best.costBps)} bps · ${money(best.totalCost)}`,
+                ],
                 ["Average fill", money(best.averageFill)],
-                ["Venue fee", money(best.venueFee)],
+                ["Effective price", money(best.effectivePrice)],
+                [
+                  "Price cost",
+                  `${number((best.priceCost / (comparison.input.quantity * comparison.reference)) * 10000)} bps`,
+                ],
                 ...(appliedFee
                   ? [
                       [
-                        "Applied taker rate",
-                        `${number(appliedFee.takerBps)} bps${appliedFee.volumeTier ? " · volume tier assumed" : ""}`,
-                      ] as [string, string],
+                        "Venue fee rate",
+                        <span key="rate">
+                          {number(appliedFee.takerBps)} bps{" "}
+                          <FeeTierInfo venue={best.venue} fee={appliedFee} />
+                        </span>,
+                      ] as [string, React.ReactNode],
                     ]
                   : []),
-                ["Cinder pricing", "Not included"],
-                [
-                  "Entry cost vs reference",
-                  `${money(best.totalCost)} · ${number(best.costBps)} bps`,
-                ],
               ]}
             />
-            {reason.against && (
-              <div className="d-route-reason-detail">
-                <h3>Advantage vs {venues[reason.against.venue]}</h3>
-                <DetailList
-                  rows={[
-                    [
-                      "Fill-price contribution",
-                      `${reason.against.priceAdvantage >= 0 ? "+" : "−"}${money(Math.abs(reason.against.priceAdvantage))}`,
-                    ],
-                    [
-                      "Fee contribution",
-                      `${reason.against.feeAdvantage >= 0 ? "+" : "−"}${money(Math.abs(reason.against.feeAdvantage))}`,
-                    ],
-                    ["Net estimated saving", money(reason.against.saving)],
-                  ]}
-                />
-                <p>
-                  Positive contributions reduce entry cost; negative ones offset
-                  the saving. Cinder pricing is excluded.
-                </p>
-              </div>
-            )}
-          </details>
+          </div>
         </>
       )}
       {best && savings !== null && savings >= 0.01 && (
@@ -121,7 +97,7 @@ export function RouteCard({
         </button>
       </div>
       <span className="d-route-fixture">
-        Venue-only estimate · not an executable quote
+        Live estimate · Rechecked on paper submission
       </span>
     </section>
   );

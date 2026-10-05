@@ -1,0 +1,35 @@
+# Wallet-gated paper trading
+
+Updated 5 October 2026. This supersedes the canned-account, review-modal and saved-draft behavior previously described in the order-entry handoff. It is a browser simulation, not an execution integration.
+
+## Agreed experience
+
+- Public charts and venue comparisons remain browseable. Order inputs, leverage, strategies, direction, reduce-only, TP/SL, quick sizes and account-changing controls require a connected Wallet Standard Solana account.
+- Wallet connection requests only `standard:connect`. No signature, transaction, RPC balance query, token transfer or venue order endpoint is invoked.
+- First connection credits **10,000 simulated USDC**. The paper ledger is saved per public wallet address and browser origin in `localStorage` (`cinder:paper:v1:<address>`). A refresh requires reconnection before viewing or changing that account. Disconnect and account-change events gate the ticket and isolate the corresponding records.
+- Account offers a confirmed **Reset paper account**, affecting only that wallet’s local paper records. Clearing browser data also resets them. Storage failure falls back to visit-only memory with a notice. Invalid/mismatched schema is discarded with a notice. This storage is editable by the browser user and is neither authentication nor a production accounting system; multi-tab synchronization is best effort, not transactional locking.
+- Market paper submission is direct: no review or additional trade confirmation dialog. Feed freshness, depth, current modeled fee, price tolerance, actual available collateral and reduce-only eligibility are rechecked at the click. Presentation averages are never execution inputs.
+- Successful actions update the records and balances without a top-of-terminal notification banner. Submission errors and browser-storage warnings remain visible; the account-wide Activity ledger preserves order, fill, fee and collateral events.
+- Standard and Pro show compact order summaries above the submission button. Pro continuously shows its recommended venue, entry cost in bps and USDC, average fill, effective price, price-cost bps and fee rate. Fee-tier assumptions retain their information dialogs. Cinder pricing is excluded.
+- Maximum slippage defaults to 0.5%. Its summary value opens a small dialog with presets and validated custom percentages. Estimated average movement and worst-fill tolerance are distinct. Buy guards bound the worst ask; sell guards bound the worst bid, relative to the decision reference, excluding fees.
+- Optional TP/SL inputs accept trigger prices or price-move percentages, side-aware and unlevered. Percentages are converted to prices at submission from the estimated entry (limit price for resting limits). At least one level is required if enabled. Advanced strategies and reduce-only closing orders do not accept new attached brackets yet; reducing an existing position preserves its prior brackets on the remaining size.
+
+## Paper ledger semantics
+
+`paper-account.ts` is the pure simulation engine; `use-paper-account.ts` handles wallet-scoped browser persistence. `paper-records.tsx` and Account/Activity read this one ledger instead of mixing canned balances with user actions.
+
+- Total paper cash starts at 10,000, decreases by modeled venue fees, and changes by realized PnL. The header and Account show this **paper balance**, excluding unrealized PnL.
+- Available collateral = cash − position margin − active-order reservations. Position margin is a simplified entry-notional / requested-leverage model (1x–25x), not a native venue margin calculation. Cash and margin bookkeeping round to six decimal places; base quantities/book walks retain JavaScript number precision. This is not a financial precision model for production.
+- Positions net by **market and venue**, using weighted entry on increases. Opposite fills realize PnL, release proportional margin, then optionally open the remainder. They never net across venues. The position table’s mark/PnL uses the active market’s fresh book; unavailable marks are blank, not fixture prices.
+- A successful fill records collateral allocation from the simulated Cinder vault to that venue’s Cinder account, order placement, visible-book fill and modeled fee. Reduction additionally records margin release and realized PnL. These are atomic local ledger events, not an assertion that a real transfer sequence occurred.
+- Standard Market quantity = USDC intent / current venue midpoint. Pro uses one shared decision reference and one base quantity across candidates; the selected venue’s newest book is walked again for the paper fill.
+- Limit quantity = USDC intent / limit price. Resting limits reserve margin plus a conservative taker-fee estimate. Marketable limits fill only when the full visible size fits inside the limit. Post-only crossing is rejected. IOC cancels without a fill if the full size cannot fit. **Partial fills and maker rebates are not simulated**; paper limit fills use the modeled taker rate.
+- Resting limits and attached brackets monitor **the currently selected market** across the three supported venue feeds while the wallet is connected and the demo is open. Navigating to Account/Activity continues that market’s monitoring. Switching markets pauses the other market. Closing the tab stops all simulation. Brackets close the complete remaining position reduce-only against a fresh book; a trigger is not a guaranteed execution price.
+- Scheduled advanced plans reserve funds and appear in Open orders, Order history and Activity, with a clear preview-only status. They do not generate child orders, TWAP/VWAP workers, queue repricing, hidden liquidity or invented fills. Cancellation releases their reservation.
+- Funding charges, native liquidation, risk tiers, lot/tick enforcement, partial fills, cross-margin offsets and liquidation-price estimation are not modeled. Liquidation preview remains **N/A**. Agent grants remain separate illustrative permission examples, not agents acting on the paper ledger.
+
+## Before real execution
+
+Replace local persistence with an authenticated server ledger and idempotent intent IDs. Confirm customer risk and venue margin, actual fee qualification, Cinder charges, precision/rounding, native reduce-only/TIF semantics and the timing/state of collateral transfers. Recheck venue state server-side, enforce an authorized price cap/floor, process partial fills, reconcile order/position events, run persistent trigger/strategy workers, handle retries and failover without duplicate orders, and expose real expiry/cancellation/transfer state. Never treat the paper engine as an execution adapter or wallet balance.
+
+Tests: `paper-account.spec.ts` covers ledger arithmetic and guards; `paper-trading.spec.ts` covers connected/disconnected flows, persistence, records, slippage, brackets and responsive accessibility.

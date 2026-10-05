@@ -2,6 +2,8 @@
 
 Updated 5 October 2026. For the founder, frontend developer and backend implementation owner.
 
+**Latest demo behavior:** [Wallet-gated paper trading](paper-trading-demo.md) supersedes this document’s canned account balances, review confirmations and local-draft-only interactions. The demo now persists a 10,000-USDC paper ledger per connected wallet/browser, submits simulated orders directly and tracks their local lifecycle. Historical preview-only descriptions below remain backend context, not the current ticket behavior. No live execution or transfers have been added.
+
 This document records the direction for Cinder's Standard and Pro trading experiences, the advanced strategy previews implemented locally in `/demo`, and the execution requirements that must be resolved before those controls can place real orders. It is a product and engineering handoff, not a claim of implemented trading capabilities or deployment status.
 
 The central decision is to keep venue selection, execution strategy and customer risk distinct. Standard makes the chosen venue prominent. Pro compares eligible venues for an immediate entry. Advanced strategies describe how an order is worked; they are not alternatives to routing.

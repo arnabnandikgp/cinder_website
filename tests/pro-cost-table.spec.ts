@@ -1,7 +1,12 @@
+import { mockWallet, connectWallet } from "./helpers/wallet";
 import { expect, test } from "@playwright/test";
 import { bookMessage, mockMarketData } from "./helpers/market-data";
 
 let marketData: Awaited<ReturnType<typeof mockMarketData>>;
+test.beforeEach(async ({ page }) => {
+  await mockWallet(page);
+});
+
 test.beforeEach(async ({ page }) => {
   marketData = await mockMarketData(page, { stream: true, phoenix: true });
 });
@@ -59,6 +64,7 @@ test("buy and sell rows reorder cheapest first and keep the clear winner blue", 
   page,
 }) => {
   await page.goto("/demo?mode=auto");
+  await connectWallet(page);
   await expect(page.getByTestId("curve-phoenix")).toHaveCount(1);
   const rows = page.locator(".d-comparison-table tbody tr");
   const assertRanked = async () => {
@@ -126,6 +132,7 @@ test("incomplete and excluded estimates follow ranked venues without false blue 
   page,
 }) => {
   await page.goto("/demo?mode=auto");
+  await connectWallet(page);
   await expect(page.getByTestId("curve-phoenix")).toHaveCount(1);
   const rows = page.locator(".d-comparison-table tbody tr");
   await page

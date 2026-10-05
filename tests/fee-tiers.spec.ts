@@ -1,3 +1,4 @@
+import { mockWallet, connectWallet } from "./helpers/wallet";
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import {
@@ -109,6 +110,10 @@ test("Phoenix remains on its market fee and polling timestamps do not change the
   expect(feeBasisKey(fee)).not.toBe(feeBasisKey({ ...fee, takerBps: 2.7 }));
 });
 
+test.beforeEach(async ({ page }) => {
+  await mockWallet(page);
+});
+
 for (const width of [375, 1280]) {
   test(`volume fee information is accessible and fits the ${width}px terminal`, async ({
     page,
@@ -187,6 +192,7 @@ test("live comparison, five-second average and saved preview share the modeled f
 }) => {
   await mockMarketData(page, { stream: true, phoenix: true });
   await page.goto("/demo?mode=auto");
+  await connectWallet(page);
   await expect(page.getByTestId("comparison-status")).toContainText("3 venues");
   for (const [venue, rate] of [
     ["pacifica", 2.8],
@@ -206,13 +212,11 @@ test("live comparison, five-second average and saved preview share the modeled f
     "paired samples",
     { timeout: 8000 },
   );
-  await page.getByRole("button", { name: "Review buy order" }).click();
-  const receipt = page.getByRole("region", { name: "Saved route estimate" });
-  await expect(receipt).toContainText(
-    "Lowest volume tier · VIP 3 (assumed) · 2.80 bps",
-  );
-  await expect(receipt).toContainText(
-    "Lowest volume tier (assumed) · 2.20 bps",
-  );
-  await expect(receipt).toContainText("Public market fee · 3.50 bps");
+  await page.getByRole("button", { name: "Place buy order" }).click();
+  await expect(page.locator(".d-paper-table")).toContainText("Long");
+  await expect(page.locator(".d-feedback-note")).toHaveCount(0);
+  await page.getByRole("tab", { name: "Order history" }).click();
+  await page.locator(".d-paper-table .d-cell-link").first().click();
+  await expect(page.getByRole("dialog")).toContainText("2.80 bps");
+  await expect(page.getByRole("dialog")).toContainText("Modeled venue fee");
 });

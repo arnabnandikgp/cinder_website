@@ -1,3 +1,4 @@
+import { mockWallet, connectWallet } from "./helpers/wallet";
 import { expect, test } from "@playwright/test";
 import { chooseVenue } from "./helpers/venue-select";
 import AxeBuilder from "@axe-core/playwright";
@@ -262,6 +263,7 @@ test("Pro shows three curves, independent Phoenix chart and honest depth limits"
     if (!["GET", "HEAD"].includes(r.method())) writes.push(r.url());
   });
   await page.goto("/demo?mode=auto");
+  await connectWallet(page);
   await expect(page.getByTestId("comparison-status")).toHaveText(
     /Live books · 3 venues/,
   );
@@ -322,6 +324,10 @@ test("Phoenix ignores regressing slots and foreign-market messages", async ({
   );
   await expect(page.locator(".d-book")).not.toContainText("999.01");
   await expect(page.locator(".d-book")).not.toContainText("888.01");
+});
+
+test.beforeEach(async ({ page }) => {
+  await mockWallet(page);
 });
 
 for (const width of [375, 768, 1280])

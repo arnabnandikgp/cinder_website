@@ -527,7 +527,10 @@ export function quoteIssue(
     input.slippage + 1e-10
   )
     return "Beyond price tolerance";
-  if (quote.notional / input.leverage + quote.totalFees > 7400)
+  if (
+    quote.notional / input.leverage + quote.totalFees >
+    (input.availableCollateral ?? 7400)
+  )
     return "Exceeds sample margin budget";
   return null;
 }

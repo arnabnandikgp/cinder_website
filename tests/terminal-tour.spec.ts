@@ -1,3 +1,4 @@
+import { mockWallet, connectWallet } from "./helpers/wallet";
 import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import {
@@ -234,6 +235,10 @@ test("overview mask joins only the active tab to the content and dims the remain
       viewport,
     ).notch,
   ).toBeNull();
+});
+
+test.beforeEach(async ({ page }) => {
+  await mockWallet(page);
 });
 
 test.describe("first visit", () => {
@@ -740,21 +745,22 @@ test("replay preserves both order tickets, saved draft, URL and account, with no
     if (!["GET", "HEAD"].includes(request.method())) writes.push(request.url());
   });
   await page.goto("/demo");
+  await connectWallet(page);
   await expect(page.getByTestId("book-status")).toHaveText("Live");
   await chooseVenue(page, "Execution venue", "bulk");
   await page.getByLabel("Order size", { exact: true }).fill("5678");
   await page.getByLabel("Limit price", { exact: true }).fill("123.45");
   await page
-    .getByRole("button", { name: "Review buy order", exact: true })
+    .getByRole("button", { name: "Place buy order", exact: true })
     .click();
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "Save example draft" })
-    .click();
+  await expect(page.locator(".d-paper-table")).toContainText("Open");
+  await expect(page.locator(".d-feedback-note")).toHaveCount(0);
   await page.getByRole("radio", { name: "Pro", exact: true }).check();
   await page.getByLabel("Order size", { exact: true }).fill("12345");
   await page.getByRole("radio", { name: "Sell / Short" }).check();
-  await page.getByLabel("Price tolerance").fill("0.7");
+  await page.getByRole("button", { name: /Set maximum slippage/ }).click();
+  await page.getByLabel("Custom percentage").fill("0.7");
+  await page.getByRole("button", { name: "Save slippage" }).click();
   const url = page.url();
   await page.getByRole("button", { name: "Take a tour" }).click();
   for (let index = 0; index < tourSteps.length; index++) {
@@ -771,7 +777,9 @@ test("replay preserves both order tickets, saved draft, URL and account, with no
     "12345",
   );
   await expect(page.getByRole("radio", { name: "Sell / Short" })).toBeChecked();
-  await expect(page.getByLabel("Price tolerance")).toHaveValue("0.7");
+  await expect(
+    page.getByRole("button", { name: /Set maximum slippage, currently 0.7%/ }),
+  ).toBeVisible();
   await expect(page.getByRole("button", { name: "Take a tour" })).toBeFocused();
   await page.getByRole("radio", { name: "Standard", exact: true }).check();
   await expect(page.getByLabel("Order size", { exact: true })).toHaveValue(
@@ -785,10 +793,10 @@ test("replay preserves both order tickets, saved draft, URL and account, with no
     "bulk",
   );
   await page.getByRole("button", { name: "Activity", exact: true }).click();
-  await expect(page.locator(".d-events")).toContainText("DRAFT-1");
-  await page.getByRole("button", { name: "Account", exact: true }).click();
-  await expect(page.getByTestId("margin-committed")).toHaveText(
-    "2,600.00 USDC",
+  await expect(page.locator(".d-events")).toContainText(
+    "Paper limit order resting",
   );
+  await page.getByRole("button", { name: "Account", exact: true }).click();
+  await expect(page.getByTestId("margin-committed")).toHaveText("228.37 USDC");
   expect(writes).toEqual([]);
 });

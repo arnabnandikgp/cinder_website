@@ -391,6 +391,7 @@ export function ProWorkspace({
   onInterval,
   onRetry,
   onNotional,
+  canEdit = true,
 }: {
   comparison: RouteComparison;
   analysis: AnalysisFrame;
@@ -406,6 +407,7 @@ export function ProWorkspace({
   onInterval: (value: Interval) => void;
   onRetry: () => void;
   onNotional: (value: number) => void;
+  canEdit?: boolean;
 }) {
   const { input } = comparison;
   const reference = analysis.reference;
@@ -502,7 +504,7 @@ export function ProWorkspace({
                       key={value}
                       type="button"
                       onClick={() => onNotional(value)}
-                      disabled={!Number.isFinite(comparison.reference)}
+                      disabled={!canEdit || !Number.isFinite(comparison.reference)}
                       aria-label={`Set order notional to ${value} USDC`}
                       aria-pressed={input.notional === value}
                     >

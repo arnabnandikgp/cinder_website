@@ -1,6 +1,11 @@
+import { mockWallet, connectWallet } from "./helpers/wallet";
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { bookMessage, mockMarketData } from "./helpers/market-data";
+
+test.beforeEach(async ({ page }) => {
+  await mockWallet(page);
+});
 
 test("Live is default; graph and table publish together rather than on every message", async ({
   page,
@@ -124,6 +129,7 @@ test("average winner never drives live ticket or review, and new size resets his
 }) => {
   const data = await mockMarketData(page, { stream: true, phoenix: true });
   await page.goto("/demo?mode=auto&analysis=average");
+  await connectWallet(page);
   await expect(page.getByTestId("route-row-pacifica")).toContainText(
     "Lowest 5s average",
     { timeout: 9000 },
@@ -144,10 +150,10 @@ test("average winner never drives live ticket or review, and new size resets his
     await expect(page.getByTestId("route-row-pacifica")).toContainText(
       "Lowest 5s average",
     );
-    await page.getByRole("button", { name: "Review buy order" }).click();
-    const dialog = page.getByRole("dialog");
-    await expect(dialog.locator(".d-route-receipt")).toContainText("Phoenix");
-    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "Place buy order" }).click();
+    await expect(page.locator(".d-paper-table")).toContainText("Long");
+    await expect(page.locator(".d-feedback-note")).toHaveCount(0);
+    await expect(page.locator(".d-paper-table")).toContainText("Phoenix");
     await page.getByLabel("Order size", { exact: true }).fill("300");
     await expect(page.getByTestId("analysis-status")).toHaveText(
       "Collecting 5s average",

@@ -1,7 +1,12 @@
+import { mockWallet, connectWallet } from "./helpers/wallet";
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { mockMarketData } from "./helpers/market-data";
 import { chooseVenue } from "./helpers/venue-select";
+
+test.beforeEach(async ({ page }) => {
+  await mockWallet(page);
+});
 
 test.beforeEach(async ({ page }) => {
   await mockMarketData(page, { stream: true, phoenix: true });
@@ -11,6 +16,7 @@ test("Pro shares the branded instrument across cost and price views", async ({
   page,
 }) => {
   await page.goto("/demo?mode=auto");
+  await connectWallet(page);
   const market = page.getByRole("combobox", { name: "Market", exact: true });
   await expect(market).toHaveCount(1);
   await expect(market.locator("option:checked")).toHaveText("SOL-USDC");
@@ -51,6 +57,7 @@ test("quick sizes expose selection and chart range never changes order intent or
   page,
 }) => {
   await page.goto("/demo?mode=auto");
+  await connectWallet(page);
   await expect(page.getByTestId("curve-phoenix")).toHaveCount(1);
   const presets = page.getByRole("group", {
     name: "Order notional presets",

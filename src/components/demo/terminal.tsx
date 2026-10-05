@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   ArrowUpRight,
@@ -16,11 +16,21 @@ import { Brand } from "@/components/ui";
 import { AccountOverview, ActivityView } from "./account-views";
 import { AgentsView } from "./agents-view";
 import { agentsFor } from "./agents";
-import { DemoDialogs, type DialogState } from "./demo-dialogs";
+import { RoutePreferences } from "./route-preferences";
 import { MarketChart, OrderBook } from "./market-chart";
 import { OrderTicket, initialTicket, type Ticket } from "./order-ticket";
 import { initialStrategy } from "./strategies";
-import { Records } from "./records";
+import { PaperRecords } from "./paper-records";
+import { PaperDialog } from "./paper-dialogs";
+import { usePaperAccount } from "./use-paper-account";
+import {
+  cancelPaperOrder,
+  paperQuote,
+  paperTotals,
+  placePaperOrder,
+  tickPaperAccount,
+  type Bracket,
+} from "./paper-account";
 import { ProWorkspace } from "./pro-workspace";
 import { WalletConnect } from "./wallet-connect";
 import { SpotlightTour } from "./spotlight-tour";
@@ -36,7 +46,6 @@ import {
   pick,
   number,
   venues,
-  type CancelState,
   type Draft,
   type Market,
   type RecordTab,
@@ -80,6 +89,11 @@ export function Terminal() {
   const tourContext: Record<string, string> = tour.step?.context ?? {};
   const context = (key: string) => tourContext[key] ?? params.get(key);
   const tourTrigger = useRef<HTMLButtonElement>(null);
+  const walletTrigger = useRef<HTMLButtonElement>(null);
+  const paper = usePaperAccount();
+  const totals = paperTotals(paper.account);
+  const canTrade = Boolean(paper.address && paper.account);
+  const [paperDialog, setPaperDialog] = useState<string | null>(null);
   const view = pick<View>(
     context("view"),
     ["trade", "account", "activity", "agents"],
@@ -114,15 +128,21 @@ export function Terminal() {
     "pacifica",
     market,
     "15m",
-    proEnabled,
+    proEnabled || canTrade,
     "comparison",
   );
-  const bulk = useMarketFeed("bulk", market, "15m", proEnabled, "comparison");
+  const bulk = useMarketFeed(
+    "bulk",
+    market,
+    "15m",
+    proEnabled || canTrade,
+    "comparison",
+  );
   const phoenix = useMarketFeed(
     "phoenix",
     market,
     "15m",
-    proEnabled,
+    proEnabled || canTrade,
     "comparison",
   );
   const scope = pick<VenueScope>(
@@ -178,7 +198,10 @@ export function Terminal() {
     slippage: parseAmount(ticket.slippage),
     allowed,
     snapshot: "balanced", // Legacy draft schema; live comparison never reads fixtures.
-    account: scenario,
+    account: "funded",
+    // Cost analysis is browseable independent of the wallet's buying power.
+    // Paper submission checks actual free collateral against the fresh fill.
+    availableCollateral: Infinity,
   };
   const comparison = useMemo(
     () =>
@@ -192,7 +215,8 @@ export function Terminal() {
           slippage: parseAmount(ticket.slippage),
           allowed,
           snapshot: "balanced",
-          account: scenario,
+          account: "funded",
+          availableCollateral: Infinity,
         },
         { pacifica, bulk, phoenix },
         Math.max(pacifica.now, bulk.now, phoenix.now),
@@ -205,7 +229,6 @@ export function Terminal() {
       ticket.leverage,
       ticket.slippage,
       allowed,
-      scenario,
       pacifica,
       bulk,
       phoenix,
@@ -218,10 +241,109 @@ export function Terminal() {
     analysisMode,
     proEnabled,
   );
-  const [cancel, setCancel] = useState<CancelState>("none");
-  const [drafts, setDrafts] = useState<Draft[]>([]);
-  const [dialog, setDialog] = useState<DialogState | null>(null);
+  const cancel = "none" as const;
+  const drafts: Draft[] = [];
+  const [routePreferences, setRoutePreferences] = useState(false);
   const [notice, setNotice] = useState("");
+  const lastSubmission = useRef({ fingerprint: "", at: 0 });
+  const reduceIntent = useRef<{ id: string; size: string } | null>(null);
+  const connectPaper = paper.connect;
+  const onWallet = useCallback(
+    (address: string | null) => {
+      connectPaper(address);
+      setNotice("");
+      setPaperDialog(null);
+      setRoutePreferences(false);
+    },
+    [connectPaper, setNotice, setPaperDialog, setRoutePreferences],
+  );
+  const updatePaper = paper.update;
+  const feeds = { pacifica, bulk, phoenix };
+  const manualFeed = venue === "velocity" ? live : feeds[venue];
+  const estimate = paperQuote(
+    venue,
+    manualFeed,
+    ticket.side,
+    parseAmount(ticket.size),
+    manualFeed.now,
+  );
+  useEffect(() => {
+    if (!canTrade) return;
+    updatePaper((a) =>
+      tickPaperAccount(a, market, { pacifica, bulk, phoenix }),
+    );
+  }, [canTrade, market, pacifica, bulk, phoenix, updatePaper]);
+  const marks: Record<string, number> = {};
+  for (const [v, feed] of Object.entries(feeds)) {
+    if (channelHealth(feed, "book") === "Live" && feed.book)
+      marks[`${v}-${market}`] =
+        (feed.book.bids[0].price + feed.book.asks[0].price) / 2;
+  }
+  function place(draft: Draft, bracket: Bracket, submittedAt: number) {
+    if (!canTrade) {
+      walletTrigger.current?.click();
+      return;
+    }
+    const fingerprint = JSON.stringify([
+      paper.address,
+      draft.market,
+      draft.venue,
+      draft.side,
+      draft.type,
+      draft.size,
+      draft.limit,
+      draft.leverage,
+      draft.reduceOnly,
+      bracket,
+      draft.strategy,
+    ]);
+    if (
+      lastSubmission.current.fingerprint === fingerprint &&
+      submittedAt - lastSubmission.current.at < 750
+    )
+      return;
+    try {
+      const feed = draft.venue === "velocity" ? live : feeds[draft.venue];
+      let record = "positions";
+      paper.update((a) => {
+        const closing =
+          draft.reduceOnly &&
+          reduceIntent.current?.id === `${draft.venue}-${draft.market}` &&
+          reduceIntent.current.size === draft.size
+            ? a.positions.find((p) => p.id === reduceIntent.current?.id)
+            : undefined;
+        const r = placePaperOrder(
+          a,
+          draft,
+          feed,
+          Date.now(),
+          draft.route?.reference,
+          closing ? Math.abs(closing.quantity) : draft.route?.input.quantity,
+          bracket,
+        );
+        record =
+          r.order.status === "Filled"
+            ? "positions"
+            : r.order.status === "Cancelled"
+              ? "history"
+              : "orders";
+        return r.account;
+      });
+      setNotice("");
+      lastSubmission.current = { fingerprint, at: submittedAt };
+      updateQuery({
+        record,
+        scope: mode === "auto" ? "all" : draft.venue,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Paper order could not be placed";
+      setNotice(message);
+      return message;
+    }
+  }
   function updateQuery(values: Record<string, string>, push = false) {
     const next = new URLSearchParams(window.location.search);
     next.delete("journey"); // Retire bookmarks for the removed ledger guide.
@@ -239,21 +361,59 @@ export function Terminal() {
     }));
   }
   const actions = {
-    onCancel: () => setDialog({ kind: "cancel" }),
-    onReduce: (market: Market, venue: Venue) =>
-      setDialog({ kind: "reduce", market, venue }),
-    onDetail: (id: string) => setDialog({ kind: "detail", id }),
+    onCancel: (id: string) => {
+      if (!canTrade) return;
+      try {
+        paper.update((a) => cancelPaperOrder(a, id));
+        setNotice("");
+      } catch (error) {
+        setNotice(
+          error instanceof Error ? error.message : "Cancellation unavailable",
+        );
+      }
+    },
+    onReduce: (m: Market, v: Venue) => {
+      if (!canTrade) return;
+      const p = paper.account?.positions.find(
+        (p) => p.market === m && p.venue === v,
+      );
+      if (!p) return;
+      const mark = marks[p.id] ?? p.entry;
+      reduceIntent.current = {
+        id: p.id,
+        size: String(Math.abs(p.quantity) * mark),
+      };
+      setStandardTicket((current) => ({
+        ...current,
+        side: p.quantity > 0 ? "Sell" : "Buy",
+        type: "Market",
+        size: String(Math.abs(p.quantity) * mark),
+        reduceOnly: true,
+        leverage: String(Math.round(p.leverage)),
+        slippage: "0.5",
+      }));
+      updateQuery({
+        view: "trade",
+        mode: "manual",
+        market: m,
+        venue: v,
+        chart: v,
+        scope: v,
+      });
+      setNotice("");
+    },
+    onDetail: (id: string) => setPaperDialog(id),
   };
   const records = (
-    <Records
+    <PaperRecords
       tab={tab}
       onTab={(value) => updateQuery({ record: value })}
       scope={scope}
       onScope={(value) => updateQuery({ scope: value })}
-      scenario={scenario}
-      cancel={cancel}
-      actions={actions}
-      account={view === "account"}
+      account={paper.account}
+      marks={marks}
+      {...actions}
+      accountView={view === "account"}
     />
   );
   return (
@@ -307,28 +467,33 @@ export function Terminal() {
           <div className="d-account-actions">
             <button
               className="d-header-balance"
-              title="Illustrative Cinder account equity, not your wallet balance"
+              title="Paper account balance, not your wallet's real USDC"
               aria-label="View account balance (simulated)"
               onClick={() => updateQuery({ view: "account" }, true)}
             >
               <span>Balance</span>
               <strong>
-                {number(scenario === "empty" ? 0 : 12024)} <small>USDC</small>
+                {number(totals.cash)} <small>USDC</small>
               </strong>
             </button>
             <button
               className="d-button d-header-deposit"
-              onClick={() => setDialog({ kind: "deposit" })}
+              disabled={!canTrade}
+              onClick={() => setPaperDialog("deposit")}
             >
               <ArrowDownLeft size={15} aria-hidden="true" /> Deposit
             </button>
             <button
               className="d-button"
-              onClick={() => setDialog({ kind: "withdraw" })}
+              disabled={!canTrade}
+              onClick={() => setPaperDialog("withdraw")}
             >
               Withdraw <ArrowUpRight size={14} aria-hidden="true" />
             </button>
-            <WalletConnect />
+            <WalletConnect
+              onAccountChange={onWallet}
+              triggerRef={walletTrigger}
+            />
           </div>
         </header>
         {notice && (
@@ -339,24 +504,10 @@ export function Terminal() {
             </button>
           </div>
         )}
-        {scenario === "stale" && (
-          <div className="d-stale" role="status">
-            <Info size={17} aria-hidden="true" />
-            <p>
-              Account updates paused in this scenario. These are last-known
-              records; new order review is unavailable.
-            </p>
-            <button
-              onClick={() => {
-                updateQuery({ scenario: "funded" });
-                setNotice(
-                  "Sample account restored. No live connection was made.",
-                );
-              }}
-            >
-              Restore sample
-            </button>
-          </div>
+        {paper.warning && (
+          <p className="d-feedback-note" role="status">
+            {paper.warning}
+          </p>
         )}
         {view === "trade" ? (
           <>
@@ -384,11 +535,13 @@ export function Terminal() {
                     phoenix.retry();
                   }}
                   onNotional={(value) =>
+                    canTrade &&
                     setProTicket((current) => ({
                       ...current,
                       size: String(value),
                     }))
                   }
+                  canEdit={canTrade}
                 />
               ) : (
                 <>
@@ -400,9 +553,7 @@ export function Terminal() {
                     onMarket={changeMarket}
                     onVenue={(value) => {
                       updateQuery({ chart: value });
-                      setNotice(
-                        "Chart reference updated. Execution and account records are unchanged.",
-                      );
+                      setNotice("");
                     }}
                     live={live}
                     liveInterval={interval}
@@ -417,9 +568,16 @@ export function Terminal() {
                 mode={mode}
                 venue={venue}
                 allowed={allowed}
-                scenario={scenario}
+                scenario="funded"
                 ticket={ticket}
-                onTicket={setTicket}
+                canTrade={canTrade}
+                available={totals.available}
+                onConnect={() => walletTrigger.current?.click()}
+                estimate={estimate}
+                venueFee={manualFeed.fee ?? undefined}
+                onTicket={(value) => {
+                  if (canTrade) setTicket(value);
+                }}
                 marketPrice={
                   channelHealth(live, "ticker") === "Live"
                     ? live.ticker?.mark
@@ -457,7 +615,9 @@ export function Terminal() {
                   updateQuery({ venue: value, scope: value, chart: value });
                   setNotice("");
                 }}
-                onAllowed={() => setDialog({ kind: "route" })}
+                onAllowed={() => {
+                  if (canTrade) setRoutePreferences(true);
+                }}
                 comparison={comparison}
                 refreshComparison={() =>
                   compareLiveRoutes(
@@ -477,7 +637,7 @@ export function Terminal() {
                     }),
                   );
                 }}
-                onReview={(draft) => setDialog({ kind: "review", draft })}
+                onPlace={place}
               />
               {records}
             </div>
@@ -488,7 +648,11 @@ export function Terminal() {
               <>
                 <AccountOverview
                   scenario={scenario}
-                  onTransfer={(kind) => setDialog({ kind })}
+                  paper={paper.account}
+                  onReset={() => setPaperDialog("reset")}
+                  onTransfer={(kind) => {
+                    if (canTrade) setPaperDialog(kind);
+                  }}
                 />
                 {records}
               </>
@@ -516,6 +680,7 @@ export function Terminal() {
                 onActor={(value) => updateQuery({ actor: value })}
                 onFilter={(value) => updateQuery({ filter: value })}
                 onDetail={actions.onDetail}
+                events={paper.account?.events ?? []}
               />
             )}
           </div>
@@ -537,40 +702,26 @@ export function Terminal() {
           returnFocus={tourTrigger}
         />
       )}
-      {dialog && (
-        <DemoDialogs
-          key={dialog.kind}
-          dialog={dialog}
-          onClose={() => setDialog(null)}
-          scenario={scenario}
-          cancel={cancel}
-          drafts={drafts}
+      {routePreferences && canTrade && (
+        <RoutePreferences
           allowed={allowed}
-          onAllowed={(values) => {
+          onClose={() => setRoutePreferences(false)}
+          onSave={(values) => {
             setAllowed(values);
-            setDialog(null);
-            setNotice("Allowed venues updated. Route estimates recalculated.");
+            setRoutePreferences(false);
+            setNotice("");
           }}
-          onCancel={() => {
-            setCancel("requested");
-            setNotice(
-              "Sample cancellation requested. The order remains open until confirmation.",
-            );
-          }}
-          onConfirmCancel={() => {
-            setCancel("confirmed");
-            setDialog(null);
-            setNotice(
-              "Sample cancellation confirmed. Filled quantity is preserved in Trade history; the order remains in Order history.",
-            );
-          }}
-          onSave={(draft) => {
-            const id = `DRAFT-${drafts.length + 1}`;
-            setDrafts((current) => [...current, { ...draft, id }]);
-            setDialog(null);
-            setNotice(
-              `${id} saved locally. Find it in Activity → Drafts. No order was submitted.`,
-            );
+        />
+      )}
+      {paperDialog && canTrade && (
+        <PaperDialog
+          kind={paperDialog}
+          account={paper.account}
+          onClose={() => setPaperDialog(null)}
+          onReset={() => {
+            paper.reset();
+            setPaperDialog(null);
+            setNotice("");
           }}
         />
       )}
