@@ -104,7 +104,7 @@ export function PaperRecords({
             ))}
           </select>
         </div>
-        <span>Paper records · All markets · UTC</span>
+        <span>All markets · UTC</span>
       </div>
       <div
         id="records-panel"
@@ -124,7 +124,7 @@ export function PaperRecords({
               ? "Start with 10,000 simulated USDC. No signing or real orders."
               : tab === "funding"
                 ? "Funding payments are not simulated. Live rates remain visible in the market header."
-                : "Your paper trades will appear here. Try All venues to see the whole account."}
+                : "Your trades will appear here. Try All venues to see the whole account."}
           </Empty>
         ) : (
           <div className="d-table-scroll d-table-wrap">
@@ -203,9 +203,7 @@ export function PaperRecords({
                           </td>
                           <td>
                             {money(p.margin)}
-                            <small>
-                              {number(p.leverage, 2)}x · paper margin
-                            </small>
+                            <small>{number(p.leverage, 2)}x leverage</small>
                           </td>
                           <td>
                             {money(p.tp)} / {money(p.sl)}
@@ -306,11 +304,6 @@ export function PaperRecords({
           </div>
         )}
       </div>
-      <p className="d-record-foot">
-        Paper simulation only. Positions net within a venue, never across
-        venues. Limits and triggers monitor the selected market while this demo
-        is open; funding and liquidation are not modeled.
-      </p>
     </section>
   );
 }

@@ -155,7 +155,7 @@ test("Standard streams venue data without resetting its chart and stays separate
   await expect(page.getByTestId("market-mark")).toHaveText("86,000.00");
   await page.getByRole("radio", { name: "Pro", exact: true }).check();
   await expect(page.getByTestId("route-card")).toContainText(
-    "Rechecked on paper submission",
+    "Rechecked on submission",
   );
   await expect.poll(() => sockets.filter((s) => !s.closed).length).toBe(3);
 });

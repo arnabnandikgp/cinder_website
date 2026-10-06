@@ -15,12 +15,12 @@
 .d-balance-breakdown summary::-webkit-details-marker {
   display: none;
 }
-.d-demo-indicator p {
+.d-demo-info-content {
   position: absolute;
   top: 100%;
   left: 0;
   z-index: 40;
-  width: min(260px, 65vw);
+  width: min(340px, 65vw);
   margin: 0;
   padding: 12px;
   border: 1px solid var(--d-line);
@@ -28,6 +28,13 @@
   background: var(--d-panel);
   line-height: 1.6;
   color: var(--off-white);
+}
+.d-demo-info-content strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+.d-demo-info-content p {
+  margin: 8px 0 0;
 }
 .demo .d-account-heading h1 {
   font-size: 22px;
@@ -96,12 +103,23 @@
   color: var(--off-white);
   margin-top: 8px;
 }
-.demo :is(.d-demo-indicator, .d-balance-breakdown) summary:focus-visible {
+.demo
+  :is(.d-demo-indicator, .d-balance-breakdown, .d-margin-info)
+  summary:focus-visible {
   outline: 2px solid var(--d-blue);
   outline-offset: 4px;
   border-radius: var(--d-radius);
 }
 @media (max-width: 760px) {
+  .d-brand-tools {
+    position: relative;
+  }
+  .d-demo-indicator {
+    position: static;
+  }
+  .d-demo-info-content {
+    width: min(340px, calc(100vw - 32px));
+  }
   .d-balance-breakdown-grid {
     grid-template-columns: minmax(0, 1fr);
     gap: 20px;
@@ -203,12 +221,48 @@
   font-weight: 400;
   color: var(--d-muted);
 }
-.d-margin-context small {
-  margin-left: 6px;
-  color: var(--d-muted);
-  font-size: 12px;
+.d-margin-control {
+  position: relative;
+  min-width: 0;
 }
-.d-cross-hint,
+.d-margin-control .d-margin-context {
+  min-height: 40px;
+}
+.d-margin-info summary {
+  position: absolute;
+  right: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  list-style: none;
+  color: var(--d-muted);
+}
+.d-margin-info summary:hover {
+  color: var(--off-white);
+}
+.d-margin-info summary::-webkit-details-marker {
+  display: none;
+}
+.d-margin-info p {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  width: min(300px, calc(100vw - 64px));
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--d-line);
+  border-radius: var(--d-radius);
+  background: var(--d-panel);
+  color: var(--off-white);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.6;
+}
 .d-order-readiness {
   margin: 0;
   font-size: 12px;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { ArrowRight, ChevronDown, LockKeyhole, Route } from "lucide-react";
+import { ArrowRight, ChevronDown, Info, Route } from "lucide-react";
 import { DetailList, Segments, useClientReady } from "./controls";
 import { RouteCard } from "./route-card";
 import { VenueSelect } from "./venue-select";
@@ -401,12 +401,36 @@ export function OrderTicket({
         <fieldset className="d-ticket-fields" disabled={!editable}>
           <legend className="d-sr-only">Paper order controls</legend>
           <div className="d-risk-controls">
-            <div
-              className="d-margin-context"
-              aria-label="Margin mode: Cross preview"
-              aria-describedby="d-cross-hint"
-            >
-              Cross <small>Preview</small>
+            <div className="d-margin-control">
+              <div
+                className="d-margin-context"
+                aria-label="Margin mode: Cross preview"
+                aria-describedby="d-cross-hint"
+              >
+                Cross
+              </div>
+              <span className="d-sr-only" id="d-cross-hint">
+                Simulated margin model. Positions net within a venue, with no
+                cross-venue offsets. Native venues do not share collateral.
+              </span>
+              <details
+                className="d-margin-info"
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") {
+                    event.currentTarget.open = false;
+                    event.currentTarget.querySelector("summary")?.focus();
+                  }
+                }}
+              >
+                <summary aria-label="Cross margin information">
+                  <Info size={14} aria-hidden="true" />
+                </summary>
+                <p>
+                  Cross is a simulated margin preview, not a verified native
+                  venue setting. Positions net within a venue, with no
+                  cross-venue offsets. Native venues do not share collateral.
+                </p>
+              </details>
             </div>
             <div className="d-leverage-control">
               <label htmlFor="d-leverage">Leverage</label>
@@ -428,9 +452,6 @@ export function OrderTicket({
               </span>
             </div>
           </div>
-          <p className="d-cross-hint" id="d-cross-hint">
-            Paper margin model · No cross-venue offsets.
-          </p>
           {mode === "manual" ? (
             <OrderTypes
               value={ticket.type}
@@ -745,10 +766,6 @@ export function OrderTicket({
             <p>Start with 10,000 simulated USDC. No signing or real funds.</p>
           </div>
         )}
-        <div className="d-ticket-privacy">
-          <LockKeyhole size={13} aria-hidden="true" />
-          Paper trading · No live orders
-        </div>
       </form>
       {slippageOpen && editable && (
         <SlippageDialog

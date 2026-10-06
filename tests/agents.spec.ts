@@ -269,6 +269,10 @@ test("switching from a scrolled Agents page opens Activity at its filters", asyn
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/demo?view=agents");
+  // Initial hydration mounts the keyed content and can reset a premature scroll.
+  await expect(
+    page.getByRole("button", { name: "Connect wallet", exact: true }),
+  ).toBeEnabled();
   await page.locator(".d-account-content").evaluate((node) => {
     node.scrollTop = node.scrollHeight;
   });

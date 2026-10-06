@@ -517,10 +517,24 @@ export function Terminal() {
               <summary>
                 Demo <Info size={12} aria-hidden="true" />
               </summary>
-              <p>
-                Live market data where available. Simulated account and
-                execution. No live orders or real transfers.
-              </p>
+              <div className="d-demo-info-content">
+                <strong>Demo environment</strong>
+                <p>
+                  Live market data where available. Simulated account and
+                  execution. No live orders or real transfers.
+                </p>
+                <p>
+                  Each connected wallet starts with 10,000 simulated USDC.
+                  Records are saved per wallet in this browser; reset them in
+                  Account.
+                </p>
+                <p>
+                  Positions net within a venue, never across venues. Limits and
+                  TP/SL triggers monitor the selected market while the demo is
+                  open. Funding and liquidation are not modeled; advanced plans
+                  do not execute child orders.
+                </p>
+              </div>
             </details>
             <button
               ref={tourTrigger}

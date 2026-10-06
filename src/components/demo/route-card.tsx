@@ -98,7 +98,7 @@ export function RouteCard({
         </button>
       </div>
       <span className="d-route-fixture">
-        Venue-local cost · Rechecked on paper submission
+        Venue-local cost · Rechecked on submission
       </span>
     </section>
   );

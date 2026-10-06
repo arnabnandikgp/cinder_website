@@ -41,7 +41,7 @@ test("venue-first ticket has prominent types, live price shortcuts and a static 
   await chooseVenue(page, "Execution venue", "bulk");
   await expect(page.getByTestId("manual-chart-source")).toHaveText("BULK");
   const margin = page.locator(".d-margin-context");
-  await expect(margin).toHaveText("Cross Preview");
+  await expect(margin).toHaveText("Cross");
   expect(await margin.evaluate((element) => element.tagName)).toBe("DIV");
   expect(
     await margin.evaluate((element) => (element as HTMLElement).tabIndex),
@@ -64,6 +64,88 @@ test("venue-first ticket has prominent types, live price shortcuts and a static 
   await expect(page.locator(".d-feedback-note")).toHaveCount(0);
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
+
+for (const width of [375, 768, 1280]) {
+  test(`compact demo disclosures retain context and keyboard access at ${width}px`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.goto("/demo");
+    // Wait for hydration before sending the keyboard interaction.
+    await expect(
+      page.getByRole("button", { name: "Connect wallet", exact: true }),
+    ).toBeEnabled();
+    // Informational help remains available before a wallet is connected.
+    await expect(page.getByLabel("Order size", { exact: true })).toBeDisabled();
+    const info = page.getByLabel("Cross margin information", { exact: true });
+    const cross = page.locator(".d-margin-info");
+    await info.focus();
+    await page.keyboard.press("Enter");
+    await expect(cross).toHaveAttribute("open", "");
+    await expect(cross.locator("p")).toContainText("no cross-venue offsets");
+    await expect(cross.locator("p")).toContainText(
+      "Native venues do not share collateral",
+    );
+    const bounds = await cross.locator("p").boundingBox();
+    expect(bounds!.x).toBeGreaterThanOrEqual(0);
+    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
+    const target = await info.boundingBox();
+    expect(target!.width).toBeGreaterThanOrEqual(40);
+    expect(target!.height).toBeGreaterThanOrEqual(40);
+    await page.keyboard.press("Escape");
+    await expect(cross).not.toHaveAttribute("open");
+    await expect(info).toBeFocused();
+
+    const disclosure = page.locator(".d-demo-indicator summary");
+    await disclosure.focus();
+    await page.keyboard.press("Enter");
+    const content = page.locator(".d-demo-info-content");
+    await expect(content).toContainText("No live orders or real transfers");
+    await expect(content).toContainText("10,000 simulated USDC");
+    await expect(content).toContainText(
+      "Funding and liquidation are not modeled",
+    );
+    await expect(content).toContainText(
+      "advanced plans do not execute child orders",
+    );
+    const disclosureBounds = await content.boundingBox();
+    expect(disclosureBounds!.x).toBeGreaterThanOrEqual(0);
+    expect(disclosureBounds!.x + disclosureBounds!.width).toBeLessThanOrEqual(
+      width,
+    );
+    await page.screenshot({ path: testInfo.outputPath("demo-info.png") });
+    await page.keyboard.press("Escape");
+    await expect(disclosure).toBeFocused();
+    await expect(content).not.toBeVisible();
+
+    await connectWallet(page);
+    for (const mode of ["Standard", "Pro"] as const) {
+      await page.getByRole("radio", { name: mode, exact: true }).check();
+      await expect(page.locator(".d-margin-context")).toHaveText("Cross");
+      await expect(
+        page.locator(".d-cross-hint, .d-ticket-privacy, .d-record-foot"),
+      ).toHaveCount(0);
+      await expect(page.locator(".d-record-scope")).toContainText(
+        "All markets · UTC",
+      );
+      await expect(page.locator(".d-record-scope")).not.toContainText(
+        "Paper records",
+      );
+      await expect(
+        page.getByLabel("Order size", { exact: true }),
+      ).toBeEnabled();
+    }
+    await page.getByRole("button", { name: /Smart route/ }).click();
+    const preferences = page.getByRole("dialog", { name: "Route preferences" });
+    await expect(preferences.locator(".d-overline")).toHaveText("ROUTING");
+    await expect(preferences).not.toContainText("CINDER / DEMO");
+    await page.keyboard.press("Escape");
+    await expect(
+      page.getByRole("button", { name: /Smart route/ }),
+    ).toBeFocused();
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  });
+}
 
 for (const kind of [
   "Scale",

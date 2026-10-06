@@ -15,7 +15,7 @@ export function RoutePreferences({
   const [selected, setSelected] = useState(allowed),
     [error, setError] = useState("");
   return (
-    <Modal title="Route preferences" onClose={onClose}>
+    <Modal title="Route preferences" eyebrow="ROUTING" onClose={onClose}>
       <p>
         Compare visible books and modeled venue fees. Pacifica and BULK assume
         their lowest volume tiers. Cinder pricing is excluded.
@@ -49,8 +49,8 @@ export function RoutePreferences({
         </p>
       )}
       <p className="d-field-help">
-        Applies to new paper orders, not existing positions. Curve visibility
-        does not exclude a venue.
+        Applies to new orders, not existing positions. Curve visibility does not
+        exclude a venue.
       </p>
       <button
         className="d-button d-primary d-wide"
