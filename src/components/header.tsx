@@ -7,10 +7,9 @@ import Link from "next/link";
 import { site } from "@/lib/site";
 
 const links = [
+  { label: "Why Cinder", href: "#brokerage" },
   { label: "Trading", href: "#trading" },
   { label: "Agents", href: "#agents" },
-  { label: "The account", href: "#advantage" },
-  { label: "Privacy", href: "#privacy" },
 ];
 
 export function Header() {

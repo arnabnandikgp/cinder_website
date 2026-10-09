@@ -3,7 +3,7 @@ import { ImageResponse } from "next/og";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-export const alt = "Cinder: One account for Solana perps.";
+export const alt = "Cinder: A Solana-native prime broker for perps.";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -59,20 +59,20 @@ export default async function OpenGraphImage() {
           letterSpacing: 3,
         }}
       >
-        A PRIME BROKER FOR SOLANA PERPETUALS
+        PRIVATE POSITIONS. COLLECTIVE FEE ACCESS.
       </div>
       <div
         style={{
           display: "flex",
           flexDirection: "column",
           marginTop: 24,
-          fontSize: 76,
+          fontSize: 70,
           lineHeight: 1.13,
           letterSpacing: -4,
         }}
       >
-        <span>One account</span>
-        <span style={{ color: "#6093FF" }}>for Solana perps.</span>
+        <span>A Solana-native</span>
+        <span style={{ color: "#6093FF" }}>prime broker for perps.</span>
       </div>
       <div
         style={{
@@ -84,7 +84,7 @@ export default async function OpenGraphImage() {
           fontSize: 18,
         }}
       >
-        Connected venues. Simpler trading. Aggregated activity.
+        For traders. For agents. Across connected venues.
       </div>
       <div
         style={{

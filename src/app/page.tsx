@@ -1,5 +1,4 @@
 import {
-  ArrowDown,
   ArrowRight,
   ArrowUpRight,
   ShieldCheck,
@@ -14,16 +13,11 @@ import activityPreview from "../../public/previews/cinder-activity.png";
 import Link from "next/link";
 import { Header } from "@/components/header";
 import { AgentAccessDiagram } from "@/components/agent-access-diagram";
+import { BrokerageDiagram } from "@/components/brokerage-diagram";
 import { Brand, ExploreButton, Mark } from "@/components/ui";
-import { AdvantageMini, PrivacyMap } from "@/components/diagrams";
 import { site } from "@/lib/site";
 
 const faqs = [
-  {
-    question: "What is Cinder?",
-    answer:
-      "Cinder is building a prime broker for Solana perpetuals. It brings trading, individual account records, and pooled fee economics into one workspace, while orders execute against connected venues’ liquidity.",
-  },
   {
     question: "Is Cinder a new perp exchange?",
     answer:
@@ -32,7 +26,7 @@ const faqs = [
   {
     question: "Do I choose where my order executes?",
     answer:
-      "In Standard, you choose the execution venue and its chart follows that choice. Pro compares visible liquidity and estimated entry costs for your order size, with price cost and venue fees shown separately. The demo previews a venue recommendation; automatic routing and live execution are not enabled.",
+      "In Standard, you choose your venue. Pro compares estimated spread, depth impact and fees for your size, measured from each venue’s own midpoint. A lower cost means less estimated friction relative to that venue’s market, not necessarily the best absolute fill price. The demo recommends a venue from your allowed list and simulates execution; it does not route live orders.",
   },
   {
     question: "How do trading agents fit into Cinder?",
@@ -40,14 +34,9 @@ const faqs = [
       "The account is designed to support scoped agent permissions, expiry and order limits without granting withdrawal authority. The Agents view lets you inspect example authorizations and open Activity filtered to an agent. Adding or revoking an agent in the demo is a local preview, not an onchain authorization.",
   },
   {
-    question: "Does one account mean one position across every venue?",
-    answer:
-      "No. Your Cinder account keeps your individual records together, while Cinder operates venue-side accounts for execution. Positions retain their venue identity. A unified view does not imply shared margin or interchangeable positions across venues.",
-  },
-  {
     question: "How does pooled volume help with fees?",
     answer:
-      "Cinder combines qualifying volume through its account at each venue to pursue more competitive fee tiers. Eligibility, the effective trader fee, and any Cinder charges depend on the venue rules and the final pricing model. There is no universal lowest-fee guarantee.",
+      "Cinder combines qualifying trading volume at each eligible venue to access fee tiers that can be harder to reach alone. Volume is counted separately at each venue. The effective trader fee depends on venue rules, qualifying volume and Cinder’s final pricing. The demo labels its modeled fee tiers; they are not a promise of a universal lowest rate.",
   },
   {
     question: "What remains private?",
@@ -62,12 +51,7 @@ const faqs = [
   {
     question: "Can I trade in the demo?",
     answer:
-      "The demo uses public market feeds from Pacifica, BULK and Phoenix where available, alongside simulated account records. You can connect a real wallet, but no signatures, deposits or live orders are requested. Order drafts, strategy plans and agent controls stay local previews. Pro estimates use visible books and labelled fee assumptions, not guaranteed fills or final Cinder pricing.",
-  },
-  {
-    question: "What is the longer-term direction?",
-    answer:
-      "Broader venue access, optional routing and deeper risk coordination build on the broker account. A coordinated clearing layer is a longer-term ambition, not a claim of shared cross-venue margin or settlement guarantees today. The article explains why this account layer matters.",
+      "Yes, with simulated funds. The demo uses public market feeds from Pacifica, BULK and Phoenix where available. Connect a real wallet to receive 10,000 simulated USDC, saved per wallet in this browser with a reset option in Account. Supported paper orders update Positions, History, Account and Activity. Advanced strategy plans and agent authorizations remain local previews. No signatures, deposits or live orders are requested.",
   },
 ];
 
@@ -92,26 +76,32 @@ export default function Home() {
               <span className="tiny-cross" aria-hidden="true">
                 +
               </span>{" "}
-              A PRIME BROKER FOR SOLANA PERPETUALS
+              BUILT FOR TRADERS AND TRADING AGENTS
             </div>
             <div className="product-hero-heading">
               <h1 id="hero-title">
-                One account
+                A Solana-native
                 <br />
-                for <span className="heading-accent">Solana perps.</span>
+                <span className="heading-accent">prime broker</span>
+                <br />
+                for perps.
               </h1>
               <div>
                 <p className="hero-intro">
-                  Cinder is building a prime broker account for trading Solana
-                  perpetuals. Choose your venue, compare execution costs, or
-                  give trading agents scoped access. Your capital, positions and
-                  activity stay together in one workspace.
+                  Private positions, collective fee access and connected venue
+                  liquidity. Trade through a familiar terminal or bring your own
+                  trading agent.
                 </p>
                 <div className="hero-actions">
                   <ExploreButton />
-                  <a className="text-link" href="#agents">
-                    Explore agent access{" "}
-                    <ArrowDown size={15} aria-hidden="true" />
+                  <a
+                    className="text-link"
+                    href={site.launchVideo}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Watch Cinder in action{" "}
+                    <ArrowUpRight size={15} aria-hidden="true" />
                   </a>
                 </div>
               </div>
@@ -119,11 +109,69 @@ export default function Home() {
             <figure className="product-preview">
               <Image
                 src={tradePreview}
-                alt="Cinder’s Standard trading demo, with a SOL-USDC chart, live order book, venue selection, order entry and sample position records. Trade, Account, Activity and Agents share one workspace."
+                alt="Cinder’s Standard trading demo, with a SOL-USDC chart, live order book, venue selection, order entry and a simulated position. Trade, Account, Activity and Agents share one workspace."
                 sizes="(max-width: 800px) 100vw, 1280px"
                 preload
               />
             </figure>
+          </div>
+        </section>
+
+        <section
+          className="section brokerage-section"
+          id="brokerage"
+          aria-labelledby="brokerage-title"
+        >
+          <div className="container">
+            <div className="workspace-heading brokerage-heading">
+              <div>
+                <span className="editorial-label">INSIDE CINDER</span>
+                <h2 id="brokerage-title">
+                  Private by design.
+                  <br />
+                  <span className="heading-accent">Stronger together.</span>
+                </h2>
+              </div>
+              <p>
+                Your positions are individual. Your trading volume doesn’t have
+                to stand alone. Cinder brings order flow together at connected
+                venues while keeping each trader’s records separate.
+              </p>
+            </div>
+            <BrokerageDiagram />
+            <div className="brokerage-benefits">
+              <article id="privacy">
+                <span className="editorial-label">PRIVATE POSITIONS</span>
+                <h3>Your strategy isn’t a public feed.</h3>
+                <p>
+                  Individual orders and account records are handled inside an
+                  attested confidential environment, rather than exposed as a
+                  public trader-by-trader ledger.
+                </p>
+                <a
+                  className="text-link"
+                  href={`${site.docs}/security/privacy`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  How privacy works{" "}
+                  <ArrowUpRight size={15} aria-hidden="true" />
+                </a>
+              </article>
+              <article id="economics">
+                <span className="editorial-label">COLLECTIVE FEE ACCESS</span>
+                <h3>Trade individually. Qualify collectively.</h3>
+                <p>
+                  Qualifying volume combines at each eligible venue to pursue
+                  better fee tiers. The benefit of scale, without having to
+                  generate all that volume yourself.
+                </p>
+                <a className="text-link" href="#faq">
+                  How fee aggregation works{" "}
+                  <ArrowRight size={15} aria-hidden="true" />
+                </a>
+              </article>
+            </div>
           </div>
         </section>
 
@@ -140,17 +188,17 @@ export default function Home() {
                 One <span className="heading-accent">workspace.</span>
               </h2>
               <p className="trading-story-intro">
-                Know where you want to trade? Go straight to the market.
-                Comparing venues? See how the cost changes with your order size
-                before deciding.
+                Go straight to your preferred venue, or compare the cost of
+                executing your size. Same workspace. A different level of
+                control.
               </p>
               <div className="trading-modes">
                 <article>
                   <span className="editorial-label">STANDARD</span>
                   <h3>Your venue. Your trade.</h3>
                   <p>
-                    Live prices, depth and market, limit or advanced order
-                    plans. Your selected execution venue stays in view.
+                    Choose a venue, follow its market and place your trade.
+                    Chart, order book and order entry stay together.
                   </p>
                   <Link href="/demo" className="text-link">
                     Explore Standard <ArrowRight size={15} aria-hidden="true" />
@@ -158,11 +206,11 @@ export default function Home() {
                 </article>
                 <article className="pro-mode-story">
                   <span className="editorial-label">PRO</span>
-                  <h3>Compare the cost, not just the price.</h3>
+                  <h3>See what your size costs.</h3>
                   <p>
-                    Compare estimated entry cost in basis points for your order
-                    size, separating price cost from venue fees. Use live books
-                    or a five-second average.
+                    Compare spread, depth impact and modeled fees in basis
+                    points, relative to each venue’s midpoint. Use live books or
+                    a five-second average, with your allowed venues in control.
                   </p>
                   <Link href="/demo?mode=auto" className="text-link">
                     Explore Pro <ArrowRight size={15} aria-hidden="true" />
@@ -173,7 +221,7 @@ export default function Home() {
             <div className="feature-preview pro-feature-preview">
               <Image
                 src={proPreview}
-                alt="Cinder Pro preview with a 100,000 USDC order selected, comparing venue entry costs with separate price-cost and fee columns."
+                alt="Cinder Pro preview with a 100,000 USDC order selected, comparing venue-local execution costs with separate spread-and-impact and fee columns."
                 sizes="(max-width: 1000px) 100vw, (max-width: 1440px) 55vw, 740px"
               />
             </div>
@@ -187,16 +235,18 @@ export default function Home() {
         >
           <div className="container agent-story-layout">
             <div className="section-copy">
-              <span className="editorial-label">FOR AGENT-DRIVEN TRADING</span>
+              <span className="editorial-label">
+                BUILT FOR PROGRAMMATIC TRADING
+              </span>
               <h2 id="agents-title">
                 Your agents.
                 <br />
                 <span className="heading-accent">Your control.</span>
               </h2>
               <p>
-                An agent should have a clear mandate, not unrestricted access to
-                your account. Cinder’s agent workflow is designed around scoped
-                permissions, expiry and order limits.
+                Bring your own trading agent. Cinder’s API is designed to give
+                it a clear mandate: which markets it can trade, how much it can
+                place and when its access expires.
               </p>
               <ul className="agent-story-points">
                 <li>
@@ -212,14 +262,25 @@ export default function Home() {
                   actions in Activity.
                 </li>
               </ul>
-              <a
-                href={`${site.docs}/guides/agents#agents`}
-                className="agent-docs-link text-link"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Agent setup guide <ArrowUpRight size={15} aria-hidden="true" />
-              </a>
+              <div className="agent-resource-links">
+                <a
+                  href={`${site.docs}/guides/agents#agents`}
+                  className="agent-docs-link text-link"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Agent setup guide{" "}
+                  <ArrowUpRight size={15} aria-hidden="true" />
+                </a>
+                <a
+                  href={`${site.docs}/api/overview`}
+                  className="text-link"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  API reference <ArrowUpRight size={15} aria-hidden="true" />
+                </a>
+              </div>
             </div>
             <AgentAccessDiagram />
           </div>
@@ -238,9 +299,9 @@ export default function Home() {
                 Every <span className="heading-accent">move.</span>
               </h2>
               <p>
-                Whether you trade directly or through an agent, the account is
-                yours. See where your capital is committed and trace the
-                activity behind it, without piecing together separate venues.
+                Whether you trade directly or through an agent, keep your
+                capital and activity in view. From the first order to the latest
+                fill, know what changed and who acted.
               </p>
             </div>
             <div className="account-story-grid">
@@ -248,16 +309,16 @@ export default function Home() {
                 <div className="feature-preview">
                   <Image
                     src={accountPreview}
-                    alt="Sample Cinder capital view with available funds and margin committed broken down by venue."
+                    alt="Simulated Cinder Account overview with account equity, available margin and position margin requirements grouped by execution venue."
                     sizes="(max-width: 800px) 100vw, 620px"
                   />
                 </div>
                 <span className="editorial-label">ACCOUNT</span>
                 <h3>Your capital, with context.</h3>
                 <p>
-                  See equity, available funds and venue-by-venue margin.
-                  Positions keep their venue identity; one account view does not
-                  imply shared cross-venue margin.
+                  See account equity, available margin and position margin
+                  requirements by execution venue. Positions keep their venue
+                  identity, without implying shared native venue collateral.
                 </p>
                 <Link href="/demo?view=account" className="text-link">
                   Explore Account <ArrowRight size={15} aria-hidden="true" />
@@ -267,7 +328,7 @@ export default function Home() {
                 <div className="feature-preview activity-feature-preview">
                   <Image
                     src={activityPreview}
-                    alt="Sample account-wide activity in Cinder, with actor and event filters and traceable order, fill and fee records."
+                    alt="Simulated account-wide activity in Cinder, with actor and event filters and traceable order, fill and fee records."
                     sizes="(max-width: 800px) 100vw, 620px"
                   />
                 </div>
@@ -287,106 +348,53 @@ export default function Home() {
         </section>
 
         <section
-          className="section economics-section"
-          id="economics"
-          aria-labelledby="economics-title"
+          className="section trust-section"
+          id="trust"
+          aria-labelledby="trust-title"
         >
-          <div className="container split-layout">
+          <div className="container trust-layout">
             <div className="section-copy">
-              <h2 id="economics-title">
-                Pooled volume.
-                <br />
-                <span className="heading-accent">More competitive fees.</span>
-              </h2>
+              <span className="editorial-label">BUILT IN THE OPEN</span>
+              <h2 id="trust-title">Explore it. Inspect it.</h2>
               <p>
-                Trading alone means qualifying for volume tiers alone. Cinder
-                brings qualifying activity together at each venue, creating the
-                potential for fee economics that are harder to reach
-                individually.
+                The Cinder program is deployed on Solana devnet. Explore the
+                product today, then dig into the account model, API and recovery
+                design in the public docs.
               </p>
-              <p>
-                The goal is a better outcome for the trader. Actual pricing
-                depends on venue rules, qualifying volume, and the final Cinder
-                fee model.
+              <p className="product-status">
+                <span className="product-status-dot" aria-hidden="true" />
+                Demo · Live market data / Simulated account and execution
               </p>
-              <a className="text-link" href="#faq">
-                How fee aggregation works{" "}
-                <ArrowDown size={15} aria-hidden="true" />
-              </a>
             </div>
-            <div className="economics-illustration">
-              <span className="editorial-label">SCALE AT THE VENUE LEVEL</span>
-              <AdvantageMini type="fees" />
-            </div>
-          </div>
-        </section>
-
-        <section
-          className="section privacy-section"
-          id="privacy"
-          aria-labelledby="privacy-title"
-        >
-          <Mark className="privacy-watermark" />
-          <div className="container">
-            <div className="privacy-heading">
-              <h2 id="privacy-title">
-                Confidential handling.
-                <br />
-                Built <span className="heading-accent">into the account.</span>
-              </h2>
-              <div>
-                <p>
-                  Your individual orders, positions and account records are
-                  designed to stay inside Cinder’s confidential execution
-                  environment. Privacy is part of the brokerage account, not a
-                  separate trading mode.
-                </p>
-                <p>
-                  A trusted execution environment (TEE) isolates sensitive
-                  processing from ordinary operators and infrastructure
-                  providers. The selected venue receives the order it needs to
-                  execute, rather than your complete Cinder account history.
-                </p>
-              </div>
-            </div>
-            <PrivacyMap />
-          </div>
-        </section>
-
-        <section
-          className="article-section"
-          id="article"
-          aria-labelledby="article-title"
-        >
-          <div className="container">
-            <a
-              className="article-feature"
-              href={site.article}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Image
-                src="/art/cobalt-architecture.png"
-                alt=""
-                fill
-                sizes="(max-width: 800px) 100vw, 1280px"
-              />
-              <span className="article-scrim" aria-hidden="true" />
-              <span className="article-kicker">FROM CINDER · OUR THESIS</span>
-              <div className="article-feature-copy">
-                <h2 id="article-title">
-                  Introducing Cinder:
-                  <br />
-                  what happens between the venues?
-                </h2>
-                <span className="article-read">
-                  Read article <ArrowUpRight size={22} aria-hidden="true" />
+            <nav className="trust-resources" aria-label="Learn about Cinder">
+              <a href={site.docs} target="_blank" rel="noopener noreferrer">
+                <span>
+                  <strong>Documentation</strong>
+                  <small>Accounts, agents, privacy and recovery</small>
                 </span>
-              </div>
-              <span className="article-platform">
-                THE STORY BEHIND THE ACCOUNT <span>READ ON X ↗</span>
-              </span>
-            </a>
+                <ArrowUpRight size={18} aria-hidden="true" />
+              </a>
+              <a href={site.github} target="_blank" rel="noopener noreferrer">
+                <span>
+                  <strong>GitHub</strong>
+                  <small>Explore the implementation</small>
+                </span>
+                <ArrowUpRight size={18} aria-hidden="true" />
+              </a>
+              <a
+                className="article-resource"
+                id="article"
+                href={site.article}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <span>
+                  <strong>Read the thesis</strong>
+                  <small>Why the brokerage layer matters</small>
+                </span>
+                <ArrowUpRight size={18} aria-hidden="true" />
+              </a>
+            </nav>
           </div>
         </section>
 
@@ -427,11 +435,9 @@ export default function Home() {
         <section className="closing-section" aria-label="Explore Cinder">
           <div className="container closing-inner">
             <p>
-              Your next trading
+              Trade your way.
               <br />
-              workspace.
-              <br />
-              <span>Help shape it.</span>
+              <span>With Cinder.</span>
             </p>
             <Link className="button button-light" href="/demo">
               Explore the demo <ArrowUpRight size={17} aria-hidden="true" />
@@ -442,7 +448,7 @@ export default function Home() {
               target="_blank"
               rel="noopener noreferrer"
             >
-              Share your feedback <ArrowUpRight size={15} aria-hidden="true" />
+              Follow on X <ArrowUpRight size={15} aria-hidden="true" />
             </a>
           </div>
           <Mark className="closing-watermark" />
@@ -453,7 +459,7 @@ export default function Home() {
           <div className="footer-main">
             <div>
               <Brand large />
-              <p>Prime brokerage for Solana perpetuals.</p>
+              <p>A Solana-native prime broker for perps.</p>
             </div>
             <nav aria-label="Footer navigation">
               <a href={site.x} target="_blank" rel="noopener noreferrer">
@@ -469,7 +475,7 @@ export default function Home() {
           </div>
           <div className="footer-bottom">
             <span>© {new Date().getFullYear()} Cinder</span>
-            <span>ONE ACCOUNT. CONNECTED VENUES.</span>
+            <span>PRIVATE POSITIONS. CONNECTED VENUES.</span>
             <a href="#">Back to top ↑</a>
           </div>
         </div>
