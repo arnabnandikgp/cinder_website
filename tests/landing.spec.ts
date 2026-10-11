@@ -1,28 +1,6 @@
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
-test("requested supporting copy and empty wrappers are removed", async ({
-  page,
-}) => {
-  await page.goto("/");
-  for (const text of [
-    "Explore with sample data. No wallet required.",
-    "THE CINDER ACCOUNT",
-    "Interactive prototype · Sample data · No live trading",
-    "The venues provide the liquidity. Cinder brings your trading together.",
-    "Your positions and trading results remain individually accounted for.",
-    "Deposits and payouts remain public. A separate recovery process",
-    "Product direction, not a list of live capabilities.",
-  ]) {
-    await expect(page.getByText(text, { exact: true })).toHaveCount(0);
-  }
-  await expect(
-    page.locator(
-      ".product-preview figcaption, .account-model-note, .privacy-support, .roadmap-note",
-    ),
-  ).toHaveCount(0);
-});
-
 for (const width of [375, 768, 1280]) {
   test(`homepage is readable and accessible at ${width}px`, async ({
     page,
@@ -35,21 +13,18 @@ for (const width of [375, 768, 1280]) {
     });
     await page.goto("/");
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-      "A Solana-nativeprime brokerfor perps.",
+      "A Solana-native prime broker for perps.",
     );
     await page.evaluate(() => document.fonts.ready);
+    for (const image of await page.locator("main img:visible").all()) {
+      await image.scrollIntoViewIfNeeded();
+      await image.evaluate((element: HTMLImageElement) => element.decode());
+    }
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
-    await page
-      .locator(".product-preview img")
-      .evaluate((image: HTMLImageElement) => image.decode());
-    for (const image of await page.locator(".feature-preview img").all()) {
-      await image.scrollIntoViewIfNeeded();
-      await image.evaluate((element: HTMLImageElement) => element.decode());
-    }
     const audit = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
       .analyze();
@@ -60,21 +35,83 @@ for (const width of [375, 768, 1280]) {
       })),
     ).toEqual([]);
     expect(errors).toEqual([]);
-    await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
     await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
     await page.screenshot({
       path: `test-results/review/home-${width}.png`,
       fullPage: true,
     });
-    for (const id of ["brokerage", "trading", "agents", "advantage", "trust"]) {
-      await page.locator(`#${id}`).screenshot({
-        path: `test-results/review/${id}-${width}.png`,
-      });
+    for (const id of ["brokerage", "trading", "account", "agents", "trust"]) {
+      await page
+        .locator("#" + id)
+        .screenshot({ path: `test-results/review/${id}-${width}.png` });
     }
   });
 }
 
-test("homepage uses the chart-first screenshot and links to the real demo and article", async ({
+test("eight-section story leads with brokerage and follows the trader’s workflow", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(page.locator("main > section")).toHaveCount(8);
+  expect(
+    await page
+      .locator("main > section[id]")
+      .evaluateAll((nodes) => nodes.map((node) => node.id)),
+  ).toEqual(["brokerage", "trading", "account", "agents", "trust", "faq"]);
+  await expect(page.locator(".hero-intro")).toHaveText(
+    "Access Solana perp venues through one account, with private positions and the fee advantages of pooled trading volume.",
+  );
+  await expect(page.locator("#brokerage")).toContainText(
+    "Your account stays individual.",
+  );
+  await expect(page.locator(".brokerage-principles li")).toHaveText([
+    "Private positions",
+    "Pooled volume",
+    "Existing liquidity",
+  ]);
+  await expect(page.locator("#agents")).toContainText(
+    "without granting withdrawal access",
+  );
+  await expect(page.locator("#trust")).toContainText(
+    "On-chain vault and recovery controls",
+  );
+  await expect(
+    page.locator(".product-status, .brokerage-benefits, .agent-story-points"),
+  ).toHaveCount(0);
+  await expect(page.locator("main")).not.toContainText(
+    /five-second average|each venue’s midpoint|deployed on Solana devnet|Live market data \/ Simulated/,
+  );
+  await expect(page.locator("#faq details")).toHaveCount(6);
+});
+
+test("hero and closing keep primary content inside their containers", async ({
+  page,
+}) => {
+  for (const width of [375, 768, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    for (const selector of [".landing-hero", ".landing-closing"]) {
+      const section = page.locator(selector);
+      const container = await section.locator(".container").boundingBox();
+      expect(container!.x).toBeGreaterThanOrEqual(20);
+      expect(container!.x + container!.width).toBeLessThanOrEqual(width - 20);
+      for (const content of await section
+        .locator("h1, h2, .landing-actions a")
+        .all()) {
+        const box = await content.boundingBox();
+        expect(box!.x).toBeGreaterThanOrEqual(container!.x);
+        expect(box!.x + box!.width).toBeLessThanOrEqual(
+          container!.x + container!.width + 1,
+        );
+      }
+      await section.screenshot({
+        path: `test-results/review/${selector.slice(1)}-${width}.png`,
+      });
+    }
+  }
+});
+
+test("hero shows the actual terminal and keeps demo, video and thesis links", async ({
   page,
 }) => {
   await page.goto("/");
@@ -84,35 +121,20 @@ test("homepage uses the chart-first screenshot and links to the real demo and ar
   );
   await expect(page.locator(".product-preview img")).toHaveAttribute(
     "alt",
-    /Standard trading demo.*Trade, Account, Activity and Agents/,
+    /Standard trading demo.*chart, order book/,
   );
   await expect(page.locator(".product-preview a")).toHaveCount(0);
-  await expect(page.locator(".hero-intro")).toContainText("Private positions");
-  await expect(page.locator(".hero-intro")).toContainText(
-    "bring your own trading agent",
-  );
-  await expect(page.locator(".hero-intro")).not.toContainText(
-    /router|automatically/i,
-  );
-  await expect(page.locator(".article-resource")).toHaveAttribute(
-    "href",
-    "https://x.com/CinderExchange/status/2104439873029685347",
-  );
-  await expect(page.locator(".article-resource")).toHaveAttribute(
-    "rel",
-    "noopener noreferrer",
-  );
-  await expect(page.locator(".article-resource")).toContainText(
-    "Read the thesis",
-  );
   await expect(
     page.getByRole("link", { name: "Watch Cinder in action" }),
   ).toHaveAttribute(
     "href",
     "https://x.com/CinderExchange/status/2107457041975693801",
   );
-  await expect(page.getByRole("link", { name: /early access/i })).toHaveCount(
-    0,
+  await expect(
+    page.getByRole("link", { name: "Read the thesis" }),
+  ).toHaveAttribute(
+    "href",
+    "https://x.com/CinderExchange/status/2104439873029685347",
   );
   await page
     .getByRole("link", { name: "Explore the demo", exact: true })
@@ -124,95 +146,79 @@ test("homepage uses the chart-first screenshot and links to the real demo and ar
   ).toBeAttached();
 });
 
-test("story leads with brokerage benefits before trading, agents and account", async ({
-  page,
-}) => {
-  await page.goto("/");
-  expect(
-    await page
-      .locator("main > section[id]")
-      .evaluateAll((nodes) => nodes.map((node) => node.id)),
-  ).toEqual(["brokerage", "trading", "agents", "advantage", "trust", "faq"]);
-  await expect(page.locator("#economics")).toContainText(
-    "Qualifying volume combines at each eligible venue",
-  );
-  await expect(page.locator("#privacy")).toContainText(
-    "attested confidential environment",
-  );
-  await expect(page.locator("#trading")).toContainText("five-second average");
-  await expect(page.locator("#agents")).toContainText("withdrawal authority");
-  await expect(page.locator("#advantage")).toContainText(
-    "without implying shared native venue collateral",
-  );
-  await expect(page.locator("#trading")).toContainText("each venue’s midpoint");
-  await expect(page.locator("#trust")).toContainText(
-    "deployed on Solana devnet",
-  );
-  await expect(page.locator(".product-status")).toHaveText(
-    "Demo · Live market data / Simulated account and execution",
-  );
-  await expect(page.locator("#vision")).toHaveCount(0);
-});
-
-test("Pro preview uses 100k and sits alongside the trading copy on desktop", async ({
-  page,
-}) => {
-  await page.goto("/");
-  const preview = page.locator(".pro-feature-preview");
-  await expect(preview.locator("img")).toHaveAttribute(
-    "alt",
-    /100,000 USDC order selected/,
-  );
-  for (const width of [1024, 1280, 1440]) {
-    await page.setViewportSize({ width, height: 900 });
-    const copy = await page.locator(".trading-story-copy").boundingBox();
-    const image = await preview.boundingBox();
-    const layout = await page.locator(".trading-story-layout").boundingBox();
-    expect(copy!.x + copy!.width).toBeLessThan(image!.x);
-    expect(image!.width / layout!.width).toBeLessThan(0.65);
-    expect(
-      Math.abs(copy!.y + copy!.height / 2 - (image!.y + image!.height / 2)),
-    ).toBeLessThan(2);
-  }
-  await page.setViewportSize({ width: 375, height: 900 });
-  const copy = await page.locator(".trading-story-copy").boundingBox();
-  const image = await preview.boundingBox();
-  expect(image!.y).toBeGreaterThan(copy!.y + copy!.height);
-});
-
-test("brokerage diagram separates private records from venue execution", async ({
+test("brokerage diagram connects three traders and two agents through one Cinder layer", async ({
   page,
 }) => {
   await page.goto("/");
   const diagram = page.getByRole("figure", {
-    name: "Private Cinder accounts and shared execution at each venue",
+    name: "Traders and agents connect through one Cinder brokerage layer to venue liquidity",
   });
-  await expect(diagram.locator(".brokerage-account")).toHaveCount(3);
-  await expect(diagram.locator(".brokerage-private")).toContainText(
-    "Individual positions",
-  );
+  const participants = diagram.locator(".brokerage-participant");
+  await expect(participants).toHaveCount(5);
+  await expect(participants).toHaveText(["", "", "", "", ""]);
+  expect(
+    await participants.evaluateAll((nodes) =>
+      nodes.map((node) => node.getAttribute("data-kind")),
+    ),
+  ).toEqual(["trader", "agent", "trader", "agent", "trader"]);
   await expect(
-    diagram.locator(".brokerage-private .brokerage-venue"),
-  ).toHaveCount(0);
-  await expect(diagram.locator(".brokerage-hub")).toContainText("Order flow");
-  await expect(diagram.locator("figcaption")).toContainText(
-    "at each eligible venue, not across venues",
+    diagram.getByRole("heading", { name: "Traders & agents" }),
+  ).toBeVisible();
+  await expect(
+    diagram.getByRole("img", { name: "Trader", exact: true }),
+  ).toHaveCount(3);
+  await expect(
+    diagram.getByRole("img", { name: "Agent", exact: true }),
+  ).toHaveCount(2);
+  await expect(participants.locator("svg")).toHaveCount(5);
+  await expect(diagram.locator('[data-kind="trader"]')).toHaveCount(3);
+  await expect(diagram.locator('[data-kind="agent"]')).toHaveCount(2);
+  await expect(diagram).not.toContainText("Private Cinder accounts");
+  await expect(diagram.locator(".brokerage-hub")).toHaveCount(1);
+  await expect(diagram.locator(".brokerage-hub")).toContainText(
+    "Prime brokerage",
   );
-  const venues = diagram.locator(".brokerage-venue");
-  await expect(venues).toHaveCount(3);
-  await expect(venues.nth(2)).toContainText("Additional venue liquidity");
-  await expect(venues.nth(2)).not.toContainText("fee tiers");
-  for (const image of await venues.locator("img").all()) {
-    await image.scrollIntoViewIfNeeded();
-    await image.evaluate((element: HTMLImageElement) => element.decode());
+  await expect(diagram.getByRole("button")).toHaveCount(0);
+  await expect(diagram.locator(".brokerage-venue")).toHaveCount(3);
+  await expect(
+    diagram.locator(".brokerage-participants .brokerage-venue"),
+  ).toHaveCount(0);
+  for (const name of ["Pacifica", "BULK", "Phoenix"]) {
+    await expect(
+      diagram.locator(".brokerage-venue").filter({ hasText: name }),
+    ).toHaveCount(1);
   }
+  await expect(diagram).not.toContainText(/fee tiers/);
   for (const width of [375, 768, 1024, 1280]) {
     await page.setViewportSize({ width, height: 900 });
-    const records = await diagram.locator(".brokerage-private").boundingBox();
-    const execution = await diagram.locator(".brokerage-venues").boundingBox();
-    if (width <= 800)
-      expect(execution!.y).toBeGreaterThanOrEqual(records!.y + records!.height);
-    else expect(execution!.x).toBeGreaterThan(records!.x + records!.width);
+    const individual = await diagram
+      .locator(".brokerage-participants")
+      .boundingBox();
+    const layer = await diagram.locator(".brokerage-layer").boundingBox();
+    const venues = await diagram.locator(".brokerage-venues").boundingBox();
+    if (width <= 800) {
+      expect(layer!.y).toBeGreaterThan(individual!.y + individual!.height);
+      expect(venues!.y).toBeGreaterThan(layer!.y + layer!.height);
+    } else {
+      expect(layer!.x).toBeGreaterThan(individual!.x + individual!.width);
+      expect(venues!.x).toBeGreaterThan(layer!.x + layer!.width);
+    }
+    for (const participant of await participants.all()) {
+      const box = await participant.boundingBox();
+      expect(box!.x).toBeGreaterThanOrEqual(individual!.x);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(
+        individual!.x + individual!.width + 1,
+      );
+      await expect(participant.locator("svg")).toBeVisible();
+      const avatar = await participant
+        .locator(".brokerage-participant-avatar")
+        .boundingBox();
+      const icon = await participant.locator("svg").boundingBox();
+      expect(avatar!.width).toBeGreaterThanOrEqual(44);
+      expect(avatar!.height).toBeGreaterThanOrEqual(44);
+      expect(icon!.width).toBeGreaterThanOrEqual(28);
+      expect(icon!.height).toBeGreaterThanOrEqual(28);
+    }
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
@@ -221,82 +227,186 @@ test("brokerage diagram separates private records from venue execution", async (
   }
 });
 
-test("screenshots are static while separate text links open the workspace", async ({
+test("brokerage motion is a short one-time pass with no pause control", async ({
   page,
 }) => {
   await page.goto("/");
-  const images = page.locator(".product-preview img, .feature-preview img");
-  await expect(images).toHaveCount(4);
-  for (const image of await images.all()) {
-    await image.scrollIntoViewIfNeeded();
-    await image.evaluate((element: HTMLImageElement) => element.decode());
-    expect(
-      await image.evaluate((element: HTMLImageElement) => element.naturalWidth),
-    ).toBeGreaterThan(0);
-    await expect(image).not.toHaveAttribute("alt", "");
-    expect(
-      await image.evaluate(
-        (element) => !!element.closest("a, button, [role=link]"),
-      ),
-    ).toBe(false);
-    await image.click();
-    await expect(page).toHaveURL(/\/$/);
+  const diagram = page.locator(".brokerage-map");
+  await diagram.scrollIntoViewIfNeeded();
+  await expect(diagram).toHaveAttribute("data-playing", "true");
+  await expect(diagram.getByRole("button")).toHaveCount(0);
+  const timing = await diagram.evaluate((node) =>
+    node.getAnimations({ subtree: true }).map((animation) => ({
+      iterations: animation.effect!.getTiming().iterations,
+      endTime: animation.effect!.getComputedTiming().endTime,
+    })),
+  );
+  expect(timing).toHaveLength(8);
+  for (const animation of timing) {
+    expect(animation.iterations).toBe(1);
+    expect(Number(animation.endTime)).toBeLessThan(5000);
   }
-  for (const [label, href] of [
-    ["Explore Standard", "/demo"],
-    ["Explore Pro", "/demo?mode=auto"],
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+  await expect(diagram).toHaveAttribute("data-playing", "false");
+  expect(
+    await diagram.evaluate((node) =>
+      node
+        .getAnimations({ subtree: true })
+        .every((animation) => animation.playState === "paused"),
+    ),
+  ).toBe(true);
+});
+
+test("Standard and Pro switch the actual preview, description and destination together", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const modes = page.getByRole("group", { name: "Trading mode preview" });
+  await expect(
+    modes.getByRole("button", { name: "Standard", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".trading-preview img:visible")).toHaveAttribute(
+    "src",
+    /cinder-trade/,
+  );
+  await expect(
+    page.getByRole("link", { name: "Explore Standard", exact: true }),
+  ).toHaveAttribute("href", "/demo");
+  await modes.getByRole("button", { name: "Pro", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await expect(
+    modes.getByRole("button", { name: "Pro", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".trading-preview img:visible")).toHaveAttribute(
+    "src",
+    /cinder-pro/,
+  );
+  await expect(page.locator(".trading-mode-copy")).toContainText(
+    "estimated trading costs",
+  );
+  await expect(
+    page.getByRole("link", { name: "Explore Pro", exact: true }),
+  ).toHaveAttribute("href", "/demo?mode=auto");
+  const audit = await new AxeBuilder({ page })
+    .include("#trading")
+    .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+    .analyze();
+  expect(audit.violations).toEqual([]);
+  await page
+    .locator("#trading")
+    .screenshot({ path: "test-results/review/trading-pro.png" });
+  await modes.getByRole("button", { name: "Standard", exact: true }).click();
+  await expect(page.locator(".trading-preview img:visible")).toHaveAttribute(
+    "src",
+    /cinder-trade/,
+  );
+  await expect(
+    page.getByRole("link", { name: "Explore Pro", exact: true }),
+  ).toHaveCount(0);
+});
+
+test("account activity selection is keyboard accessible with accurate view links", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(page.locator(".account-product-preview img")).toHaveAttribute(
+    "src",
+    /cinder-account/,
+  );
+  const activity = page.getByRole("group", { name: "Order activity preview" });
+  await activity.getByRole("button", { name: "Fee recorded" }).focus();
+  await page.keyboard.press("Space");
+  await expect(
+    activity.getByRole("button", { name: "Fee recorded" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#account-event-detail")).toContainText(
+    "Included in account activity",
+  );
+  await expect(activity.locator('[aria-pressed="true"]')).toHaveCount(1);
+  for (const [name, href] of [
     ["Explore Account", "/demo?view=account"],
     ["Explore Activity", "/demo?view=activity"],
+    ["Explore Agents", "/demo?view=agents"],
   ]) {
-    await expect(
-      page.getByRole("link", { name: label, exact: true }),
-    ).toHaveAttribute("href", href);
+    await expect(page.getByRole("link", { name, exact: true })).toHaveAttribute(
+      "href",
+      href,
+    );
   }
-  await expect(page.locator("#agents a")).toHaveCount(2);
-  await expect(
-    page.getByRole("link", { name: "Explore Agents", exact: true }),
-  ).toHaveCount(0);
-  await expect(
-    page.getByRole("link", { name: "Agent setup guide", exact: true }),
-  ).toHaveAttribute(
-    "href",
-    "https://docs.cinder.exchange/guides/agents#agents",
-  );
   await expect(
     page.getByRole("link", { name: "API reference", exact: true }),
   ).toHaveAttribute("href", "https://docs.cinder.exchange/api/overview");
-  await page.setViewportSize({ width: 375, height: 900 });
-  await expect(page.locator(".agent-docs-link")).toHaveCSS("display", "flex");
 });
 
-test("Agents uses a readable permission diagram instead of a terminal screenshot", async ({
+test("architecture layers link to security, docs and source without leaving stale resources", async ({
   page,
 }) => {
   await page.goto("/");
-  const agent = page.getByTestId("agent-access-diagram");
-  await expect(page.locator(".agent-feature-preview")).toHaveCount(0);
-  await expect(agent).toHaveAccessibleName(
-    "Agent permissions and request flow",
+  const layers = page.getByRole("group", {
+    name: "Explore Cinder’s architecture",
+  });
+  const resource = page.locator("#trust-resource");
+  await expect(
+    resource.getByRole("link", { name: "Security", exact: true }),
+  ).toHaveAttribute("href", "https://docs.cinder.exchange/security/privacy");
+  await layers.getByRole("button", { name: /Vault controls/ }).click();
+  await expect(
+    resource.getByRole("link", { name: "Documentation", exact: true }),
+  ).toHaveAttribute("href", "https://docs.cinder.exchange");
+  await layers.getByRole("button", { name: /Verification/ }).focus();
+  await page.keyboard.press("Enter");
+  await expect(
+    resource.getByRole("link", { name: "GitHub", exact: true }),
+  ).toHaveAttribute("href", "https://github.com/arnabnandikgp/cinder");
+  await expect(resource.getByRole("link")).toHaveAttribute(
+    "rel",
+    "noopener noreferrer",
   );
-  await expect(agent).toContainText("Access granted by you");
-  await expect(agent).toContainText("Trade · Cancel");
-  await expect(agent).toContainText("Order limits + expiry");
-  await expect(agent).toContainText("No withdrawal authority");
-  await expect(agent).toContainText("Actor: SOL arbitrage");
-  await expect(agent.getByText("SOL arbitrage", { exact: true })).toBeVisible();
-  await expect(agent).not.toContainText("SOL strategy");
-  await expect(agent.locator("a")).toHaveCount(0);
-  for (const width of [375, 768, 1024, 1280, 1440]) {
-    await page.setViewportSize({ width, height: 900 });
-    const agentBox = await agent.boundingBox();
-    for (const preview of await page
-      .locator(".account-story-grid .feature-preview")
-      .all()) {
-      const box = await preview.boundingBox();
-      expect(Math.abs(agentBox!.width - box!.width)).toBeLessThan(2);
-      expect(agentBox!.height).toBeLessThan(560);
-    }
-  }
+  await expect(layers.locator('[aria-pressed="true"]')).toHaveCount(1);
+});
+
+test("FAQ is concise, keyboard accessible and keeps privacy and recovery boundaries", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const exchange = page
+    .locator("summary")
+    .filter({ hasText: "Is Cinder another exchange?" });
+  await exchange.click();
+  await expect(page.locator("details[open] p")).toContainText(
+    "Cinder is the brokerage layer",
+  );
+  await page
+    .locator("summary")
+    .filter({ hasText: "What remains private?" })
+    .focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("details[open] p")).toContainText(
+    "deposits and payouts remain visible on-chain",
+  );
+  await expect(exchange.locator("..")).not.toHaveAttribute("open");
+  await page
+    .locator("summary")
+    .filter({ hasText: "How does pooled volume" })
+    .click();
+  await expect(page.locator("details[open] p")).toContainText(
+    "Volume is counted separately at each venue",
+  );
+  await page
+    .locator("summary")
+    .filter({ hasText: "What if normal service" })
+    .click();
+  await expect(
+    page.getByRole("link", { name: "Read about recovery" }),
+  ).toHaveAttribute("href", "https://docs.cinder.exchange/security/recovery");
+  const footer = page.getByRole("navigation", { name: "Footer navigation" });
+  await expect(
+    footer.getByRole("link", { name: "Contact", exact: true }),
+  ).toHaveAttribute("href", "https://x.com/CinderExchange");
+  await expect(footer.getByRole("link", { name: "GitHub" })).toHaveAttribute(
+    "href",
+    "https://github.com/arnabnandikgp/cinder",
+  );
 });
 
 test("agent motion pauses on demand and when outside the viewport", async ({
@@ -405,86 +515,6 @@ test("reduced-motion agent diagram is static with both outcomes readable", async
   await expect(diagram.locator('[data-event="allowed"]')).toBeVisible();
   await expect(diagram.locator('[data-event="blocked"]')).toBeVisible();
   await expect(diagram).toContainText("No withdrawal authority");
-});
-
-test("FAQ describes persistent simulated trading and local agent permissions", async ({
-  page,
-}) => {
-  await page.goto("/");
-  await page
-    .locator("summary")
-    .filter({ hasText: "Can I trade in the demo?" })
-    .click();
-  const answer = page.locator("details[open] p");
-  await expect(answer).toContainText(
-    "public market feeds from Pacifica, BULK and Phoenix",
-  );
-  await expect(answer).toContainText("Connect a real wallet");
-  await expect(answer).toContainText("No signatures, deposits or live orders");
-  await expect(answer).toContainText(
-    "10,000 simulated USDC, saved per wallet in this browser",
-  );
-  await expect(answer).toContainText(
-    "update Positions, History, Account and Activity",
-  );
-  await page
-    .locator("summary")
-    .filter({ hasText: "How do trading agents fit into Cinder?" })
-    .click();
-  await expect(page.locator("details[open] p")).toContainText(
-    "local preview, not an onchain authorization",
-  );
-  await page
-    .locator("summary")
-    .filter({ hasText: "Do I choose where my order executes?" })
-    .click();
-  await expect(page.locator("details[open] p")).toContainText(
-    "not necessarily the best absolute fill price",
-  );
-});
-
-test("FAQ, privacy boundaries and footer work with keyboard", async ({
-  page,
-}) => {
-  await page.goto("/");
-  await page
-    .locator("summary")
-    .filter({ hasText: "Is Cinder a new perp exchange?" })
-    .click();
-  await expect(
-    page.getByText(/No. Cinder is a broker, not another matching engine/),
-  ).toBeVisible();
-  const question = page
-    .locator("summary")
-    .filter({ hasText: "What remains private?" });
-  await question.focus();
-  await page.keyboard.press("Enter");
-  await expect(
-    page.getByText(
-      /Cinder is designed to handle individual orders and account records inside/,
-    ),
-  ).toBeVisible();
-  await expect(
-    page.getByText(/No. Cinder is a broker, not another matching engine/),
-  ).not.toBeVisible();
-  const privacyLink = page.getByRole("link", {
-    name: "How privacy works",
-    exact: true,
-  });
-  await privacyLink.focus();
-  await expect(privacyLink).toBeFocused();
-  await expect(privacyLink).toHaveAttribute(
-    "href",
-    "https://docs.cinder.exchange/security/privacy",
-  );
-  const footer = page.getByRole("navigation", { name: "Footer navigation" });
-  await expect(
-    footer.getByRole("link", { name: "Contact", exact: true }),
-  ).toHaveAttribute("href", "https://x.com/CinderExchange");
-  await expect(footer.getByRole("link", { name: "GitHub" })).toHaveAttribute(
-    "href",
-    "https://github.com/arnabnandikgp/cinder",
-  );
 });
 
 test("mobile navigation closes on selection and Escape", async ({ page }) => {
@@ -599,14 +629,55 @@ test("repaired logo and branded social preview remain intact", async ({
   expect(social.headers()["content-type"]).toContain("image/png");
 });
 
-test("metadata and visible copy retain the approved punctuation", async ({
+test("metadata and reduced-motion variants retain the product’s identity", async ({
   page,
 }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   await expect(page).toHaveTitle(
     "Cinder | A Solana-native prime broker for perps",
   );
   expect(await page.locator("body").innerText()).not.toContain("—");
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await expect(page.getByRole("button", { name: /pause/i })).toHaveCount(0);
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute(
+    "content",
+    /pooled trading volume/,
+  );
+  for (const selector of [
+    ".brokerage-map",
+    '[data-testid="agent-access-diagram"]',
+  ]) {
+    const diagram = page.locator(selector);
+    await diagram.scrollIntoViewIfNeeded();
+    expect(
+      await diagram.evaluate(
+        (node) => node.getAnimations({ subtree: true }).length,
+      ),
+    ).toBe(0);
+    await expect(diagram.getByRole("button")).toBeHidden();
+  }
+});
+
+test("server-rendered landing copy and primary links remain available without JavaScript", async ({
+  browser,
+  baseURL,
+}) => {
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  const page = await context.newPage();
+  try {
+    await page.goto(baseURL!);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      "A Solana-native prime broker for perps.",
+    );
+    await expect(
+      page.getByRole("link", { name: "Explore the demo", exact: true }).first(),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Explore Standard", exact: true }),
+    ).toHaveAttribute("href", "/demo");
+    await expect(page.locator(".brokerage-hub")).toHaveCount(1);
+    await page.locator("summary").first().click();
+    await expect(page.locator("details[open] p")).toBeVisible();
+  } finally {
+    await context.close();
+  }
 });

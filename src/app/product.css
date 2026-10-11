@@ -1,547 +1,1025 @@
-/* Brokerage-led homepage. Scoped selectors retain the Cinder identity. */
-.hero.product-hero {
-  padding-top: 72px;
-  padding-bottom: 40px;
+/* Landing-only composition; terminal styles and behavior remain independent. */
+.landing-page {
+  overflow: clip;
 }
-.product-hero .hero-atmosphere > img {
-  opacity: 0.24;
+.landing-page h2 {
+  font-size: clamp(34px, 4.05vw, 58px);
+  line-height: 1.1;
+  letter-spacing: -2.3px;
 }
-.product-hero-heading {
+.landing-page .landing-hero {
+  position: relative;
+  padding-block: 74px 0;
+  border-bottom: 1px solid var(--border);
+}
+.landing-hero > .container {
+  position: relative;
+}
+.landing-hero-mark {
+  position: absolute;
+  top: -160px;
+  right: -130px;
+  width: 600px;
+  opacity: 0.035;
+  pointer-events: none;
+}
+.landing-hero-heading {
   display: grid;
-  grid-template-columns: 1.15fr 1fr;
+  grid-template-columns: 1.25fr 1fr;
   align-items: end;
   gap: 72px;
-  margin-bottom: 56px;
+  padding-bottom: 60px;
 }
-.product-hero-heading h1 {
-  font-size: clamp(48px, 5.1vw, 74px);
-  line-height: 1.06;
-  letter-spacing: -3px;
+.landing-hero-heading h1 {
+  max-width: 720px;
+  font-size: clamp(50px, 6.2vw, 88px);
+  line-height: 1.03;
+  letter-spacing: -4px;
 }
-.product-hero-heading .hero-intro {
-  margin-top: 0;
-  font-size: 16px;
-  max-width: 510px;
-}
-.product-hero-heading .hero-actions {
-  margin-top: 24px;
-  flex-wrap: wrap;
-  gap: 20px;
-}
-.product-hero-heading .hero-actions .text-link {
-  font-size: 14px;
-}
-.product-preview {
-  margin: 0;
-  position: relative;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow: hidden;
-  background: var(--surface);
-}
-.product-preview > img {
+.landing-hero-heading h1 > span {
   display: block;
+}
+.landing-hero-copy {
+  padding-bottom: 4px;
+}
+.landing-page .hero-intro {
+  max-width: 440px;
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.65;
+}
+.landing-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 28px;
+  margin-top: 28px;
+}
+.landing-page .product-preview {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 2.45;
+  overflow: hidden;
+  border: 1px solid #34373d;
+  border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+  background: var(--black);
+}
+.landing-page .product-preview > img {
   width: 100%;
+  max-width: none;
   height: auto;
 }
-.workspace-heading {
+.landing-section-heading {
   display: grid;
-  grid-template-columns: 1.2fr 1fr;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 96px;
   align-items: end;
-  gap: 80px;
   margin-bottom: 56px;
 }
-.workspace-heading > p {
-  max-width: 480px;
-  font-size: 16px;
-  line-height: 1.8;
+.landing-section-heading > p {
+  max-width: 440px;
+  font-size: 17px;
+  line-height: 1.75;
 }
-.brokerage-heading h2 {
-  margin-top: 20px;
-}
+
+/* Traders and agents reach venue liquidity through one Cinder brokerage layer. */
 .brokerage-map {
-  display: grid;
-  grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
-  column-gap: 80px;
   margin: 0;
-}
-.brokerage-private {
-  padding: 30px;
-  border: 1px solid #35466a;
+  padding: 24px 32px 36px;
+  border: 1px solid var(--border);
   border-radius: 10px;
-  background: linear-gradient(120deg, #0e1523, #0d1018);
+  background: #0e1014;
 }
-.brokerage-map-label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 24px;
-  color: var(--cobalt-bright);
-  font-size: 14px;
-  font-weight: 500;
-}
-.brokerage-private-flow {
-  display: flex;
-  align-items: center;
-  margin-top: 24px;
-  height: 210px;
-}
-.brokerage-accounts {
-  flex: 1;
-  min-width: 0;
-}
-.brokerage-account {
+.brokerage-map-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  height: 70px;
-  border-bottom: 1px solid #293141;
-  font-size: 15px;
+  gap: 16px;
+  margin-bottom: 30px;
+  font-size: 14px;
 }
-.brokerage-account > span:last-child {
-  color: var(--muted);
-  font-size: 12px;
+.brokerage-map-heading > span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
-.brokerage-converge {
-  width: 60px;
-  height: 210px;
+.brokerage-map-heading > span > svg {
+  color: var(--cobalt-bright);
   flex-shrink: 0;
-  margin: 0 12px;
 }
-.brokerage-map svg path {
-  fill: none;
-  stroke: #647aa6;
-  stroke-width: 1.5;
+.brokerage-model {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) 72px minmax(0, 1fr) 72px minmax(
+      0,
+      0.75fr
+    );
+  align-items: end;
+}
+.brokerage-model h3 {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 400;
+  line-height: 24px;
+  letter-spacing: 0;
+  margin-bottom: 16px;
+}
+.brokerage-participant-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.brokerage-participant {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.brokerage-participant::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  margin-left: 4px;
+  background: #34445e;
+}
+.brokerage-participant-avatar {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid #38404e;
+  border-radius: 50%;
+  background: #191e27;
+  color: #cbd0db;
+  flex-shrink: 0;
+}
+.brokerage-participant-avatar > svg {
+  width: 28px;
+  height: 28px;
+}
+.brokerage-participant[data-kind="agent"] .brokerage-participant-avatar {
+  color: #a7c6ff;
+  border-color: #34496f;
+  background: #101d34;
+}
+.brokerage-converge,
+.brokerage-branches {
+  width: 100%;
+  height: 240px;
+  margin-bottom: 1px;
+  stroke: #34445e;
+  stroke-width: 1;
+}
+.brokerage-converge path,
+.brokerage-branches path {
   vector-effect: non-scaling-stroke;
+}
+.brokerage-stream {
+  stroke: var(--cobalt-bright);
+  opacity: 0;
+  stroke-width: 2;
+  stroke-dasharray: 0.12 0.88;
 }
 .brokerage-hub {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
+  justify-content: center;
+  height: 242px;
+  padding: 24px 16px;
+  background: var(--cobalt-tint);
+  border: 1px solid #3a5d98;
+  border-radius: 8px;
+  text-align: center;
 }
-.brokerage-hub .cinder-mark {
-  width: 54px;
-  height: auto;
-  margin-bottom: 6px;
+.brokerage-hub > img {
+  width: 42px;
+  margin-bottom: 12px;
+}
+.brokerage-hub > strong {
+  font-size: 26px;
+  font-weight: 500;
+  letter-spacing: -0.6px;
+  line-height: 1.2;
 }
 .brokerage-hub > span {
-  font-size: 15px;
+  font-size: 14px;
+  color: #c2d5f7;
+  margin-top: 4px;
 }
-.brokerage-hub small {
-  color: var(--cobalt-bright);
-  font-size: 12px;
-}
-.brokerage-private > p {
-  margin-top: 24px;
-  font-size: 12px;
-}
-.brokerage-venues {
-  position: relative;
-  padding-top: 31px;
-}
-.brokerage-venues .brokerage-map-label {
-  color: var(--muted);
-}
-.brokerage-branches {
-  position: absolute;
-  width: 80px;
-  height: 210px;
-  left: -80px;
-  top: 79px;
+.brokerage-hub > p {
+  font-size: 13px;
+  margin-top: 16px;
+  line-height: 1.6;
 }
 .brokerage-venue-list {
-  margin-top: 24px;
+  display: grid;
+  grid-template-rows: repeat(3, 80px);
 }
 .brokerage-venue {
   display: flex;
   align-items: center;
-  gap: 16px;
-  height: 70px;
-  border-bottom: 1px solid var(--border);
+  gap: 12px;
+  min-width: 0;
+  padding-left: 16px;
+}
+.brokerage-venue strong {
+  font-size: 16px;
+  font-weight: 500;
 }
 .brokerage-venue img {
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
 }
-.brokerage-venue > div {
+.brokerage-principles {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  list-style: none;
+  padding: 28px 0 0;
+  margin: 0;
+  color: #b2b8c4;
+  font-size: 16px;
+}
+.brokerage-principles li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.brokerage-principles li::before {
+  content: "+";
+  color: var(--cobalt-bright);
+}
+
+/* One product stage; switching is deliberate, never an automatic slideshow. */
+.trading-story {
   display: grid;
-  gap: 6px;
-}
-.brokerage-venue span {
-  font-size: 19px;
-}
-.brokerage-venue small {
-  color: var(--muted);
-  font-size: 12px;
-}
-.brokerage-map figcaption {
-  grid-column: 1 / -1;
-  margin-top: 20px;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.7;
-}
-.brokerage-benefits {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.35fr);
   gap: 64px;
-  margin-top: 48px;
+  align-items: center;
 }
-.brokerage-benefits article {
-  padding-top: 24px;
-  border-top: 1px solid var(--border);
+.trading-mode-switch {
+  display: inline-flex;
+  padding: 4px;
+  margin-top: 32px;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: #111316;
 }
-.brokerage-benefits h3 {
-  margin: 16px 0 12px;
-  font-size: 24px;
-}
-.brokerage-benefits p {
+.trading-mode-switch button {
+  min-width: 110px;
+  min-height: 44px;
+  padding: 8px 22px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: #a7acb6;
   font-size: 15px;
-  line-height: 1.8;
-  max-width: 500px;
 }
-.brokerage-benefits .text-link {
+.trading-mode-switch button[aria-pressed="true"] {
+  background: var(--cobalt);
+  color: white;
+}
+.trading-mode-copy {
+  min-height: 164px;
+  padding-top: 24px;
+}
+.trading-mode-copy > p {
+  max-width: 355px;
+  font-size: 17px;
+  line-height: 1.75;
+}
+.trading-mode-copy .text-link {
   margin-top: 16px;
 }
-.trading-story-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
-  align-items: center;
-  gap: 64px;
-}
-.trading-story-intro {
-  max-width: 440px;
-  margin-top: 24px;
-  font-size: 15px;
-  line-height: 1.8;
-}
-.trading-modes {
-  display: grid;
-  gap: 24px;
-  margin-top: 32px;
-}
-.trading-modes article {
-  padding-top: 20px;
-  border-top: 1px solid var(--border);
-}
-.trading-modes .pro-mode-story {
-  border-color: var(--cobalt-bright);
-}
-.account-story-grid h3 {
-  margin: 16px 0 12px;
-  font-size: 24px;
-}
-.trading-modes h3 {
-  margin: 12px 0 8px;
-  font-size: 20px;
-}
-.trading-modes p {
-  font-size: 14px;
-  line-height: 1.7;
-}
-.trading-modes .text-link {
-  margin-top: 12px;
-}
-.account-story-grid p {
-  max-width: 520px;
-  font-size: 15px;
-  line-height: 1.8;
-}
-.account-story-grid .text-link,
-.agent-story-layout .text-link {
-  margin-top: 20px;
-}
-.feature-preview {
-  display: block;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
-  background: var(--surface);
-}
-.feature-preview img {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-.pro-feature-preview {
+.trading-preview {
   min-width: 0;
+  margin: 0;
+  border: 1px solid #363a43;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--black);
 }
-.agent-story-layout {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 40px;
+.trading-preview > figcaption {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-}
-.agents-section {
-  background: var(--surface);
-}
-.agent-story-layout h2 {
-  margin-top: 20px;
-}
-.agent-story-points {
-  display: grid;
   gap: 16px;
-  list-style: none;
-  padding: 0;
-  margin: 28px 0 8px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
 }
-.agent-story-points li {
+.trading-context {
   display: flex;
-  align-items: start;
-  gap: 12px;
-  color: var(--muted);
-  font-size: 14px;
-  line-height: 1.6;
-}
-.agent-story-points svg {
-  flex-shrink: 0;
-  margin-top: 2px;
-  color: var(--cobalt-bright);
-}
-.agent-docs-link {
-  margin-left: 0;
-}
-.agent-resource-links {
-  display: flex;
-  flex-wrap: wrap;
-  column-gap: 24px;
-}
-.account-story-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 40px;
-}
-.account-story-grid .feature-preview {
-  aspect-ratio: 1.49;
-  margin-bottom: 28px;
-}
-.account-story-grid .feature-preview img {
-  height: 100%;
-  /* Keep financial values and ledger columns intact, never crop the UI. */
-  object-fit: contain;
-  object-position: top;
-}
-.editorial-label {
-  color: var(--cobalt-bright);
-  font-size: 11px;
-  letter-spacing: 1.3px;
-}
-.trust-section {
-  background: var(--surface);
-}
-.trust-layout {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 80px;
   align-items: center;
+  gap: 8px;
+  color: #b0bbcf;
 }
-.trust-layout h2 {
-  margin-top: 20px;
-}
-.trust-layout .product-status {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  font-size: 12px;
-  line-height: 1.7;
-  margin-top: 24px;
-}
-.product-status-dot {
-  display: inline-block;
-  flex-shrink: 0;
+.trading-context > span {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: var(--cobalt-bright);
 }
-.trust-resources > a {
+.trading-preview-crop {
+  aspect-ratio: 1.28;
+  overflow: hidden;
+}
+.trading-preview-crop > img {
+  width: 150%;
+  height: auto;
+  max-width: none;
+}
+.trading-preview-crop > img[hidden] {
+  display: none;
+}
+.trading-story[data-mode="pro"] .trading-preview-crop > img {
+  width: 145%;
+}
+
+/* A dominant account view and a narrower, inspectable activity rail. */
+.account-story {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr);
+  gap: 48px;
+  align-items: center;
+}
+.account-product-preview {
+  min-width: 0;
+  margin: 0;
+  aspect-ratio: 1.58;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--black);
+}
+.account-product-preview img {
+  width: 100%;
+  height: auto;
+  max-width: none;
+}
+.account-activity {
+  border-left: 1px solid #31425e;
+  padding-left: 32px;
+}
+.account-activity-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.account-activity-heading h3 {
+  font-size: 19px;
+  font-weight: 400;
+}
+.account-activity-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--cobalt-bright);
+  flex-shrink: 0;
+}
+.account-activity-market {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-block: 24px 20px;
+  font-size: 13px;
+  color: white;
+}
+.account-activity-market > span {
+  color: var(--muted);
+  border-left: 1px solid var(--border);
+  padding-left: 12px;
+}
+.account-activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.account-activity-event {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  padding: 12px;
+  min-height: 52px;
+  text-align: left;
+  color: var(--muted);
+  font-size: 14px;
+}
+.account-activity-event > svg {
+  margin-left: auto;
+  opacity: 0;
+}
+.account-activity-event[aria-pressed="true"] {
+  background: #0d1a33;
+  color: #edf3ff;
+  border-color: #324a73;
+}
+.account-activity-event[aria-pressed="true"] > svg {
+  opacity: 1;
+  color: var(--cobalt-bright);
+}
+.account-event-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #202631;
+  color: #b5c9ed;
+  flex-shrink: 0;
+}
+.account-event-detail {
+  padding: 20px 12px 0;
+  min-height: 83px;
+  font-size: 13px;
+}
+.account-event-detail > span {
+  color: #dee5f1;
+}
+.account-event-detail > p {
+  margin-top: 4px;
+  font-size: 13px;
+}
+.account-activity > .text-link {
+  padding-left: 12px;
+}
+.account-links {
+  margin-top: 20px;
+}
+
+.landing-agent-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  gap: 80px;
+  align-items: center;
+}
+.landing-agent-copy > p {
+  max-width: 370px;
+  margin-top: 28px;
+  font-size: 17px;
+  line-height: 1.75;
+}
+.landing-agent-copy .landing-actions {
+  gap: 12px 24px;
+}
+.landing-agent-layout > figure {
+  min-width: 0;
+}
+
+/* Quiet architecture controls, with an explicit resource for each layer. */
+.trust-story {
+  border-top: 1px solid var(--border);
+}
+.trust-layers {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.trust-layers > button {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 32px 24px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  color: var(--muted);
+}
+.trust-layers > button + button {
+  border-left: 1px solid var(--border);
+}
+.trust-layers > button > svg {
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+.trust-layers strong {
+  display: block;
+  font-size: 18px;
+  font-weight: 400;
+  color: #e0e5ee;
+}
+.trust-layers strong + span {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+}
+.trust-layers > button[aria-pressed="true"] {
+  background: #10182a;
+  box-shadow: inset 0 -2px var(--cobalt);
+}
+.trust-layers > button[aria-pressed="true"] > svg {
+  color: var(--cobalt-bright);
+}
+.trust-layer-number {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  color: #99a4b8;
+  font-size: 11px;
+}
+.trust-resource {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  padding: 24px 0;
-  border-bottom: 1px solid var(--border);
-}
-.trust-resources > a:first-child {
-  border-top: 1px solid var(--border);
-}
-.trust-resources strong {
-  display: block;
-  font-size: 18px;
-  font-weight: 500;
-  margin-bottom: 8px;
-}
-.trust-resources small {
-  font-size: 13px;
-  color: var(--muted);
-  line-height: 1.6;
-}
-.trust-resources svg {
-  flex-shrink: 0;
-  color: var(--cobalt-bright);
-}
-.closing-contact {
-  display: inline-flex;
-  gap: 10px;
-  align-items: center;
-  min-height: 44px;
-  margin-left: 24px;
+  gap: 24px;
+  padding: 16px 24px;
   font-size: 14px;
+  color: var(--muted);
+}
+.trust-resource .text-link {
+  min-width: 160px;
+  justify-content: space-between;
+  color: var(--off-white);
+}
+.landing-page .faq-layout {
+  gap: 100px;
+}
+.landing-page .faq-layout h2 {
+  margin-bottom: 24px;
+}
+.landing-page .faq-list summary {
+  font-size: 17px;
+}
+.landing-page .faq-number {
+  font-size: 12px;
+  color: #a4aab5;
+}
+.landing-page .landing-faq-answer {
+  padding: 0 36px 24px 38px;
+}
+.landing-page .landing-faq-answer > p {
+  padding: 0;
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.8;
+}
+.landing-faq-answer .text-link {
+  margin-top: 10px;
+  color: #b5ceff;
+}
+.landing-page .landing-closing {
+  min-height: 400px;
+  padding-block: 80px;
+}
+.landing-closing .closing-inner {
+  position: relative;
+  z-index: 1;
+  padding-block: 0;
+}
+.landing-page .landing-closing h2 {
+  max-width: 700px;
+  font-size: clamp(44px, 5.6vw, 80px);
+  line-height: 1.05;
+  letter-spacing: -3px;
+  color: white;
+}
+.landing-closing .landing-actions {
+  margin-top: 36px;
+}
+.landing-closing .closing-inner .button {
+  margin-top: 0;
+}
+.landing-closing .text-link {
+  color: white;
+}
+.landing-page .landing-closing .closing-watermark {
+  right: -60px;
+  top: -90px;
+  width: 470px;
+  opacity: 0.13;
+}
+.footer-bottom .article-resource {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@keyframes brokerage-stream {
+  0% {
+    stroke-dashoffset: 0.12;
+    opacity: 0;
+  }
+  12%,
+  88% {
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: -1;
+    opacity: 0;
+  }
+}
+/* Without a pause control, the explanatory pass settles in under five seconds. */
+@media (prefers-reduced-motion: no-preference) {
+  .brokerage-stream-in {
+    animation: brokerage-stream 2s linear 1 both;
+  }
+  .brokerage-stream-in:nth-of-type(3) {
+    animation-delay: 0.1s;
+  }
+  .brokerage-stream-in:nth-of-type(4) {
+    animation-delay: 0.2s;
+  }
+  .brokerage-stream-in:nth-of-type(5) {
+    animation-delay: 0.3s;
+  }
+  .brokerage-stream-in:nth-of-type(6) {
+    animation-delay: 0.4s;
+  }
+  .brokerage-stream-out {
+    animation: brokerage-stream 2s linear 1.8s 1 both;
+  }
+  .brokerage-stream-out:nth-of-type(3) {
+    animation-delay: 2s;
+  }
+  .brokerage-stream-out:nth-of-type(4) {
+    animation-delay: 2.2s;
+  }
+  .brokerage-map[data-playing="false"] .brokerage-stream {
+    animation-play-state: paused;
+  }
+  .landing-page button {
+    transition:
+      background-color 160ms ease,
+      border-color 160ms ease,
+      color 160ms ease;
+  }
 }
 @media (hover: hover) {
-  .trust-resources > a:hover strong {
-    color: var(--cobalt-bright);
+  .trading-mode-switch button:not([aria-pressed="true"]):hover {
+    background: #222731;
+    color: white;
+  }
+  .account-activity-event:not([aria-pressed="true"]):hover,
+  .trust-layers > button:not([aria-pressed="true"]):hover {
+    background: #171b23;
+    color: white;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .brokerage-stream {
+    opacity: 0;
   }
 }
 @media (max-width: 1100px) {
-  .product-hero-heading {
-    gap: 32px;
-  }
-  .product-hero-heading h1 {
-    font-size: 52px;
-  }
-  .workspace-heading {
+  .landing-hero-heading {
     gap: 40px;
   }
-  .trading-story-layout {
-    gap: 32px;
+  .landing-page .hero-intro {
+    font-size: 16px;
+  }
+  .landing-hero-heading .landing-actions {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .landing-section-heading {
+    gap: 48px;
   }
   .brokerage-map {
-    column-gap: 48px;
+    padding-inline: 24px;
   }
-  .brokerage-private {
-    padding: 24px;
+  .brokerage-model {
+    grid-template-columns: minmax(0, 1.1fr) 48px minmax(0, 1fr) 48px minmax(
+        0,
+        0.8fr
+      );
   }
-  .brokerage-venues {
-    padding-top: 25px;
+  .brokerage-participant {
+    gap: 10px;
   }
-  .brokerage-branches {
-    left: -48px;
-    width: 48px;
-    top: 73px;
+  .brokerage-venue {
+    gap: 8px;
+    padding-left: 10px;
   }
-  .brokerage-account {
-    flex-direction: column;
-    justify-content: center;
-    align-items: start;
-    gap: 6px;
+  .brokerage-venue img {
+    width: 24px;
+    height: 24px;
   }
-  .brokerage-converge {
-    width: 44px;
+  .trading-story {
+    gap: 40px;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.2fr);
   }
-}
-@media (max-width: 1000px) {
-  .trading-story-layout {
-    grid-template-columns: 1fr;
+  .account-story {
     gap: 32px;
+    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
   }
-  .trading-story-intro {
-    max-width: 580px;
+  .account-activity {
+    padding-left: 24px;
   }
-  .trading-modes {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 32px;
+  .account-activity-heading h3 {
+    font-size: 17px;
+  }
+  .landing-agent-layout {
+    gap: 48px;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.3fr);
+  }
+  .trust-layers > button {
+    gap: 12px;
+    padding-inline: 16px;
+  }
+  .trust-layers strong {
+    font-size: 16px;
   }
 }
 @media (max-width: 800px) {
-  .hero.product-hero {
-    padding-top: 40px;
-    padding-bottom: 32px;
+  .landing-page .landing-hero {
+    padding-top: 44px;
   }
-  .product-hero-heading {
+  .landing-hero-heading {
     grid-template-columns: 1fr;
-    gap: 24px;
-    margin-bottom: 40px;
+    gap: 28px;
+    padding-bottom: 40px;
   }
-  .product-hero-heading h1 {
-    font-size: clamp(48px, 8vw, 66px);
+  .landing-hero-heading h1 {
+    max-width: 650px;
+    font-size: clamp(48px, 8vw, 68px);
     letter-spacing: -2.5px;
   }
-  .product-hero-heading .hero-intro {
-    font-size: 16px;
+  .landing-page .hero-intro {
+    max-width: 510px;
+    font-size: 17px;
   }
-  .workspace-heading {
+  .landing-hero-heading .landing-actions {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px 24px;
+  }
+  .landing-page .product-preview {
+    height: 340px;
+    aspect-ratio: auto;
+  }
+  .landing-page .product-preview > img {
+    width: 1050px;
+  }
+  .landing-section-heading {
     grid-template-columns: 1fr;
     gap: 24px;
-    margin-bottom: 32px;
+    margin-bottom: 36px;
   }
-  .account-story-grid,
-  .agent-story-layout,
-  .trust-layout {
+  .landing-section-heading > p {
+    max-width: 540px;
+    font-size: 16px;
+  }
+  .brokerage-model {
     grid-template-columns: 1fr;
-    gap: 40px;
+    gap: 32px;
   }
-  .brokerage-map {
-    grid-template-columns: 1fr;
+  .brokerage-model h3 {
+    margin-bottom: 12px;
   }
-  .brokerage-venues {
-    padding: 32px 24px 0;
+  .brokerage-participant-list {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
   }
+  .brokerage-participant {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 56px;
+  }
+  .brokerage-participant::after {
+    display: none;
+  }
+  .brokerage-converge,
   .brokerage-branches {
     display: none;
   }
+  .brokerage-layer,
+  .brokerage-venues {
+    position: relative;
+  }
+  .brokerage-layer::before,
   .brokerage-venues::before {
     content: "";
     position: absolute;
     left: 50%;
-    top: 0;
+    top: -32px;
     height: 24px;
-    border-left: 1px solid #647aa6;
+    width: 1px;
+    background: #60799e;
+  }
+  .brokerage-hub {
+    height: auto;
+    min-height: 180px;
+    padding-block: 24px;
+  }
+  .brokerage-hub > p {
+    margin-top: 12px;
   }
   .brokerage-venue-list {
-    display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 20px;
-    margin-top: 16px;
+    grid-template-rows: none;
+    gap: 12px;
   }
   .brokerage-venue {
-    height: auto;
-    min-height: 85px;
-    align-items: start;
-    padding: 16px 0;
-    gap: 10px;
+    flex-direction: column;
+    justify-content: center;
+    gap: 12px;
+    min-height: 80px;
+    padding: 8px 0;
   }
-  .brokerage-benefits {
+  .brokerage-principles {
+    font-size: 14px;
+    gap: 12px;
+  }
+  .trading-story {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  .trading-mode-copy {
+    min-height: 125px;
+  }
+  .trading-mode-copy > p {
+    max-width: 530px;
+    font-size: 16px;
+  }
+  .trading-preview-crop {
+    aspect-ratio: 1.6;
+  }
+  .trading-preview-crop > img,
+  .trading-story[data-mode="pro"] .trading-preview-crop > img {
+    width: max(100%, 960px);
+  }
+  .account-story {
+    grid-template-columns: 1fr;
     gap: 32px;
+  }
+  .account-product-preview {
+    aspect-ratio: 1.6;
+  }
+  .account-activity {
+    padding: 0;
+    border-left: 0;
+  }
+  .account-activity-list {
+    flex-direction: row;
+    gap: 8px;
+  }
+  .account-activity-event {
+    flex: 1;
+    padding: 10px;
+    gap: 8px;
+    font-size: 13px;
+  }
+  .account-activity-event > svg {
+    display: none;
+  }
+  .account-activity-market {
+    padding-block: 16px;
+  }
+  .account-event-detail {
+    min-height: 80px;
+  }
+  .account-activity > .text-link {
+    padding-left: 12px;
+  }
+  .landing-agent-layout {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  .landing-agent-copy > p {
+    max-width: 480px;
+    font-size: 16px;
+    margin-top: 24px;
+  }
+  .trust-layers {
+    grid-template-columns: 1fr;
+  }
+  .trust-layers > button {
+    padding: 24px;
+  }
+  .trust-layers > button + button {
+    border-left: 0;
+  }
+  .trust-layers strong {
+    font-size: 18px;
+  }
+  .trust-layers strong + span {
+    font-size: 14px;
+  }
+  .landing-page .faq-layout {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  .landing-page .landing-closing {
+    min-height: 350px;
+    padding-block: 64px;
+  }
+  .landing-page .landing-closing .closing-watermark {
+    width: 360px;
+    right: -150px;
+    top: 10px;
   }
 }
 @media (max-width: 520px) {
-  .product-preview {
-    border-radius: 6px;
+  .landing-page h2 {
+    font-size: 36px;
+    letter-spacing: -1.5px;
   }
-  .trading-modes {
-    grid-template-columns: 1fr;
-    gap: 24px;
+  .landing-hero-heading h1 {
+    font-size: clamp(40px, 11.4vw, 49px);
+    line-height: 1.04;
+    letter-spacing: -2.5px;
   }
-  .account-story-grid h3 {
-    font-size: 22px;
+  .landing-hero-copy .landing-actions {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
   }
-  .agent-story-layout .agent-docs-link {
-    display: flex;
-    width: fit-content;
-    margin-left: 0;
+  .landing-page .product-preview {
+    height: 280px;
   }
-  .brokerage-venue-list,
-  .brokerage-benefits {
-    grid-template-columns: 1fr;
-    gap: 0;
+  .landing-page .product-preview > img {
+    width: 900px;
   }
-  .brokerage-venue {
-    align-items: center;
-    gap: 16px;
-    min-height: 70px;
+  .brokerage-map {
+    padding: 16px;
   }
-  .brokerage-benefits {
-    margin-top: 32px;
-    gap: 24px;
+  .brokerage-map-heading {
+    gap: 10px;
+    font-size: 12px;
+    align-items: flex-start;
   }
-  .brokerage-benefits h3 {
-    font-size: 22px;
+  .brokerage-map-heading > span {
+    gap: 8px;
   }
-  .closing-contact {
-    margin: 16px 0 0;
-    display: flex;
+  .brokerage-model h3 {
+    font-size: 12px;
+  }
+  .brokerage-venue strong {
+    font-size: 14px;
+  }
+  .brokerage-venue img {
+    width: 28px;
+    height: 28px;
+  }
+  .brokerage-principles {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 8px 20px;
+    padding-top: 20px;
+  }
+  .trading-preview > figcaption {
+    padding: 14px;
+    font-size: 12px;
+    gap: 12px;
+  }
+  .trading-preview-crop {
+    height: 310px;
+    aspect-ratio: auto;
+  }
+  .trading-preview-crop > img,
+  .trading-story[data-mode="pro"] .trading-preview-crop > img {
+    width: 800px;
+  }
+  .account-product-preview {
+    height: 295px;
+    aspect-ratio: auto;
+  }
+  .account-product-preview img {
+    width: 580px;
+  }
+  .account-activity-list {
+    flex-direction: column;
+  }
+  .account-activity-event {
+    padding: 12px;
+    font-size: 14px;
+  }
+  .account-activity-event > svg {
+    display: block;
+  }
+  .account-activity-heading h3 {
+    font-size: 20px;
+  }
+  .trust-resource {
+    padding-inline: 12px;
+    font-size: 13px;
+  }
+  .trust-resource .text-link {
+    min-width: 130px;
+  }
+  .landing-page .faq-list summary {
+    font-size: 16px;
+    grid-template-columns: 24px 1fr 20px;
+    gap: 10px;
+  }
+  .landing-page .landing-faq-answer {
+    padding-left: 34px;
+    padding-right: 0;
+  }
+  .landing-page .landing-closing h2 {
+    font-size: 44px;
+    letter-spacing: -2px;
   }
 }
