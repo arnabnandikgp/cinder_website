@@ -57,7 +57,7 @@ test("eight-section story leads with brokerage and follows the trader’s workfl
     await page
       .locator("main > section[id]")
       .evaluateAll((nodes) => nodes.map((node) => node.id)),
-  ).toEqual(["brokerage", "trading", "agents", "account", "thesis", "faq"]);
+  ).toEqual(["brokerage", "trading", "agents", "account", "thesis", "faq", "waitlist"]);
   await expect(page.locator(".hero-intro")).toHaveText(
     "Private positions. Better fee tiers. Your choice of venue. All in one workspace.",
   );

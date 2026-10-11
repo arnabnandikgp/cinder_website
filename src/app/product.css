@@ -899,6 +899,158 @@ html:has(.landing-site) {
   width: 470px;
   opacity: 0.13;
 }
+.landing-site .hero-waitlist-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  margin-top: 12px;
+  color: var(--cobalt-bright);
+  font-size: 14px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.landing-site #waitlist {
+  scroll-margin-top: 32px;
+}
+.landing-site .closing-inner > .waitlist-intro {
+  margin-top: 20px;
+  color: var(--on-cobalt);
+  font-size: 17px;
+  line-height: 1.6;
+  letter-spacing: 0;
+}
+.landing-site .waitlist-form {
+  position: relative;
+  max-width: 640px;
+  margin-top: 28px;
+  color: var(--on-cobalt);
+}
+.landing-site .waitlist-form p {
+  color: var(--on-cobalt);
+}
+.landing-site .waitlist-form > label {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.landing-site .waitlist-input-row {
+  display: flex;
+  gap: 10px;
+}
+.landing-site .waitlist-input-row input {
+  flex: 1;
+  min-width: 0;
+  min-height: 56px;
+  padding: 14px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--landing-control-radius);
+  background: var(--surface-raised);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 16px;
+}
+.landing-site .waitlist-input-row input::placeholder {
+  color: var(--muted);
+}
+.landing-site .waitlist-input-row input[aria-invalid="true"] {
+  box-shadow: 0 0 0 2px var(--on-cobalt);
+}
+.landing-site .waitlist-input-row .button {
+  flex-shrink: 0;
+  min-height: 56px;
+  margin-top: 0;
+  background: var(--on-cobalt);
+  color: var(--cobalt);
+}
+.landing-site .waitlist-input-row :disabled {
+  cursor: not-allowed;
+}
+.landing-site .waitlist-input-row .button:disabled {
+  background: color-mix(in srgb, var(--on-cobalt) 85%, var(--cobalt));
+}
+.landing-site .waitlist-consent,
+.landing-site .waitlist-data-note {
+  margin-top: 12px;
+  font-size: 12px;
+  line-height: 1.65;
+}
+.landing-site .waitlist-data-note {
+  margin-top: 4px;
+}
+.landing-site .waitlist-data-note a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.landing-site .waitlist-feedback {
+  min-height: 28px;
+  margin-top: 12px;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.landing-site .waitlist-feedback p {
+  margin: 0;
+}
+.landing-site .waitlist-feedback [role="alert"] {
+  margin-top: 6px;
+  font-weight: 600;
+}
+.landing-site .waitlist-retry {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+.landing-site .waitlist-form :is(input, button, a):focus-visible,
+.landing-site .landing-closing .text-link:focus-visible {
+  outline: 2px solid var(--on-cobalt);
+  outline-offset: 4px;
+}
+.landing-site .waitlist-form input:focus-visible {
+  outline-color: var(--on-cobalt);
+  box-shadow: 0 0 0 2px var(--cobalt);
+}
+.landing-site .waitlist-trap {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.landing-site .waitlist-challenge {
+  max-width: 100%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .landing-site .waitlist-spinner {
+    animation: waitlist-spin 1s linear infinite;
+  }
+}
+@keyframes waitlist-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (max-width: 600px) {
+  .landing-site .waitlist-input-row {
+    flex-direction: column;
+  }
+  .landing-site .waitlist-input-row .button {
+    width: 100%;
+  }
+  .landing-site .landing-closing .closing-watermark {
+    opacity: 0.07;
+  }
+}
 .landing-site .site-footer {
   padding-top: 56px;
 }

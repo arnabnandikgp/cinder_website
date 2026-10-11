@@ -7,6 +7,7 @@ import { AgentAccessDiagram } from "@/components/agent-access-diagram";
 import { BrokerageDiagram } from "@/components/brokerage-diagram";
 import { AccountStory, TradingStory } from "@/components/landing-panels";
 import { LandingTheme } from "@/components/landing-theme";
+import { WaitlistForm } from "@/components/waitlist-form";
 import { Brand, ExploreButton, Mark } from "@/components/ui";
 import { site } from "@/lib/site";
 
@@ -73,8 +74,8 @@ export default function Home() {
               </h1>
               <div className="landing-hero-copy">
                 <p className="hero-intro">
-                  Private positions. Better fee tiers. Your choice of venue.
-                  All in one workspace.
+                  Private positions. Better fee tiers. Your choice of venue. All
+                  in one workspace.
                 </p>
                 <div className="landing-actions">
                   <ExploreButton />
@@ -87,6 +88,9 @@ export default function Home() {
                     <Play size={15} aria-hidden="true" /> Watch launch video
                   </a>
                 </div>
+                <a className="hero-waitlist-link" href="#waitlist">
+                  Join waitlist <ArrowUpRight size={14} aria-hidden="true" />
+                </a>
               </div>
             </div>
           </div>
@@ -271,16 +275,21 @@ export default function Home() {
 
         <section
           className="closing-section landing-closing"
-          aria-label="Explore Cinder"
+          id="waitlist"
+          aria-labelledby="waitlist-title"
         >
           <div className="container closing-inner">
-            <h2>
-              Bring your trading
+            <h2 id="waitlist-title">
+              Get early access
               <br />
-              together.
+              to Cinder.
             </h2>
+            <p className="waitlist-intro">
+              Be first to hear when Cinder is ready for you.
+            </p>
+            <WaitlistForm />
             <div className="landing-actions">
-              <Link className="button button-light" href="/demo">
+              <Link className="text-link" href="/demo">
                 Explore the demo <ArrowUpRight size={17} aria-hidden="true" />
               </Link>
               <a

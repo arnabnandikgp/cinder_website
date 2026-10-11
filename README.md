@@ -18,7 +18,7 @@ Open http://localhost:3000 or http://localhost:3000/demo. The public demo has a 
 1. Import this repository into Vercel.
 2. Use the **Next.js** framework preset and the repository root as the root directory.
 3. Keep the default build command (`npm run build`) and output settings.
-4. Optionally set `NEXT_PUBLIC_SITE_URL` to override the default production origin, `https://cinder.exchange`, for canonical and social-preview URLs. No other environment variables or services are required.
+4. Optionally set `NEXT_PUBLIC_SITE_URL` to override the default production origin, `https://cinder.exchange`, for canonical and social-preview URLs. To enable the public waitlist, configure Brevo and Turnstile following [waitlist setup](docs/waitlist-setup.md). Without them the form is visibly unavailable; the rest of the site works normally.
 5. Deploy.
 
 The pages and social-preview image are generated at build time. Fonts are self-hosted, and artwork is served through Next.js image optimization. The demo uses TradingView Lightweight Charts with public Pacifica, BULK and Phoenix feeds. Pro compares visible books with live or five-second-average analysis and labelled volume-tier fee assumptions. Wallet connection unlocks 10,000 simulated USDC, stored per wallet in this browser with Reset paper account in Account. Supported simulated orders update the same positions, history, capital and activity ledger. There is no wallet signing, real deposit or live order submission. Advanced execution strategies and agent authorizations remain local previews. Market data connects directly from the visitor's browser; venue origin restrictions, outages and rate limits can affect availability.
@@ -66,7 +66,7 @@ See [order entry and execution decisions](docs/ux/order-entry-and-execution-deci
 
 Calculation and browser tests cover fee parsing, aggregate VWAP cases, partial depth, sell-side signs, stale/skewed books, missing fees, venue-local costs, ties, feed cleanup and saved Activity receipts. The external raw two-hour dataset was not available here; aggregate fixtures are **not** a replay of that recording. No persistent collection service or cost-history database is introduced.
 
-The homepage and social card use the same Solana-native prime broker positioning. The secondary hero action opens the founder-supplied published launch-video post. X and Contact link to https://x.com/CinderExchange; no Telegram or signup destination is fabricated. Product architecture is distinct from the frontend demo's simulated execution.
+The homepage and social card use the same Solana-native prime broker positioning. The secondary hero action opens the founder-supplied published launch-video post. X and Contact link to https://x.com/CinderExchange. The closing waitlist uses a server-side Brevo double-opt-in request and verified Turnstile challenge; no subscriber list or secret is exposed to the browser. Product architecture is distinct from the frontend demo's simulated execution.
 
 ## Verify
 
