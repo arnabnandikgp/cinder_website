@@ -30,10 +30,14 @@ for (const width of [375, 768, 1280]) {
       page,
     }) => {
       await page.setViewportSize({ width, height: 900 });
+      await page.emulateMedia({ colorScheme: "light" });
       await page.goto(route);
       const header = route === "/" ? ".header-inner" : ".d-header";
-      const wordmark = page.locator(`${header} .brand-wordmark`);
-      await expect(wordmark).toHaveAttribute("src", "/brand/wordmark-dark.svg");
+      const wordmark = page.locator(`${header} .brand-wordmark:visible`);
+      await expect(wordmark).toHaveAttribute(
+        "src",
+        `/brand/wordmark-${route === "/" ? "light" : "dark"}.svg`,
+      );
       await expect(wordmark).toHaveAttribute("alt", "Cinder");
       await wordmark.evaluate((element) =>
         (element as HTMLImageElement).decode(),
@@ -55,3 +59,23 @@ for (const width of [375, 768, 1280]) {
     });
   }
 }
+
+test("landing wordmark follows explicit theme selection without changing the approved asset", async ({
+  page,
+}) => {
+  await page.goto("/");
+  for (const theme of ["dark", "light"]) {
+    await page
+      .getByRole("button", {
+        name: `${theme[0].toUpperCase() + theme.slice(1)} theme`,
+        exact: true,
+      })
+      .click();
+    await expect(
+      page.locator(".header-inner .brand-wordmark:visible"),
+    ).toHaveAttribute("src", `/brand/wordmark-${theme}.svg`);
+    await expect(page.locator(".header-inner .brand-mark:visible")).toHaveCount(
+      1,
+    );
+  }
+});

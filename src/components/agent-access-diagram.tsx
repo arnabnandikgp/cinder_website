@@ -132,7 +132,7 @@ export function AgentAccessDiagram() {
         <div className={styles.node}>
           <span className={`${styles.icon} ${styles.permissionGate}`}>
             <span aria-hidden="true">
-              <Mark />
+              <Mark themeAware />
             </span>
             <span
               className={`${styles.verdict} ${styles.allowedVerdict}`}

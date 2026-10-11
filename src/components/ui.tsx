@@ -3,11 +3,17 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import cinderMark from "../../public/brand/mark-dark.png";
 
-export function Brand({ large = false }: { large?: boolean }) {
+export function Brand({
+  large = false,
+  themeAware = false,
+}: {
+  large?: boolean;
+  themeAware?: boolean;
+}) {
   return (
     <Link
       href="/"
-      className={`brand${large ? " brand-large" : ""}`}
+      className={`brand${large ? " brand-large" : ""}${themeAware ? " theme-brand" : ""}`}
       aria-label="Cinder home"
     >
       <Image
@@ -27,6 +33,27 @@ export function Brand({ large = false }: { large?: boolean }) {
         unoptimized
         className="brand-wordmark"
       />
+      {themeAware && (
+        <>
+          <Image
+            src="/brand/mark-light.png"
+            alt=""
+            width={632}
+            height={747}
+            sizes="36px"
+            className="brand-mark brand-light"
+          />
+          <Image
+            src="/brand/wordmark-light.svg"
+            alt="Cinder"
+            width={810}
+            height={214}
+            sizes="105px"
+            unoptimized
+            className="brand-wordmark brand-light"
+          />
+        </>
+      )}
     </Link>
   );
 }
@@ -39,15 +66,34 @@ export function ExploreButton() {
   );
 }
 
-export function Mark({ className = "" }: { className?: string }) {
+export function Mark({
+  className = "",
+  themeAware = false,
+}: {
+  className?: string;
+  themeAware?: boolean;
+}) {
   return (
-    <Image
-      src={cinderMark}
-      alt=""
-      width={634}
-      height={754}
-      className={`cinder-mark ${className}`}
-      aria-hidden="true"
-    />
+    <>
+      <Image
+        src={cinderMark}
+        alt=""
+        width={634}
+        height={754}
+        className={`cinder-mark ${className}${themeAware ? " theme-mark-dark" : ""}`}
+        aria-hidden="true"
+      />
+      {themeAware && (
+        <Image
+          src="/brand/mark-light.png"
+          alt=""
+          width={632}
+          height={747}
+          sizes="60px"
+          className={`cinder-mark theme-mark-light ${className}`}
+          aria-hidden="true"
+        />
+      )}
+    </>
   );
 }

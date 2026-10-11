@@ -1,0 +1,574 @@
+.diagram {
+  --brokerage-route: color-mix(
+    in srgb,
+    var(--cobalt-bright) 65%,
+    var(--showcase-surface)
+  );
+  margin: 0;
+  padding: 20px 36px 28px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--landing-panel-radius);
+  background: var(--showcase-surface);
+}
+.heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 44px;
+  margin-bottom: 24px;
+  font-size: 14px;
+}
+.states {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.states > span {
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--landing-control-radius);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.states > span:first-child[data-active="true"] {
+  background: var(--foreground);
+  border-color: var(--foreground);
+  color: var(--background);
+}
+.states > span:last-child[data-active="true"] {
+  background: var(--cobalt-bright);
+  border-color: var(--cobalt-bright);
+  color: var(--background);
+}
+.legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.legend i {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  background: var(--muted);
+}
+.legend > span:last-child i {
+  background: var(--cobalt-bright);
+}
+.canvas {
+  position: relative;
+  aspect-ratio: 1000 / 432;
+  isolation: isolate;
+}
+.connections {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.vertical {
+  display: none;
+}
+.connections path {
+  vector-effect: non-scaling-stroke;
+  stroke-width: 1.25;
+}
+.directRoute {
+  stroke: var(--muted);
+}
+.organizedRoutes {
+  stroke: var(--brokerage-route);
+}
+.connections .stream {
+  stroke: var(--cobalt-bright);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 0.12 0.88;
+}
+.diagram[data-returning="true"] .stream {
+  visibility: hidden;
+}
+.participants,
+.venues {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+.participants {
+  left: 0;
+  width: 18%;
+}
+.venues {
+  right: 0;
+  width: 18%;
+}
+.canvas h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  letter-spacing: 0;
+  line-height: 24px;
+}
+.participantList,
+.privateAccounts ul {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.participantList,
+.venueList {
+  position: absolute;
+  inset: 0;
+}
+.participant {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  transform: translateY(-50%);
+  background: var(--showcase-surface);
+  font-size: 14px;
+}
+.participant:nth-child(1) {
+  top: 16.6667%;
+}
+.participant:nth-child(2) {
+  top: 33.3333%;
+}
+.participant:nth-child(3) {
+  top: 50%;
+}
+.participant:nth-child(4) {
+  top: 66.6667%;
+}
+.participant:nth-child(5) {
+  top: 83.3333%;
+}
+.participant::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: color-mix(in srgb, var(--muted) 65%, var(--showcase-surface));
+}
+.diagram[data-view="cinder"] .participant::after {
+  background: var(--brokerage-route);
+}
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface-raised);
+  color: var(--muted);
+}
+.avatar > svg {
+  width: 28px;
+  height: 28px;
+}
+.participant[data-kind="agent"] .avatar {
+  border-radius: 14px;
+}
+.diagram[data-view="cinder"] .avatar {
+  color: var(--cobalt-bright);
+  background: var(--cobalt-tint);
+  border-color: var(--diagram-outline);
+}
+.number {
+  color: var(--muted);
+}
+.layer {
+  position: absolute;
+  left: 36%;
+  top: 15.2778%;
+  width: 28%;
+  height: 69.4444%;
+}
+.hub {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 20px;
+  border: 1px solid var(--diagram-outline);
+  border-radius: 20px;
+  background: var(--surface-raised);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.brand > img {
+  width: 32px;
+  height: auto;
+}
+.brand > div {
+  display: flex;
+  flex-direction: column;
+}
+.brand strong {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.045em;
+  line-height: 1.2;
+}
+.brand span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.privateAccounts {
+  margin-top: 20px;
+  padding: 12px;
+  border: 1px solid var(--diagram-outline);
+  border-radius: 12px;
+  background: var(--cobalt-tint);
+}
+.privateAccounts h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--cobalt-bright);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.privateAccounts h3 svg {
+  flex-shrink: 0;
+}
+.privateAccounts ul {
+  margin-top: 8px;
+}
+.accountRecord {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 26px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.privateRecord {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--cobalt-bright);
+}
+.privateRecord i {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.privateRecord svg {
+  margin-left: 4px;
+}
+.venue {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  min-height: 64px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  transform: translateY(-14px);
+  padding-left: 16px;
+  background: var(--showcase-surface);
+}
+.venue:nth-child(1) {
+  top: 25%;
+}
+.venue:nth-child(2) {
+  top: 50%;
+}
+.venue:nth-child(3) {
+  top: 75%;
+}
+.venueName {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.venueName strong {
+  font-size: 16px;
+  font-weight: 500;
+}
+.venueName img {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  padding: 3px;
+  background: var(--venue-logo-surface);
+}
+.volume {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.volume > span {
+  display: flex;
+  gap: 2px;
+}
+.volume i {
+  width: 4px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--cobalt-bright);
+}
+.volume i:nth-child(2),
+.volume i:nth-child(4) {
+  height: 11px;
+}
+.volume i:nth-child(3) {
+  height: 14px;
+}
+.comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin-top: 16px;
+  border-top: 1px solid var(--border-soft);
+}
+.comparison > div {
+  padding: 20px 20px 0 0;
+  color: var(--muted);
+}
+.comparison > div + div {
+  border-left: 1px solid var(--border-soft);
+  padding-left: 24px;
+  padding-right: 0;
+}
+.comparison > div > span {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.comparison strong {
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+}
+.comparison p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.comparison > div[data-active="true"] {
+  color: var(--foreground);
+}
+.comparison > div:last-child[data-active="true"] > :is(span, strong) {
+  color: var(--cobalt-bright);
+}
+.accessibleDescription {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+@media (max-width: 1100px) {
+  .diagram {
+    padding-inline: 24px;
+  }
+  .hub {
+    padding: 12px;
+  }
+  .privateAccounts {
+    padding: 8px;
+    margin-top: 12px;
+  }
+  .privateAccounts h3 {
+    white-space: normal;
+  }
+  .participant {
+    font-size: 13px;
+    gap: 8px;
+  }
+  .venue {
+    padding-left: 8px;
+  }
+  .volume {
+    gap: 4px;
+  }
+}
+@media (max-width: 800px) {
+  .diagram {
+    padding: 16px 20px 20px;
+  }
+  .heading {
+    margin-bottom: 20px;
+    font-size: 13px;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .canvas {
+    aspect-ratio: 360 / 760;
+    max-width: 400px;
+    margin-inline: auto;
+  }
+  .horizontal {
+    display: none;
+  }
+  .vertical {
+    display: block;
+  }
+  .participants,
+  .venues {
+    width: 100%;
+    left: 0;
+    right: 0;
+  }
+  .participants {
+    top: 0;
+    height: 16.3158%;
+    bottom: auto;
+  }
+  .venues {
+    top: 80%;
+    bottom: 0;
+  }
+  .venues > h3 {
+    position: relative;
+    z-index: 1;
+    width: max-content;
+    margin-inline: auto;
+    padding-inline: 8px;
+    background: var(--showcase-surface);
+  }
+  .canvas h3 {
+    text-align: center;
+  }
+  .participant {
+    top: 64.5161% !important;
+    width: 20%;
+    flex-direction: column;
+    gap: 4px;
+    text-align: center;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  .participant:nth-child(1) {
+    left: 0;
+  }
+  .participant:nth-child(2) {
+    left: 20%;
+  }
+  .participant:nth-child(3) {
+    left: 40%;
+  }
+  .participant:nth-child(4) {
+    left: 60%;
+  }
+  .participant:nth-child(5) {
+    left: 80%;
+  }
+  .participant > span:last-child {
+    max-width: 54px;
+  }
+  .participant::after {
+    display: none;
+  }
+  .layer {
+    left: 11.1111%;
+    top: 31.5789%;
+    width: 77.7778%;
+    height: 39.4737%;
+  }
+  .hub {
+    padding: 16px;
+  }
+  .privateAccounts {
+    padding: 12px;
+    margin-top: 16px;
+  }
+  .privateAccounts h3 {
+    text-align: left;
+  }
+  .venue {
+    top: 54% !important;
+    width: 33.3333%;
+    padding: 0;
+    align-items: center;
+    transform: translateY(-50%);
+  }
+  .venue:nth-child(1) {
+    left: 0;
+  }
+  .venue:nth-child(2) {
+    left: 33.3333%;
+  }
+  .venue:nth-child(3) {
+    left: 66.6667%;
+  }
+  .venueName {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .venueName strong {
+    font-size: 14px;
+  }
+  .volume {
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 8px;
+  }
+  .volume > span {
+    align-items: center;
+    height: 14px;
+  }
+  .comparison strong {
+    font-size: 16px;
+  }
+}
+@media (max-width: 480px) {
+  .diagram {
+    padding-inline: 12px;
+  }
+  .hub {
+    padding: 12px;
+  }
+  .brand strong {
+    font-size: 24px;
+  }
+  .brand > img {
+    width: 28px;
+  }
+  .privateAccounts {
+    padding: 8px;
+    margin-top: 12px;
+  }
+  .accountRecord {
+    min-height: 24px;
+  }
+  .comparison p {
+    font-size: 12px;
+  }
+}

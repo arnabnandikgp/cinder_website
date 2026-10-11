@@ -1,17 +1,21 @@
-import { ArrowRight, ArrowUpRight } from "lucide-react";
-import Image from "next/image";
+import { ArrowRight, ArrowUpRight, Play, BookOpen } from "lucide-react";
+import localFont from "next/font/local";
 import Link from "next/link";
-import tradePreview from "../../public/previews/cinder-trade.png";
 import { Header } from "@/components/header";
 import { AgentAccessDiagram } from "@/components/agent-access-diagram";
 import { BrokerageDiagram } from "@/components/brokerage-diagram";
-import {
-  AccountStory,
-  TradingStory,
-  TrustStory,
-} from "@/components/landing-panels";
+import { AccountStory, TradingStory } from "@/components/landing-panels";
+import { LandingTheme } from "@/components/landing-theme";
 import { Brand, ExploreButton, Mark } from "@/components/ui";
 import { site } from "@/lib/site";
+
+const manrope = localFont({
+  src: "../../public/fonts/manrope-latin-variable.woff2",
+  variable: "--font-landing",
+  display: "swap",
+  weight: "400 700",
+  fallback: ["Arial", "sans-serif"],
+});
 
 const faqs = [
   {
@@ -52,45 +56,41 @@ const faqs = [
 
 export default function Home() {
   return (
-    <>
+    <LandingTheme className={manrope.variable}>
       <Header />
       <main id="main" className="landing-page">
         <section className="landing-hero" aria-labelledby="hero-title">
-          <Mark className="landing-hero-mark" />
+          <div className="hero-relief" aria-hidden="true">
+            <span />
+          </div>
           <div className="container">
             <div className="landing-hero-heading">
+              <p className="hero-eyebrow">For traders. For trading agents.</p>
               <h1 id="hero-title">
                 <span className="hero-title-line">A Solana-native</span>{" "}
-                <span className="heading-accent">prime broker</span>{" "}
-                <span className="hero-title-line">for perps.</span>
+                <span className="hero-title-line">
+                  <span className="heading-accent">prime broker</span> for
+                  perps.
+                </span>
               </h1>
               <div className="landing-hero-copy">
                 <p className="hero-intro">
-                  Access Solana perp venues through one account, with private
-                  positions and the fee advantages of pooled trading volume.
+                  Private positions, pooled trading volume and your choice of
+                  venue. All in one workspace.
                 </p>
                 <div className="landing-actions">
                   <ExploreButton />
                   <a
-                    className="text-link"
+                    className="button button-secondary"
                     href={site.launchVideo}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    Watch Cinder in action{" "}
-                    <ArrowUpRight size={16} aria-hidden="true" />
+                    <Play size={15} aria-hidden="true" /> Watch launch video
                   </a>
                 </div>
               </div>
             </div>
-            <figure className="product-preview">
-              <Image
-                src={tradePreview}
-                alt="Cinder’s Standard trading demo, showing the market chart, order book, venue selection and order controls."
-                sizes="(max-width: 800px) 1100px, 1440px"
-                preload
-              />
-            </figure>
           </div>
         </section>
 
@@ -135,35 +135,6 @@ export default function Home() {
         </section>
 
         <section
-          className="section landing-account"
-          id="account"
-          aria-labelledby="account-title"
-        >
-          <div className="container">
-            <div className="landing-section-heading">
-              <h2 id="account-title">
-                One account.
-                <br />
-                <span className="heading-accent">The whole picture.</span>
-              </h2>
-              <p>
-                Keep balances, positions and trading activity together, with a
-                clear view across execution venues.
-              </p>
-            </div>
-            <AccountStory />
-            <div className="landing-actions account-links">
-              <Link className="text-link" href="/demo?view=account">
-                Explore Account <ArrowRight size={16} aria-hidden="true" />
-              </Link>
-              <Link className="text-link" href="/demo?view=activity">
-                Explore Activity <ArrowRight size={16} aria-hidden="true" />
-              </Link>
-            </div>
-          </div>
-        </section>
-
-        <section
           className="section landing-agents"
           id="agents"
           aria-labelledby="agents-title"
@@ -198,23 +169,69 @@ export default function Home() {
         </section>
 
         <section
-          className="section landing-trust"
-          id="trust"
-          aria-labelledby="trust-title"
+          className="section landing-account"
+          id="account"
+          aria-labelledby="account-title"
         >
           <div className="container">
             <div className="landing-section-heading">
-              <h2 id="trust-title">
-                Explore it.
+              <h2 id="account-title">
+                One account.
                 <br />
-                <span className="heading-accent">Inspect it.</span>
+                <span className="heading-accent">The whole picture.</span>
               </h2>
               <p>
-                Confidential account processing. On-chain vault and recovery
-                controls. Public code and documentation.
+                Keep balances, positions and trading activity together, with a
+                clear view across execution venues.
               </p>
             </div>
-            <TrustStory />
+            <AccountStory />
+            <div className="landing-actions account-links">
+              <Link className="text-link" href="/demo?view=account">
+                Explore Account <ArrowRight size={16} aria-hidden="true" />
+              </Link>
+              <Link className="text-link" href="/demo?view=activity">
+                Explore Activity <ArrowRight size={16} aria-hidden="true" />
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <section
+          className="section landing-article"
+          id="thesis"
+          aria-labelledby="thesis-title"
+        >
+          <div className="container">
+            <a
+              className="thesis-card"
+              href={site.article}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <div className="thesis-art" aria-hidden="true">
+                <Mark />
+                <span>CINDER / THE THESIS</span>
+              </div>
+              <div className="thesis-copy">
+                <span className="section-eyebrow">
+                  <BookOpen size={16} aria-hidden="true" /> From Cinder
+                </span>
+                <h2 id="thesis-title">
+                  A better way
+                  <br />
+                  to trade perps.
+                </h2>
+                <p>
+                  Why we’re building a Solana-native prime broker, and what
+                  private positions and pooled volume change for traders.
+                </p>
+                <span className="text-link">
+                  Read the article on X{" "}
+                  <ArrowUpRight size={17} aria-hidden="true" />
+                </span>
+              </div>
+            </a>
           </div>
         </section>
 
@@ -296,7 +313,7 @@ export default function Home() {
         <div className="container">
           <div className="footer-main">
             <div>
-              <Brand large />
+              <Brand large themeAware />
               <p>A Solana-native prime broker for perps.</p>
             </div>
             <nav aria-label="Footer navigation">
@@ -328,6 +345,6 @@ export default function Home() {
           </div>
         </div>
       </footer>
-    </>
+    </LandingTheme>
   );
 }

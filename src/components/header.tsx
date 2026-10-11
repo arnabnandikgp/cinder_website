@@ -5,6 +5,7 @@ import { ArrowUpRight, Menu, X } from "lucide-react";
 import { Brand } from "./ui";
 import Link from "next/link";
 import { site } from "@/lib/site";
+import { ThemeControl } from "./landing-theme";
 
 const links = [
   { label: "Why Cinder", href: "#brokerage" },
@@ -90,7 +91,7 @@ export function Header() {
   return (
     <header className="site-header">
       <div className="container header-inner">
-        <Brand />
+        <Brand themeAware />
         <nav
           ref={desktopNav}
           aria-label="Main navigation"
@@ -115,6 +116,7 @@ export function Header() {
           />
         </nav>
         <div className="header-actions">
+          <ThemeControl />
           <Link className="header-contact" href="/demo">
             Explore demo <ArrowUpRight size={15} aria-hidden="true" />
           </Link>
@@ -154,6 +156,9 @@ export function Header() {
         >
           Docs
         </a>
+        <Link href="/demo" onClick={() => setOpen(false)}>
+          Explore demo <ArrowUpRight size={15} aria-hidden="true" />
+        </Link>
       </nav>
     </header>
   );

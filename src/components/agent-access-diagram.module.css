@@ -6,8 +6,8 @@
   margin: 0;
   padding: 16px 24px;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--background);
+  border-radius: var(--landing-panel-radius, 8px);
+  background: var(--showcase-surface, var(--surface));
 }
 .heading {
   display: flex;
@@ -136,7 +136,7 @@
   opacity: 0;
 }
 .blockedIncoming {
-  stroke: var(--off-white);
+  stroke: var(--foreground);
 }
 .verdict {
   position: absolute;
@@ -155,7 +155,7 @@
   color: var(--cobalt-bright);
 }
 .blockedVerdict {
-  color: var(--off-white);
+  color: var(--foreground);
 }
 .activity {
   border-top: 1px solid var(--border);
