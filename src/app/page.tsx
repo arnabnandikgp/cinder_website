@@ -1,7 +1,8 @@
-import { ArrowRight, ArrowUpRight, Play, BookOpen } from "lucide-react";
+import { ArrowUpRight, Play, BookOpen } from "lucide-react";
 import localFont from "next/font/local";
 import Link from "next/link";
 import { Header } from "@/components/header";
+import { HeroBeams } from "@/components/hero-beams";
 import { AgentAccessDiagram } from "@/components/agent-access-diagram";
 import { BrokerageDiagram } from "@/components/brokerage-diagram";
 import { AccountStory, TradingStory } from "@/components/landing-panels";
@@ -60,9 +61,7 @@ export default function Home() {
       <Header />
       <main id="main" className="landing-page">
         <section className="landing-hero" aria-labelledby="hero-title">
-          <div className="hero-relief" aria-hidden="true">
-            <span />
-          </div>
+          <HeroBeams />
           <div className="container">
             <div className="landing-hero-heading">
               <p className="hero-eyebrow">For traders. For trading agents.</p>
@@ -75,8 +74,8 @@ export default function Home() {
               </h1>
               <div className="landing-hero-copy">
                 <p className="hero-intro">
-                  Private positions, pooled trading volume and your choice of
-                  venue. All in one workspace.
+                  Private positions. Better fee tiers. Your choice of venue.
+                  All in one workspace.
                 </p>
                 <div className="landing-actions">
                   <ExploreButton />
@@ -107,9 +106,9 @@ export default function Home() {
                 <span className="heading-accent">Benefit collectively.</span>
               </h2>
               <p>
-                Your account stays individual. Your trading volume gains scale.
-                Cinder brings traders together at each venue to access fee tiers
-                that are harder to reach alone.
+                Your positions stay private. Your qualifying trading volume
+                combines with other traders’ volume to unlock lower fees at
+                eligible venues.
               </p>
             </div>
             <BrokerageDiagram />
@@ -118,7 +117,7 @@ export default function Home() {
               aria-label="The brokerage advantage"
             >
               <li>Private positions</li>
-              <li>Pooled volume</li>
+              <li>Lower venue fees</li>
               <li>Existing liquidity</li>
             </ul>
           </div>
@@ -151,9 +150,6 @@ export default function Home() {
                 expiry, without granting withdrawal access.
               </p>
               <div className="landing-actions">
-                <Link className="text-link" href="/demo?view=agents">
-                  Explore Agents <ArrowRight size={16} aria-hidden="true" />
-                </Link>
                 <a
                   className="text-link"
                   href={site.docs + "/api/overview"}
@@ -186,14 +182,6 @@ export default function Home() {
               </p>
             </div>
             <AccountStory />
-            <div className="landing-actions account-links">
-              <Link className="text-link" href="/demo?view=account">
-                Explore Account <ArrowRight size={16} aria-hidden="true" />
-              </Link>
-              <Link className="text-link" href="/demo?view=activity">
-                Explore Activity <ArrowRight size={16} aria-hidden="true" />
-              </Link>
-            </div>
           </div>
         </section>
 

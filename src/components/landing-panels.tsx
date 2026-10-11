@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { motion, useMotionValue } from "motion/react";
 import {
   ArrowRight,
@@ -59,15 +58,15 @@ const modes = {
     name: "Standard",
     description:
       "Choose your venue and trade with the chart, order book and controls you know.",
-    href: "/demo",
     context: "Your chosen venue",
+    playbackRate: 1.35,
   },
   pro: {
     name: "Pro",
     description:
       "Compare liquidity and estimated trading costs for your size, across the venues you choose.",
-    href: "/demo?mode=auto",
     context: "Your allowed venues",
+    playbackRate: 1,
   },
 };
 
@@ -91,6 +90,8 @@ function ProductLoop({
   useEffect(() => {
     const element = video.current;
     if (!element) return;
+    element.defaultPlaybackRate = config.playbackRate;
+    element.playbackRate = config.playbackRate;
     let cancelled = false;
     if (
       !active ||
@@ -110,7 +111,16 @@ function ProductLoop({
       cancelled = true;
       element.pause();
     };
-  }, [active, visible, paused, reducedMotion, explicitPlay, blocked, failed]);
+  }, [
+    active,
+    visible,
+    paused,
+    reducedMotion,
+    explicitPlay,
+    blocked,
+    failed,
+    config.playbackRate,
+  ]);
 
   return (
     <div
@@ -148,7 +158,7 @@ function ProductLoop({
       <div className="product-loop-footer">
         <span>
           {failed
-            ? "Video unavailable. You can still explore the demo."
+            ? "Video unavailable."
             : `${config.name} in motion · Recorded product flow`}
         </span>
         {!failed && (
@@ -216,10 +226,6 @@ export function TradingStory() {
             aria-atomic="true"
           >
             <p>{selected.description}</p>
-            <Link className="text-link" href={selected.href}>
-              Explore {selected.name}{" "}
-              <ArrowRight size={16} aria-hidden="true" />
-            </Link>
           </div>
         </div>
       </div>

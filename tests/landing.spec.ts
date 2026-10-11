@@ -59,14 +59,14 @@ test("eight-section story leads with brokerage and follows the trader’s workfl
       .evaluateAll((nodes) => nodes.map((node) => node.id)),
   ).toEqual(["brokerage", "trading", "agents", "account", "thesis", "faq"]);
   await expect(page.locator(".hero-intro")).toHaveText(
-    "Private positions, pooled trading volume and your choice of venue. All in one workspace.",
+    "Private positions. Better fee tiers. Your choice of venue. All in one workspace.",
   );
-  await expect(page.locator("#brokerage")).toContainText(
-    "Your account stays individual.",
+  await expect(page.locator("#brokerage .landing-section-heading > p")).toHaveText(
+    "Your positions stay private. Your qualifying trading volume combines with other traders’ volume to unlock lower fees at eligible venues.",
   );
   await expect(page.locator(".brokerage-principles li")).toHaveText([
     "Private positions",
-    "Pooled volume",
+    "Lower venue fees",
     "Existing liquidity",
   ]);
   await expect(page.locator("#agents")).toContainText(
@@ -117,7 +117,7 @@ test("hero is screenshot-free and keeps demo, video and thesis links", async ({
   await expect(
     page.locator(".landing-hero img, .landing-hero video"),
   ).toHaveCount(0);
-  await expect(page.locator(".hero-relief")).toBeVisible();
+  await expect(page.locator(".hero-beams")).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Watch launch video" }),
   ).toHaveAttribute(
@@ -140,7 +140,7 @@ test("hero is screenshot-free and keeps demo, video and thesis links", async ({
   ).toBeAttached();
 });
 
-test("light-mode depth uses blue section washes, richer panels and a visible hero mark", async ({
+test("light-mode depth uses blue section washes, richer panels and cobalt hero beams", async ({
   page,
 }) => {
   await page.goto("/");
@@ -155,7 +155,6 @@ test("light-mode depth uses blue section washes, richer panels and a visible her
     return {
       neutral: color(".landing-site"),
       hero: color(".landing-hero"),
-      mark: color(".hero-relief > span"),
       trading: color("#trading"),
       agents: color("#agents"),
       panel: color(".account-stage"),
@@ -170,15 +169,15 @@ test("light-mode depth uses blue section washes, richer panels and a visible her
   ]) {
     expect(surface[2] - surface[0]).toBeGreaterThan(15);
   }
-  // The artwork reads more strongly than its backdrop; panels read more
-  // strongly than the broad section wash, without introducing another hue.
-  expect(palette.mark[2] - palette.mark[0]).toBeGreaterThan(
-    palette.hero[2] - palette.hero[0],
-  );
+  // Panels read more strongly than the broad section wash.
   expect(palette.panel[0]).toBeLessThan(palette.trading[0]);
-  await expect(page.locator(".hero-relief")).toHaveAttribute(
+  await expect(page.locator(".hero-beams")).toHaveAttribute(
     "aria-hidden",
     "true",
+  );
+  await expect(page.locator(".hero-beams")).toHaveAttribute(
+    "data-color",
+    /#0051fe/i,
   );
 });
 
@@ -317,7 +316,7 @@ test("brokerage comparison loops, distinguishes its states and pauses offscreen"
   await expect(diagram).toHaveAttribute("data-phase", "4");
 });
 
-test("Standard and Pro switch the actual preview, description and destination together", async ({
+test("Standard and Pro switch the actual preview and description without section demo links", async ({
   page,
 }) => {
   await page.goto("/");
@@ -331,7 +330,7 @@ test("Standard and Pro switch the actual preview, description and destination to
   );
   await expect(
     page.getByRole("link", { name: "Explore Standard", exact: true }),
-  ).toHaveAttribute("href", "/demo");
+  ).toHaveCount(0);
   await modes.getByRole("button", { name: "Pro", exact: true }).focus();
   await page.keyboard.press("Enter");
   await expect(
@@ -346,7 +345,7 @@ test("Standard and Pro switch the actual preview, description and destination to
   );
   await expect(
     page.getByRole("link", { name: "Explore Pro", exact: true }),
-  ).toHaveAttribute("href", "/demo?mode=auto");
+  ).toHaveCount(0);
   const audit = await new AxeBuilder({ page })
     .include("#trading")
     .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
@@ -394,15 +393,12 @@ test("account walkthrough is keyboard accessible and stops after a deliberate ch
   await expect(page.locator(".account-stage")).toContainText(
     "Illustrative view",
   );
-  for (const [name, href] of [
-    ["Explore Account", "/demo?view=account"],
-    ["Explore Activity", "/demo?view=activity"],
-    ["Explore Agents", "/demo?view=agents"],
+  for (const name of [
+    "Explore Account",
+    "Explore Activity",
+    "Explore Agents",
   ]) {
-    await expect(page.getByRole("link", { name, exact: true })).toHaveAttribute(
-      "href",
-      href,
-    );
+    await expect(page.getByRole("link", { name, exact: true })).toHaveCount(0);
   }
   await expect(
     page.getByRole("link", { name: "API reference", exact: true }),
@@ -740,7 +736,7 @@ test("server-rendered landing copy and primary links remain available without Ja
     ).toBeVisible();
     await expect(
       page.getByRole("link", { name: "Explore Standard", exact: true }),
-    ).toHaveAttribute("href", "/demo");
+    ).toHaveCount(0);
     await expect(page.locator(".brokerage-hub")).toHaveCount(1);
     await page.locator("summary").first().click();
     await expect(page.locator("details[open] p")).toBeVisible();
@@ -817,6 +813,9 @@ test("product loops play only while selected and visible and can be paused", asy
   await expect(
     page.getByRole("button", { name: "Pause Standard preview" }),
   ).toBeVisible();
+  expect(await standard.evaluate((e: HTMLVideoElement) => e.playbackRate)).toBe(
+    1.35,
+  );
   await page.getByRole("button", { name: "Pause Standard preview" }).click();
   await expect
     .poll(() => standard.evaluate((e: HTMLVideoElement) => e.paused))
@@ -825,6 +824,9 @@ test("product loops play only while selected and visible and can be paused", asy
   await expect
     .poll(() => standard.evaluate((e: HTMLVideoElement) => e.paused))
     .toBe(false);
+  expect(await standard.evaluate((e: HTMLVideoElement) => e.playbackRate)).toBe(
+    1.35,
+  );
   await page
     .getByRole("group", { name: "Trading mode preview" })
     .getByRole("button", { name: "Pro", exact: true })
@@ -838,6 +840,11 @@ test("product loops play only while selected and visible and can be paused", asy
   await expect
     .poll(() => pro.evaluate((e: HTMLVideoElement) => e.paused))
     .toBe(false);
+  expect(await pro.evaluate((e: HTMLVideoElement) => e.playbackRate)).toBe(1);
+  expect(await pro.evaluate((e: HTMLVideoElement) => e.duration)).toBeCloseTo(
+    19,
+    1,
+  );
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
   await expect
     .poll(() => pro.evaluate((e: HTMLVideoElement) => e.paused))
@@ -952,7 +959,7 @@ test("changing the marketing theme does not retheme the trading terminal", async
   await expect(page.locator("body")).toHaveCSS("font-family", /Arial/);
 });
 
-test("a failed product video retains its poster and a working demo destination", async ({
+test("a failed product video retains its poster and the main demo entry point", async ({
   page,
 }) => {
   await page.route("**/previews/loops/standard.mp4", (route) => route.abort());
@@ -965,7 +972,7 @@ test("a failed product video retains its poster and a working demo destination",
     page.locator('.product-loop[data-mode="standard"] img'),
   ).toHaveAttribute("src", /standard.webp/);
   await expect(
-    page.getByRole("link", { name: "Explore Standard", exact: true }),
+    page.getByRole("link", { name: "Explore the demo", exact: true }).first(),
   ).toHaveAttribute("href", "/demo");
 });
 
