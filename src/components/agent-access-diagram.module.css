@@ -235,9 +235,6 @@
   align-items: center;
   gap: 8px;
 }
-.withdrawal > span:last-child {
-  font-size: 10px;
-}
 @media (hover: hover) {
   .motionControl:hover {
     color: var(--foreground);

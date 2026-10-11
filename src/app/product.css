@@ -273,14 +273,6 @@ html:has(.landing-site) {
   max-width: 1020px;
   margin-inline: auto;
 }
-.landing-site .hero-eyebrow {
-  display: block;
-  margin-bottom: 28px;
-  color: var(--hero-copy);
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-}
 .landing-site .landing-hero h1 {
   font-size: clamp(48px, 6.6vw, 92px);
   line-height: 1.1;
@@ -423,7 +415,7 @@ html:has(.landing-site) {
 }
 .landing-site .product-loop-footer {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   gap: 16px;
   padding: 8px 20px;
@@ -1123,10 +1115,6 @@ html:has(.landing-site) {
   .landing-site .landing-hero {
     min-height: 650px;
     padding-block: 88px 96px;
-  }
-  .landing-site .hero-eyebrow {
-    margin-bottom: 24px;
-    font-size: 12px;
   }
   .landing-site .landing-hero h1 {
     font-size: clamp(42px, 10.8vw, 56px);

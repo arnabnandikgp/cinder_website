@@ -187,7 +187,6 @@ export function AgentAccessDiagram() {
         <span>
           <LockKeyhole size={15} aria-hidden="true" /> No withdrawal authority
         </span>
-        <span>Illustrative flow</span>
       </p>
     </figure>
   );

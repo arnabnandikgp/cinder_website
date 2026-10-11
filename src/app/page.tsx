@@ -64,7 +64,6 @@ export default function Home() {
           <HeroBeams />
           <div className="container">
             <div className="landing-hero-heading">
-              <p className="hero-eyebrow">For traders. For trading agents.</p>
               <h1 id="hero-title">
                 <span className="hero-title-line">A Solana-native</span>{" "}
                 <span className="hero-title-line">

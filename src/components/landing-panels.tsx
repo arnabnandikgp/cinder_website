@@ -156,11 +156,7 @@ function ProductLoop({
         )}
       </div>
       <div className="product-loop-footer">
-        <span>
-          {failed
-            ? "Video unavailable."
-            : `${config.name} in motion · Recorded product flow`}
-        </span>
+        {failed && <span role="status">Video unavailable.</span>}
         {!failed && (
           <button
             type="button"
@@ -433,7 +429,6 @@ export function AccountStory() {
       >
         <figcaption>
           <span>Cinder / Account</span>
-          <span>Illustrative view</span>
         </figcaption>
         <AccountVisual scene={scene} />
       </figure>

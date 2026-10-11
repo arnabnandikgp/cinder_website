@@ -80,6 +80,9 @@ test("eight-section story leads with brokerage and follows the trader’s workfl
   await expect(page.locator("main")).not.toContainText(
     /five-second average|each venue’s midpoint|deployed on Solana devnet|Live market data \/ Simulated/,
   );
+  await expect(page.locator("main")).not.toContainText(
+    /For traders\. For trading agents|Recorded product flow|Illustrative (?:flow|view)/i,
+  );
   await expect(page.locator("#faq details")).toHaveCount(6);
 });
 
@@ -390,8 +393,8 @@ test("account walkthrough is keyboard accessible and stops after a deliberate ch
   await expect(
     controls.locator('[aria-expanded="false"] .account-step-detail').first(),
   ).toHaveCSS("grid-template-rows", "0px");
-  await expect(page.locator(".account-stage")).toContainText(
-    "Illustrative view",
+  await expect(page.locator(".account-stage > figcaption")).toHaveText(
+    "Cinder / Account",
   );
   for (const name of [
     "Explore Account",
