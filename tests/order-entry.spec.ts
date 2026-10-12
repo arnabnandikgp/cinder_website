@@ -75,35 +75,22 @@ for (const width of [375, 768, 1280]) {
     await expect(
       page.getByRole("button", { name: "Connect wallet", exact: true }),
     ).toBeEnabled();
-    // Informational help remains available before a wallet is connected.
+    // Cross is a static label, not a control or an informational popover.
     await expect(page.getByLabel("Order size", { exact: true })).toBeDisabled();
-    const info = page.getByLabel("Cross margin information", { exact: true });
-    const cross = page.locator(".d-margin-info");
-    await info.focus();
-    await page.keyboard.press("Enter");
-    await expect(cross).toHaveAttribute("open", "");
-    await expect(cross.locator("p")).toContainText("no cross-venue offsets");
-    await expect(cross.locator("p")).toContainText(
-      "Native venues do not share collateral",
-    );
-    const bounds = await cross.locator("p").boundingBox();
-    expect(bounds!.x).toBeGreaterThanOrEqual(0);
-    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
-    const target = await info.boundingBox();
-    expect(target!.width).toBeGreaterThanOrEqual(40);
-    expect(target!.height).toBeGreaterThanOrEqual(40);
-    await page.keyboard.press("Escape");
-    await expect(cross).not.toHaveAttribute("open");
-    await expect(info).toBeFocused();
+    await expect(page.locator(".d-margin-context")).toHaveText("Cross");
+    await expect(page.locator(".d-margin-info")).toHaveCount(0);
+    await expect(
+      page.locator(".d-margin-control button, .d-margin-control summary"),
+    ).toHaveCount(0);
 
     const disclosure = page.locator(".d-demo-indicator summary");
     await disclosure.focus();
     await page.keyboard.press("Enter");
     const content = page.locator(".d-demo-info-content");
     await expect(content).toContainText("No live orders or real transfers");
-    await expect(content).toContainText("10,000 simulated USDC");
+    await expect(content).toContainText("5,000 simulated USDC on each");
     await expect(content).toContainText(
-      "Funding and liquidation are not modeled",
+      "Funding charges and liquidation are not modeled",
     );
     await expect(content).toContainText(
       "advanced plans do not execute child orders",
@@ -122,6 +109,12 @@ for (const width of [375, 768, 1280]) {
     for (const mode of ["Standard", "Pro"] as const) {
       await page.getByRole("radio", { name: mode, exact: true }).check();
       await expect(page.locator(".d-margin-context")).toHaveText("Cross");
+      await expect(
+        page.locator(".d-margin-context"),
+      ).toHaveAccessibleDescription(
+        /Only this venue’s cash funds its positions and orders/,
+      );
+      await expect(page.locator(".d-margin-info")).toHaveCount(0);
       await expect(
         page.locator(".d-cross-hint, .d-ticket-privacy, .d-record-foot"),
       ).toHaveCount(0);

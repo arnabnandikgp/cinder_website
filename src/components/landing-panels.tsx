@@ -252,7 +252,7 @@ const stages = [
     id: "overview",
     title: "Know where you stand.",
     description:
-      "Account equity, available margin and withdrawable funds. Different numbers, one clear overview.",
+      "Total portfolio equity, venue balances and available venue margin. Separate balances, one clear overview.",
   },
   {
     id: "positions",
@@ -271,18 +271,18 @@ const stages = [
 const accountMetrics = [
   {
     icon: Wallet,
-    label: "Account equity",
-    description: "The value of your account",
+    label: "Total equity",
+    description: "Portfolio value across venues",
   },
   {
     icon: Layers3,
-    label: "Available margin",
-    description: "Collateral available for new margin",
+    label: "Available venue margin",
+    description: "Free collateral on the selected venue",
   },
   {
     icon: ArrowUpRight,
-    label: "Available to withdraw",
-    description: "Funds eligible for withdrawal",
+    label: "Venue balances",
+    description: "Top up each venue explicitly",
   },
 ];
 
@@ -357,14 +357,14 @@ function AccountVisual({ scene }: { scene: number }) {
         <div className="account-visual-heading">
           <span className="visual-kicker">A connected timeline</span>
           <h3>From funding to fill.</h3>
-          <p>The context behind each action.</p>
+          <p>Top up when needed. Track every order.</p>
         </div>
         <ol className="activity-illustration">
           {[
-            ["Margin funded", "Cinder collateral → execution venue"],
+            ["Venue topped up", "Wallet → selected execution venue"],
             ["Order submitted", "SOL-PERP · Pacifica"],
             ["Fill recorded", "Execution linked to the order"],
-            ["Fees recorded", "Reflected in your account"],
+            ["Fees recorded", "Reflected in that venue’s balance"],
           ].map(([title, description], i) => (
             <li key={title}>
               <span className="activity-check">

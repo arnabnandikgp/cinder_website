@@ -55,30 +55,15 @@
   flex-shrink: 0;
 }
 .d-mode-option.is-selected {
-  background: var(--d-input);
-  border-color: var(--d-control-line);
-  color: var(--off-white);
-}
-.d-mode-option.is-selected .d-mode-copy > span {
-  color: var(--d-muted);
-}
-/* Pro is discoverable at rest; the solid fill + check indicate selection. */
-.d-mode-option[data-mode="auto"] {
-  background: linear-gradient(115deg, var(--cobalt-tint), var(--d-input));
+  background: var(--cobalt);
   border-color: var(--d-blue);
   color: var(--off-white);
 }
-.d-mode-option[data-mode="auto"] :is(.d-mode-icon, .d-mode-copy > span) {
-  color: var(--d-blue);
-}
-.d-mode-option[data-mode="auto"].is-selected {
-  background: var(--cobalt);
-  border-color: var(--cobalt);
-}
-.d-mode-option[data-mode="auto"].is-selected
-  :is(.d-mode-icon, .d-mode-copy > span) {
+.d-mode-option.is-selected .d-mode-copy > span {
   color: var(--off-white);
 }
+/* Cobalt and the check mean active, regardless of mode. Pro's routing icon
+   and caption explain its distinction without suggesting it is selected. */
 .d-mode-selected {
   position: absolute;
   top: 6px;
@@ -97,16 +82,9 @@
   cursor: not-allowed;
 }
 @media (hover: hover) {
-  .d-mode-options:not([disabled]) .d-mode-option:hover {
-    border-color: var(--d-blue);
+  .d-mode-options:not([disabled]) .d-mode-option:not(.is-selected):hover {
+    border-color: var(--d-control-line);
     background: var(--d-raised);
-  }
-  .d-mode-options:not([disabled]) .d-mode-option[data-mode="auto"]:hover {
-    background: var(--cobalt-tint);
-  }
-  .d-mode-options:not([disabled])
-    .d-mode-option[data-mode="auto"].is-selected:hover {
-    background: var(--cobalt);
   }
 }
 @media (prefers-reduced-motion: no-preference) {

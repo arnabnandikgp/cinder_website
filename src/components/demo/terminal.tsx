@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
-  ArrowUpRight,
   ArrowDownLeft,
   Info,
   CandlestickChart,
@@ -21,6 +20,8 @@ import { MarketChart, OrderBook } from "./market-chart";
 import { OrderTicket, initialTicket, type Ticket } from "./order-ticket";
 import { PaperRecords } from "./paper-records";
 import { PaperDialog } from "./paper-dialogs";
+import { VenueFundingDialog } from "./venue-funding-dialog";
+import { selectPaperRoute } from "./paper-routing";
 import { usePaperAccount } from "./use-paper-account";
 import { usePaperMarks } from "./use-paper-marks";
 import {
@@ -30,6 +31,7 @@ import {
   paperValuation,
   placePaperOrder,
   tickPaperAccount,
+  transferPaperFunds,
   type Bracket,
 } from "./paper-account";
 import { ProWorkspace } from "./pro-workspace";
@@ -92,9 +94,13 @@ export function Terminal() {
   const tourTrigger = useRef<HTMLButtonElement>(null);
   const walletTrigger = useRef<HTMLButtonElement>(null);
   const paper = usePaperAccount();
-  const totals = paperTotals(paper.account);
   const canTrade = Boolean(paper.address && paper.account);
   const [paperDialog, setPaperDialog] = useState<string | null>(null);
+  const [fundingDialog, setFundingDialog] = useState<{
+    venue: Venue;
+    kind: "topup" | "return";
+    shortfall: number;
+  } | null>(null);
   const view = pick<View>(
     context("view"),
     ["trade", "account", "activity", "agents"],
@@ -147,9 +153,9 @@ export function Terminal() {
     "comparison",
   );
   const scope = pick<VenueScope>(
-    context("scope"),
+    context(view === "account" ? "accountScope" : "scope"),
     ["all", ...(Object.keys(venues) as Venue[])],
-    mode === "auto" ? "all" : venue,
+    view === "account" || mode === "auto" ? "all" : venue,
   );
   const tab = pick<RecordTab>(
     context("record"),
@@ -211,7 +217,7 @@ export function Terminal() {
   const routeInput: RouteInput = {
     market,
     side: ticket.side === "Sell" ? "Sell" : "Buy",
-    quantity: NaN, // Derived from USDC at the comparison's shared live reference.
+    quantity: NaN, // Derived independently from USDC at each venue's midpoint.
     notional: parseAmount(ticket.size),
     leverage: parseAmount(ticket.leverage),
     slippage: parseAmount(ticket.slippage),
@@ -272,12 +278,25 @@ export function Terminal() {
       connectPaper(address);
       setNotice("");
       setPaperDialog(null);
+      setFundingDialog(null);
       setRoutePreferences(false);
     },
     [connectPaper, setNotice, setPaperDialog, setRoutePreferences],
   );
   const updatePaper = paper.update;
   const feeds = { pacifica, bulk, phoenix };
+  const paperRoute = selectPaperRoute(
+    paper.account,
+    comparison,
+    feeds,
+    Math.max(pacifica.now, bulk.now, phoenix.now),
+    Boolean(ticket.reduceOnly),
+  );
+  const executionVenue =
+    mode === "auto" ? paperRoute.comparison.best?.venue : venue;
+  const venueAvailable = executionVenue
+    ? paperTotals(paper.account, executionVenue).available
+    : 0;
   const manualFeed = venue === "velocity" ? live : feeds[venue];
   const closingQuantity =
     ticket.reduceOnly &&
@@ -487,7 +506,9 @@ export function Terminal() {
       tab={tab}
       onTab={(value) => updateQuery({ record: value })}
       scope={scope}
-      onScope={(value) => updateQuery({ scope: value })}
+      onScope={(value) =>
+        updateQuery({ [view === "account" ? "accountScope" : "scope"]: value })
+      }
       account={paper.account}
       marks={marks}
       {...actions}
@@ -524,15 +545,16 @@ export function Terminal() {
                   execution. No live orders or real transfers.
                 </p>
                 <p>
-                  Each connected wallet starts with 10,000 simulated USDC.
-                  Records are saved per wallet in this browser; reset them in
-                  Account.
+                  Each new wallet starts with 5,000 simulated USDC on each of
+                  Pacifica, BULK and Phoenix, plus a separate 10,000 USDC demo
+                  wallet for top-ups. Records are saved per wallet in this
+                  browser; reset them in Account.
                 </p>
                 <p>
                   Positions net within a venue, never across venues. Limits and
                   TP/SL triggers monitor the selected market while the demo is
-                  open. Funding and liquidation are not modeled; advanced plans
-                  do not execute child orders.
+                  open. Funding charges and liquidation are not modeled;
+                  advanced plans do not execute child orders.
                 </p>
               </div>
             </details>
@@ -576,11 +598,11 @@ export function Terminal() {
           <div className="d-account-actions">
             <button
               className="d-header-balance"
-              title="Estimated paper equity: cash plus unrealised PnL at fresh venue marks. Not your wallet's real USDC."
-              aria-label="View account equity (simulated)"
+              title="Estimated portfolio equity across venues. Not a shared margin balance or your wallet's real USDC. The separate demo wallet is excluded."
+              aria-label="View total equity (simulated)"
               onClick={() => updateQuery({ view: "account" }, true)}
             >
-              <span>Account equity</span>
+              <span>Total equity</span>
               <strong>
                 {valuation.equity === null ? "—" : number(valuation.equity)}{" "}
                 <small>USDC</small>
@@ -589,16 +611,18 @@ export function Terminal() {
             <button
               className="d-button d-header-deposit"
               disabled={!canTrade}
-              onClick={() => setPaperDialog("deposit")}
+              onClick={() =>
+                setFundingDialog({
+                  venue:
+                    executionVenue && executionVenue !== "velocity"
+                      ? executionVenue
+                      : "pacifica",
+                  kind: "topup",
+                  shortfall: 0,
+                })
+              }
             >
-              <ArrowDownLeft size={15} aria-hidden="true" /> Deposit
-            </button>
-            <button
-              className="d-button"
-              disabled={!canTrade}
-              onClick={() => setPaperDialog("withdraw")}
-            >
-              Withdraw <ArrowUpRight size={14} aria-hidden="true" />
+              <ArrowDownLeft size={15} aria-hidden="true" /> Top up
             </button>
             <WalletConnect
               onAccountChange={onWallet}
@@ -629,6 +653,8 @@ export function Terminal() {
                 <ProWorkspace
                   comparison={comparison}
                   analysis={analysis}
+                  funding={paperRoute.funding}
+                  ticketVenue={executionVenue}
                   onAnalysis={(value) => updateQuery({ analysis: value })}
                   chartVenue={chart}
                   leverage={ticket.leverage}
@@ -681,12 +707,19 @@ export function Terminal() {
                 scenario="funded"
                 ticket={ticket}
                 canTrade={canTrade}
-                available={totals.available}
+                available={venueAvailable}
+                routeFunding={paperRoute.funding}
+                cheaperUnfunded={paperRoute.cheapestUnfunded}
+                onTopup={(venue, shortfall = 0) =>
+                  setFundingDialog({ venue, shortfall, kind: "topup" })
+                }
                 paper={paper.account}
                 marks={marks}
                 executionFeed={
-                  mode === "auto" && comparison.best
-                    ? feeds[comparison.best.venue as keyof typeof feeds]
+                  mode === "auto" && paperRoute.comparison.best
+                    ? feeds[
+                        paperRoute.comparison.best.venue as keyof typeof feeds
+                      ]
                     : manualFeed
                 }
                 closingQuantity={closingQuantity}
@@ -739,13 +772,19 @@ export function Terminal() {
                 onAllowed={() => {
                   if (canTrade) setRoutePreferences(true);
                 }}
-                comparison={comparison}
+                comparison={paperRoute.comparison}
                 refreshComparison={() =>
-                  compareLiveRoutes(
-                    routeInput,
-                    { pacifica, bulk, phoenix },
+                  selectPaperRoute(
+                    paper.account,
+                    compareLiveRoutes(
+                      routeInput,
+                      { pacifica, bulk, phoenix },
+                      Date.now(),
+                    ),
+                    feeds,
                     Date.now(),
-                  )
+                    Boolean(ticket.reduceOnly),
+                  ).comparison
                 }
                 onCompare={() => {
                   updateQuery({ panel: "cost" });
@@ -771,8 +810,11 @@ export function Terminal() {
                   paper={paper.account}
                   marks={marks}
                   onReset={() => setPaperDialog("reset")}
-                  onTransfer={(kind) => {
-                    if (canTrade) setPaperDialog(kind);
+                  scope={scope}
+                  onScope={(value) => updateQuery({ accountScope: value })}
+                  onTransfer={(venue, kind = "topup") => {
+                    if (canTrade)
+                      setFundingDialog({ venue, kind, shortfall: 0 });
                   }}
                 />
                 {records}
@@ -842,6 +884,21 @@ export function Terminal() {
           onReset={() => {
             paper.reset();
             setPaperDialog(null);
+            setNotice("");
+          }}
+        />
+      )}
+      {fundingDialog && canTrade && paper.account && (
+        <VenueFundingDialog
+          account={paper.account}
+          initialVenue={fundingDialog.venue}
+          initialKind={fundingDialog.kind}
+          shortfall={fundingDialog.shortfall}
+          onClose={() => setFundingDialog(null)}
+          onTransfer={(venue, amount, kind) => {
+            paper.update((account) =>
+              transferPaperFunds(account, venue, amount, kind),
+            );
             setNotice("");
           }}
         />

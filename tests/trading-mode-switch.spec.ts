@@ -70,9 +70,11 @@ for (const [width, height] of [
     const pro = page.getByRole("radio", { name: "Pro", exact: true });
     const standardTile = standard.locator("..");
     const proTile = pro.locator("..");
-    // Pro has a distinctive at-rest treatment, not just the selected-tab underline.
-    await expect(proTile).not.toHaveCSS("background-image", "none");
-    await expect(standardTile).toHaveCSS("background-image", "none");
+    // Branding must not make inactive Pro look selected. Both modes use the
+    // same cobalt + check treatment only when active, including on hover.
+    await expect(standardTile).toHaveCSS("background-color", "rgb(0, 81, 254)");
+    await expect(proTile).toHaveCSS("background-color", "rgb(18, 18, 18)");
+    await expect(proTile).toHaveCSS("background-image", "none");
     for (const choice of [standard, pro]) {
       const target = (await choice.boundingBox())!;
       const tile = (await choice.locator("..").boundingBox())!;
@@ -92,6 +94,25 @@ for (const [width, height] of [
     for (const choice of [pro, standard]) {
       await choice.check();
       await expect(choice).toBeChecked();
+      const active = choice.locator("..");
+      const inactive = (choice === pro ? standard : pro).locator("..");
+      await expect(active).toHaveCSS("background-color", "rgb(0, 81, 254)");
+      await expect(active).toHaveCSS("border-top-color", "rgb(145, 179, 255)");
+      await expect(active.locator(".d-mode-selected")).toHaveCSS(
+        "opacity",
+        "1",
+      );
+      await expect(inactive.locator(".d-mode-selected")).toHaveCSS(
+        "opacity",
+        "0",
+      );
+      await inactive.hover();
+      await expect(inactive).toHaveCSS("background-color", "rgb(31, 31, 31)");
+      await expect(inactive).toHaveCSS("border-top-color", "rgb(85, 85, 91)");
+      await expect(inactive).toHaveCSS("background-image", "none");
+      await active.hover();
+      await expect(active).toHaveCSS("background-color", "rgb(0, 81, 254)");
+      await expect(active).toHaveCSS("border-top-color", "rgb(145, 179, 255)");
       const audit = await new AxeBuilder({ page })
         .include(".d-mode-switch")
         .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
@@ -107,6 +128,18 @@ for (const [width, height] of [
           () => document.documentElement.scrollWidth <= innerWidth,
         ),
       ).toBe(true);
+    }
+    if (width === 375 || width === 1280) {
+      for (const [mode, choice] of [
+        ["standard", standard],
+        ["pro", pro],
+      ] as const) {
+        await choice.check();
+        await page.mouse.move(0, 0);
+        await page.locator(".d-mode-switch").screenshot({
+          path: `test-results/mode-switch-${mode}-${width}.png`,
+        });
+      }
     }
   });
 }

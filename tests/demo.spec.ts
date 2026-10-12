@@ -446,13 +446,17 @@ test("margin breakdown reconciles with venue-scoped positions and empty accounts
 }) => {
   await page.goto("/demo?view=account&scope=all");
   await connectWallet(page);
-  await expect(page.getByTestId("margin-committed")).toHaveText("0.00 USDC");
+  await expect(page.getByTestId("venue-balance-pacifica")).toContainText(
+    "0.00 USDC",
+  );
   for (const v of ["pacifica", "bulk", "phoenix", "velocity"]) {
     await page.getByLabel("Venue", { exact: true }).selectOption(v);
     await expect(page.getByRole("tabpanel")).toContainText("No positions");
-    await expect(page.getByTestId("margin-committed")).toHaveText("0.00 USDC");
+    await expect(page.getByTestId("venue-balance-pacifica")).toContainText(
+      "0.00 USDC",
+    );
   }
-  await expect(page.locator(".d-capital-grid")).toContainText("10,000.00");
+  await expect(page.locator(".d-portfolio-totals")).toContainText("15,000.00");
 });
 
 test("all five record tabs, keyboard navigation and URL restoration work", async ({
@@ -548,12 +552,20 @@ test("paper funds cannot be withdrawn or transferred on chain", async ({
 }) => {
   await page.goto("/demo?view=account");
   await connectWallet(page);
-  await expect(page.locator(".d-capital-grid")).toContainText("10,000.00");
-  await page.getByRole("button", { name: "Withdraw preview" }).click();
-  await expect(page.getByRole("dialog")).toContainText("not withdrawable");
-  await expect(page.getByRole("dialog").locator("input")).toHaveCount(0);
+  await expect(page.locator(".d-portfolio-totals")).toContainText("15,000.00");
+  await page
+    .getByRole("button", { name: "Return Pacifica funds to demo wallet" })
+    .click();
+  await expect(page.getByRole("dialog")).toContainText(
+    "No signature, network fee or real escrow transaction",
+  );
+  await expect(
+    page.getByRole("dialog").getByLabel("Amount (USDC)"),
+  ).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(page.getByTestId("margin-committed")).toHaveText("0.00 USDC");
+  await expect(page.getByTestId("venue-balance-pacifica")).toContainText(
+    "0.00 USDC",
+  );
 });
 
 test("legacy scenario URLs cannot fabricate paper funds or unlock orders", async ({
@@ -584,9 +596,13 @@ test("funding dialogs keep prototype safeguards and keyboard behavior without ex
   });
   await page.goto("/demo");
   await connectWallet(page);
-  const deposit = page.getByRole("button", { name: "Deposit", exact: true });
+  const deposit = page
+    .locator(".d-account-actions")
+    .getByRole("button", { name: "Top up", exact: true });
   await deposit.click();
-  await expect(page.getByRole("dialog")).toContainText("10,000 simulated USDC");
+  await expect(page.getByRole("dialog")).toContainText(
+    "Move simulated USDC between your demo wallet and one venue",
+  );
   await expect(
     page.getByRole("button", { name: "Close dialog" }),
   ).toBeFocused();

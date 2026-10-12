@@ -57,11 +57,21 @@ test("eight-section story leads with brokerage and follows the trader’s workfl
     await page
       .locator("main > section[id]")
       .evaluateAll((nodes) => nodes.map((node) => node.id)),
-  ).toEqual(["brokerage", "trading", "agents", "account", "thesis", "faq", "waitlist"]);
+  ).toEqual([
+    "brokerage",
+    "trading",
+    "agents",
+    "account",
+    "thesis",
+    "faq",
+    "waitlist",
+  ]);
   await expect(page.locator(".hero-intro")).toHaveText(
     "Private positions. Better fee tiers. Your choice of venue. All in one workspace.",
   );
-  await expect(page.locator("#brokerage .landing-section-heading > p")).toHaveText(
+  await expect(
+    page.locator("#brokerage .landing-section-heading > p"),
+  ).toHaveText(
     "Your positions stay private. Your qualifying trading volume combines with other traders’ volume to unlock lower fees at eligible venues.",
   );
   await expect(page.locator(".brokerage-principles li")).toHaveText([
@@ -383,10 +393,10 @@ test("account walkthrough is keyboard accessible and stops after a deliberate ch
   await controls.getByRole("button", { name: /Connect every move/ }).click();
   await expect(page.locator('[data-scene="activity"]')).toBeVisible();
   await expect(page.locator(".activity-illustration li")).toHaveText([
-    /Margin funded.*execution venue/,
+    /Venue topped up.*execution venue/,
     /Order submitted.*SOL-PERP/,
     /Fill recorded.*linked to the order/,
-    /Fees recorded.*your account/,
+    /Fees recorded.*venue’s balance/,
   ]);
   await expect(controls.locator('[aria-pressed="true"]')).toHaveCount(1);
   await expect(controls.locator('[aria-expanded="true"]')).toHaveCount(1);

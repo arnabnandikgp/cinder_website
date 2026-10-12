@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { ArrowRight, ChevronDown, Info, Route } from "lucide-react";
+import { ArrowRight, ChevronDown, Route } from "lucide-react";
 import { DetailList, Segments, useClientReady } from "./controls";
 import { RouteCard } from "./route-card";
 import { VenueSelect } from "./venue-select";
@@ -22,6 +22,7 @@ import {
 } from "./paper-account";
 import type { FeedState } from "./market-data/feed";
 import type { VenueFee } from "./market-data/fees";
+import type { VenueFunding } from "./paper-routing";
 import { FeeTierInfo } from "./fee-tier-info";
 import {
   OrderTypes,
@@ -94,6 +95,9 @@ export function OrderTicket({
   marks = {},
   executionFeed,
   closingQuantity,
+  routeFunding,
+  cheaperUnfunded,
+  onTopup,
 }: {
   market: Market;
   mode: "manual" | "auto";
@@ -124,6 +128,9 @@ export function OrderTicket({
   marks?: Partial<Record<string, number>>;
   executionFeed?: FeedState;
   closingQuantity?: number;
+  routeFunding?: Partial<Record<Venue, VenueFunding>>;
+  cheaperUnfunded?: Venue | null;
+  onTopup: (venue: Venue, shortfall?: number) => void;
 }) {
   const ready = useClientReady();
   const editable = ready && canTrade;
@@ -247,6 +254,10 @@ export function OrderTicket({
             : `d-strategy-${first}`,
         )
         ?.focus();
+      return;
+    }
+    if (preview?.fundingRequired && executionVenue) {
+      onTopup(executionVenue, preview.shortfall);
       return;
     }
     const review =
@@ -404,33 +415,15 @@ export function OrderTicket({
             <div className="d-margin-control">
               <div
                 className="d-margin-context"
-                aria-label="Margin mode: Cross preview"
+                aria-label="Margin mode: Cross"
                 aria-describedby="d-cross-hint"
               >
                 Cross
               </div>
               <span className="d-sr-only" id="d-cross-hint">
-                Simulated margin model. Positions net within a venue, with no
-                cross-venue offsets. Native venues do not share collateral.
+                Simulated venue-scoped requirements. Only this venue’s cash
+                funds its positions and orders. No cross-venue offsets.
               </span>
-              <details
-                className="d-margin-info"
-                onKeyDown={(event) => {
-                  if (event.key === "Escape") {
-                    event.currentTarget.open = false;
-                    event.currentTarget.querySelector("summary")?.focus();
-                  }
-                }}
-              >
-                <summary aria-label="Cross margin information">
-                  <Info size={14} aria-hidden="true" />
-                </summary>
-                <p>
-                  Cross is a simulated margin preview, not a verified native
-                  venue setting. Positions net within a venue, with no
-                  cross-venue offsets. Native venues do not share collateral.
-                </p>
-              </details>
             </div>
             <div className="d-leverage-control">
               <label htmlFor="d-leverage">Leverage</label>
@@ -478,10 +471,31 @@ export function OrderTicket({
           <div className="d-ticket-account-context">
             <div
               className="d-ticket-available"
-              title="Account-wide cash after position requirements and pending reservations. Not notional buying power or withdrawable funds."
+              title="This execution venue’s cash after its position requirements and pending reservations. Funds on other venues are not included."
             >
-              <span>Available margin</span>
-              <strong>{number(available)} USDC</strong>
+              <span>
+                Available venue margin
+                <small>
+                  {executionVenue ? venues[executionVenue] : "Route pending"}
+                </small>
+              </span>
+              <div>
+                <strong>
+                  {canTrade && executionVenue
+                    ? number(available) + " USDC"
+                    : "—"}
+                </strong>
+                {executionVenue && executionVenue !== "velocity" && (
+                  <button
+                    type="button"
+                    className="d-text-button d-ticket-topup"
+                    disabled={!editable}
+                    onClick={() => onTopup(executionVenue)}
+                  >
+                    Top up
+                  </button>
+                )}
+              </div>
             </div>
             <div className="d-ticket-position" aria-label="Current position">
               <span>
@@ -637,6 +651,9 @@ export function OrderTicket({
               comparison={comparison}
               onCompare={onCompare}
               onAllowed={onAllowed}
+              funding={routeFunding}
+              cheaperUnfunded={cheaperUnfunded}
+              onTopup={onTopup}
             />
           )}
           <div className="d-ticket-summary" aria-label="Paper order summary">
@@ -725,7 +742,9 @@ export function OrderTicket({
           </div>
           {previewStatus && (
             <p className="d-order-readiness" role="status">
-              {previewStatus}
+              {preview?.fundingRequired && executionVenue
+                ? `${venues[executionVenue]} needs another ${number(Math.ceil(preview.shortfall * 100) / 100)} USDC for this order.`
+                : previewStatus}
             </p>
           )}
           <button
@@ -735,11 +754,18 @@ export function OrderTicket({
               scenario === "stale" ||
               (mode === "auto" && !comparison.best)
             }
-            type="submit"
+            type={preview?.fundingRequired ? "button" : "submit"}
+            onClick={
+              preview?.fundingRequired && executionVenue
+                ? () => onTopup(executionVenue, preview.shortfall)
+                : undefined
+            }
           >
-            {advanced
-              ? "Schedule paper plan"
-              : `Place ${ticket.side === "Buy" ? "buy" : "sell"} order`}
+            {preview?.fundingRequired && executionVenue
+              ? `Top up ${venues[executionVenue]}`
+              : advanced
+                ? "Schedule paper plan"
+                : `Place ${ticket.side === "Buy" ? "buy" : "sell"} order`}
             <ArrowRight size={16} aria-hidden="true" />
           </button>
           {errors.route && (
@@ -763,7 +789,10 @@ export function OrderTicket({
               Connect wallet to trade
               <ArrowRight size={16} aria-hidden="true" />
             </button>
-            <p>Start with 10,000 simulated USDC. No signing or real funds.</p>
+            <p>
+              Start with 5,000 simulated USDC per supported venue. No signing or
+              real funds.
+            </p>
           </div>
         )}
       </form>

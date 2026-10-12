@@ -26,8 +26,9 @@ export function PaperDialog({
       >
         <p>
           Clear this wallet’s paper positions, orders and history in this
-          browser and start again with 10,000 simulated USDC. No real wallet
-          assets are affected.
+          browser and start again with 5,000 simulated USDC on each supported
+          venue, plus 10,000 in the separate demo wallet for top-ups. No real
+          wallet assets are affected.
         </p>
         <div className="d-dialog-actions">
           <button className="d-button" onClick={onClose}>
@@ -37,27 +38,6 @@ export function PaperDialog({
             Reset paper account
           </button>
         </div>
-      </Modal>
-    );
-  if (kind === "deposit" || kind === "withdraw")
-    return (
-      <Modal
-        title={
-          kind === "deposit"
-            ? "Demo credit, not a deposit"
-            : "Paper funds, not withdrawable"
-        }
-        eyebrow="PAPER ACCOUNT"
-        onClose={onClose}
-      >
-        <p>
-          Your connected wallet starts with 10,000 simulated USDC. No tokens are
-          held or transferred by this demo. Use Reset paper account in Account
-          for a fresh recording session.
-        </p>
-        <button className="d-button d-wide" onClick={onClose}>
-          Got it
-        </button>
       </Modal>
     );
   if (!o) return null;

@@ -10,6 +10,7 @@ import "./terminal-chrome.css";
 import "./agents.css";
 import "./terminal-tour.css";
 import "./paper-trading.css";
+import "./venue-balances.css";
 
 export const metadata: Metadata = {
   title: "Cinder | Interactive trading demo",

@@ -19,6 +19,7 @@ import {
 import type { LiveMarket } from "./market-data/use-market-feed";
 import type { Interval } from "./market-data/adapters";
 import { formatCostBps } from "./venue-estimates";
+import type { VenueFunding } from "./paper-routing";
 import {
   rankAnalysis,
   type AnalysisFrame,
@@ -259,7 +260,15 @@ export function CostChart({ analysis }: { analysis: AnalysisFrame }) {
   );
 }
 
-export function VenueComparison({ analysis }: { analysis: AnalysisFrame }) {
+export function VenueComparison({
+  analysis,
+  funding,
+  ticketVenue,
+}: {
+  analysis: AnalysisFrame;
+  funding?: Partial<Record<Venue, VenueFunding>>;
+  ticketVenue?: Venue;
+}) {
   const { rows: sorted, count, similar, lowest } = rankAnalysis(analysis);
   return (
     <div
@@ -334,6 +343,20 @@ export function VenueComparison({ analysis }: { analysis: AnalysisFrame }) {
                                 : "Lowest estimate"
                               : "Comparable"))}
                   </span>
+                  {funding?.[venue] && (
+                    <span
+                      className="d-cell-sub d-venue-funding-status"
+                      data-testid={"funding-status-" + venue}
+                    >
+                      {funding[venue]!.shortfall > 0
+                        ? "Top-up required"
+                        : funding[venue]!.ready
+                          ? ticketVenue === venue
+                            ? "Margin ready · Ticket route"
+                            : "Margin ready"
+                          : "Not eligible for this order"}
+                    </span>
+                  )}
                 </td>
                 <td>
                   {costs ? (
@@ -396,6 +419,8 @@ export function ProWorkspace({
   onRetry,
   onNotional,
   canEdit = true,
+  funding,
+  ticketVenue,
 }: {
   comparison: RouteComparison;
   analysis: AnalysisFrame;
@@ -412,6 +437,8 @@ export function ProWorkspace({
   onRetry: () => void;
   onNotional: (value: number) => void;
   canEdit?: boolean;
+  funding?: Partial<Record<Venue, VenueFunding>>;
+  ticketVenue?: Venue;
 }) {
   const { input } = comparison;
   return (
@@ -542,7 +569,11 @@ export function ProWorkspace({
             </div>
             <div className="d-pro-analysis">
               <CostChart analysis={analysis} />
-              <VenueComparison analysis={analysis} />
+              <VenueComparison
+                analysis={analysis}
+                funding={funding}
+                ticketVenue={ticketVenue}
+              />
             </div>
             <details className="d-comparison-method">
               <summary>

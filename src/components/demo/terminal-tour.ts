@@ -97,20 +97,20 @@ export const tourSteps: readonly TourStep[] = [
     label: "ACCOUNT",
     title: "Your account at a glance.",
     description:
-      "Connect a wallet to start with 10,000 simulated USDC. Estimated account equity, available margin and positions stay together, saved for this wallet in this browser.",
+      "Connect a wallet to start with 5,000 simulated USDC per supported venue. Portfolio equity adds your venue balances and unrealised PnL; it is not a shared margin pool. Records stay saved for this wallet in this browser.",
     target: ".d-workspace",
     presentation: "overview",
     navigationTarget: 'button[aria-labelledby="d-nav-account-label"]',
-    context: { view: "account", scope: "all", record: "positions" },
+    context: { view: "account", accountScope: "all", record: "positions" },
   },
   {
     id: "account",
     label: "ACCOUNT",
     title: "Know where your margin is.",
     description:
-      "See position margin requirements grouped by execution venue. These are read-only requirements, not separate venue accounts or editable allocations. Pending order reservations appear in Balance breakdown.",
+      "Each venue card shows its available margin, equity, PnL and position requirements. Top up one venue explicitly, or select its card to filter your records. Funds do not move when you change modes or venues.",
     target: ".d-margin-group",
-    context: { view: "account", scope: "all" },
+    context: { view: "account", accountScope: "all" },
   },
   {
     id: "activity-overview",
@@ -128,7 +128,7 @@ export const tourSteps: readonly TourStep[] = [
     label: "ACTIVITY",
     title: "Follow the whole account.",
     description:
-      "Follow paper collateral allocations, orders, fills and modeled fees across venues. Filter by event type, then open a record for its details. Funding payments are not simulated.",
+      "Follow simulated venue top-ups, returns, orders, fills and modeled fees. Margin reservations and releases stay on their venue, not invented wallet transfers. Funding payments are not simulated.",
     target: ".d-activity",
     context: { view: "activity", filter: "all", actor: "all" },
   },

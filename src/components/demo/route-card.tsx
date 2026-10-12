@@ -4,6 +4,8 @@ import { number, usdcSize, venues } from "./data";
 import { VenueIcon } from "./venue-select";
 import { FeeTierInfo } from "./fee-tier-info";
 import { entryCostBreakdown } from "./venue-estimates";
+import type { VenueFunding } from "./paper-routing";
+import type { Venue } from "./data";
 import {
   money,
   snapshotLabels,
@@ -15,10 +17,16 @@ export function RouteCard({
   comparison,
   onCompare,
   onAllowed,
+  funding,
+  cheaperUnfunded,
+  onTopup,
 }: {
   comparison: RouteComparison;
   onCompare: () => void;
   onAllowed: () => void;
+  funding?: Partial<Record<Venue, VenueFunding>>;
+  cheaperUnfunded?: Venue | null;
+  onTopup?: (venue: Venue, shortfall?: number) => void;
 }) {
   const { best, ranked, savings, explanation } = comparison;
   const appliedFee = comparison.live?.observations.find(
@@ -32,7 +40,13 @@ export function RouteCard({
     >
       <div className="d-route-card-heading">
         <span>
-          <Route size={15} aria-hidden="true" /> Best now · live estimate
+          <Route size={15} aria-hidden="true" />{" "}
+          {best && funding?.[best.venue]?.ready
+            ? "Best funded route"
+            : best && (funding?.[best.venue]?.shortfall ?? 0) > 0
+              ? "Top-up required"
+              : "Best now"}{" "}
+          · live estimate
         </span>
         <span>{ranked.length} comparable</span>
       </div>
@@ -43,15 +57,37 @@ export function RouteCard({
         </strong>
         <span>
           {best
-            ? comparison.live?.tied
-              ? "Similar estimates"
-              : ranked.length === 1
-                ? "Only available estimate"
-                : "Lowest local execution cost"
+            ? funding?.[best.venue] && !funding[best.venue]!.ready
+              ? "Not ready to submit"
+              : funding?.[best.venue]?.ready
+                ? "Lowest-cost eligible venue"
+                : comparison.live?.tied
+                  ? "Similar estimates"
+                  : ranked.length === 1
+                    ? "Only available estimate"
+                    : "Lowest local execution cost"
             : "Check venue status"}
         </span>
       </div>
       {!best && <p>{explanation}</p>}
+      {cheaperUnfunded && funding?.[cheaperUnfunded] && (
+        <div className="d-route-funding-alternative">
+          <span>
+            {venues[cheaperUnfunded]} has a lower cost estimate, but needs a
+            top-up.
+          </span>
+          <button
+            type="button"
+            className="d-text-button"
+            onClick={() =>
+              onTopup?.(cheaperUnfunded, funding[cheaperUnfunded]!.shortfall)
+            }
+          >
+            Top up {venues[cheaperUnfunded]}{" "}
+            <ArrowRight size={13} aria-hidden="true" />
+          </button>
+        </div>
+      )}
       {best && (
         <>
           <div className="d-route-compact-metrics">

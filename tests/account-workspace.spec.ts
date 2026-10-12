@@ -42,7 +42,7 @@ for (const view of ["account", "activity", "agents"]) {
   }
 }
 
-test("read-only meters show only venue shares of position requirements", async ({
+test("venue cards show local position requirements and filter records", async ({
   page,
 }) => {
   await page.goto("/demo");
@@ -54,21 +54,16 @@ test("read-only meters show only venue shares of position requirements", async (
   await expect(page.locator(".d-paper-table")).toContainText("Long");
   await expect(page.locator(".d-feedback-note")).toHaveCount(0);
   await page.getByRole("button", { name: "Account", exact: true }).click();
-  const meter = page.getByRole("meter", {
-    name: "Pacifica share of position margin requirements",
-  });
-  expect(Number(await meter.getAttribute("value"))).toBeGreaterThan(40);
-  expect(await meter.getAttribute("value")).toBe(
-    await meter.getAttribute("max"),
+  await expect(page.getByTestId("venue-balance-pacifica")).toContainText(
+    "40.01 USDC",
   );
-  await expect(
-    page.getByRole("meter", {
-      name: "BULK share of position margin requirements",
-    }),
-  ).toHaveAttribute("value", "0");
-  await expect(page.locator(".d-allocation-note")).toContainText(
-    "not editable allocations or separate venue accounts",
-  );
+  await expect(page.getByTestId("available-bulk")).toHaveText("5,000.00 USDC");
+  await page.getByRole("button", { name: "Show BULK records" }).click();
+  await expect(page.getByRole("tabpanel")).toContainText("No positions");
+  await page.getByRole("button", { name: "Show Pacifica records" }).click();
+  await expect(page.locator(".d-paper-table")).toContainText("Long");
+  await page.getByRole("button", { name: "All venues", exact: true }).click();
+  await expect(page.locator(".d-paper-table")).toContainText("Long");
 });
 
 test("ledger attributes venues and opens funding and transfer details without inventing orders", async ({
@@ -76,14 +71,14 @@ test("ledger attributes venues and opens funding and transfer details without in
 }) => {
   await page.goto("/demo?view=activity");
   await connectWallet(page);
-  await expect(page.locator(".d-events li")).toHaveCount(1);
-  await page.locator(".d-event-inspect").click();
+  await expect(page.locator(".d-events li")).toHaveCount(3);
+  await page.locator(".d-event-inspect").first().click();
   const dialog = page.getByRole("dialog");
-  await expect(dialog).toContainText("Paper account credited");
-  await expect(dialog).toContainText("+10,000.00 USDC");
+  await expect(dialog).toContainText("Demo venue balance credited");
+  await expect(dialog).toContainText("+5,000.00 USDC");
   await expect(dialog).not.toContainText("EX-");
   await page.keyboard.press("Escape");
-  await expect(page.locator(".d-event-inspect")).toBeFocused();
+  await expect(page.locator(".d-event-inspect").first()).toBeFocused();
   await page.getByRole("button", { name: "Funding", exact: true }).click();
   await expect(page.locator(".d-events li")).toHaveCount(0);
 });

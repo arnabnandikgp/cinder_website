@@ -28,7 +28,7 @@ test("wallet gates both tickets and size presets; connecting grants only paper f
   await expect(page.getByLabel("Order size", { exact: true })).toBeDisabled();
   await expect(page.getByLabel("Limit price", { exact: true })).toBeDisabled();
   await expect(
-    page.getByRole("button", { name: "View account equity (simulated)" }),
+    page.getByRole("button", { name: "View total equity (simulated)" }),
   ).toContainText("0.00");
   await page.getByRole("radio", { name: "Pro", exact: true }).check();
   await expect(page.getByLabel("Order size", { exact: true })).toBeDisabled();
@@ -37,15 +37,15 @@ test("wallet gates both tickets and size presets; connecting grants only paper f
   ).toBeDisabled();
   await connect(page);
   await expect(
-    page.getByRole("button", { name: "View account equity (simulated)" }),
-  ).toContainText("10,000.00");
+    page.getByRole("button", { name: "View total equity (simulated)" }),
+  ).toContainText("15,000.00");
   expect(await page.evaluate(() => window.cinderWalletTest.calls)).toEqual([
     "connect",
   ]);
   await page.evaluate(() => window.cinderWalletTest.change());
   await expect(page.getByLabel("Order size", { exact: true })).toBeDisabled();
   await expect(
-    page.getByRole("button", { name: "View account equity (simulated)" }),
+    page.getByRole("button", { name: "View total equity (simulated)" }),
   ).toContainText("0.00");
 });
 test("direct paper fill appears in positions, history, Account and Activity; reconnect restores records", async ({
@@ -69,12 +69,12 @@ test("direct paper fill appears in positions, history, Account and Activity; rec
     before.orders[0].id,
   );
   await page.getByRole("button", { name: "Account", exact: true }).click();
-  await expect(page.getByTestId("margin-committed")).not.toContainText(
-    "0.00 USDC",
+  await expect(page.getByTestId("venue-balance-pacifica")).toContainText(
+    "40.01 USDC",
   );
   await page.getByRole("button", { name: "Activity", exact: true }).click();
   await expect(page.locator(".d-events")).toContainText(
-    "Cinder vault → Cinder account on Pacifica",
+    "Venue margin committed",
   );
   await expect(page.locator(".d-events")).toContainText("Paper order filled");
   await expect(page.locator(".d-events")).toContainText(
@@ -98,12 +98,11 @@ test("successful paper actions stay banner-free while errors remain visible", as
   await connect(page);
   await market(page, "10000");
   await page.getByLabel("Leverage", { exact: true }).selectOption("1");
-  await page.getByRole("button", { name: "Place buy order" }).click();
-  await expect(page.locator(".d-feedback-note")).toContainText(
-    "Not enough available paper collateral",
-  );
-  await expect(page.locator(".d-ticket .d-error")).toContainText(
-    "Not enough available paper collateral",
+  await expect(
+    page.getByRole("button", { name: "Top up Pacifica", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".d-order-readiness")).toContainText(
+    "needs another",
   );
   await page.getByLabel("Order size", { exact: true }).fill("1000");
   await page.getByRole("button", { name: "Place buy order" }).click();
@@ -117,7 +116,7 @@ test("successful paper actions stay banner-free while errors remain visible", as
     .getByRole("dialog")
     .getByRole("button", { name: "Reset paper account", exact: true })
     .click();
-  await expect(page.locator(".d-header-balance")).toContainText("10,000.00");
+  await expect(page.locator(".d-header-balance")).toContainText("15,000.00");
   await expect(page.locator(".d-feedback-note")).toHaveCount(0);
 });
 test("brackets, slippage dialog, resting limits, cancellations and reset", async ({
@@ -139,7 +138,7 @@ test("brackets, slippage dialog, resting limits, cancellations and reset", async
   await page.getByRole("button", { name: "Place buy order" }).click();
   await expect(page.locator(".d-paper-table")).toContainText("Open");
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
-  await expect(page.locator(".d-ticket-available")).toContainText("10,000.00");
+  await expect(page.locator(".d-ticket-available")).toContainText("5,000.00");
   await market(page);
   await page.getByRole("button", { name: /Set maximum slippage/ }).click();
   await page.getByLabel("Custom percentage").fill("100");
@@ -159,14 +158,14 @@ test("brackets, slippage dialog, resting limits, cancellations and reset", async
     .getByRole("button", { name: "Reset paper account", exact: true })
     .click();
   await expect(
-    page.getByRole("button", { name: "View account equity (simulated)" }),
-  ).toContainText("10,000.00");
+    page.getByRole("button", { name: "View total equity (simulated)" }),
+  ).toContainText("15,000.00");
   const a = await page.evaluate(
     (key) => JSON.parse(localStorage.getItem(key)!),
     PAPER_PREFIX + address,
   );
   expect(a.orders).toHaveLength(0);
-  expect(a.events).toHaveLength(1);
+  expect(a.events).toHaveLength(3);
 });
 test("Pro is continuous and compact; submits a freshly recomputed paper route without review", async ({
   page,
@@ -234,7 +233,7 @@ test("wallet changes isolate balances and records, unregister locks orders, dupl
   await page.evaluate(() =>
     window.cinderWalletTest.change("22222222222222222222222222222222"),
   );
-  await expect(page.locator(".d-header-balance")).toContainText("10,000.00");
+  await expect(page.locator(".d-header-balance")).toContainText("15,000.00");
   await expect(page.getByRole("tabpanel")).toContainText("No positions");
   await page.evaluate(() =>
     window.cinderWalletTest.change("11111111111111111111111111111111"),
@@ -262,7 +261,7 @@ test("corrupt paper records are reset safely with a notice, and storage failure 
   await expect(page.locator(".d-feedback-note")).toContainText(
     "Unreadable paper records",
   );
-  await expect(page.locator(".d-header-balance")).toContainText("10,000.00");
+  await expect(page.locator(".d-header-balance")).toContainText("15,000.00");
   await page.evaluate(() => window.cinderWalletTest.change());
   await page.evaluate(() => {
     Storage.prototype.setItem = () => {
@@ -303,7 +302,7 @@ test("corrupt paper records are reset safely with a notice, and storage failure 
   }
   await expect(page.locator(".d-paper-table")).toContainText("$153.00");
   await expect(page.locator(".d-header-balance")).not.toContainText(
-    "10,000.00",
+    "15,000.00",
   );
 });
 for (const width of [375, 768, 1440])

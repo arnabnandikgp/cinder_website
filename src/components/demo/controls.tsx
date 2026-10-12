@@ -112,11 +112,13 @@ export function Modal({
   children,
   onClose,
   eyebrow = "CINDER / DEMO",
+  className = "",
 }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
   eyebrow?: string;
+  className?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const id = useId();
@@ -132,7 +134,7 @@ export function Modal({
   return (
     <dialog
       ref={ref}
-      className="d-dialog"
+      className={"d-dialog " + className}
       aria-labelledby={id}
       onCancel={(event) => {
         event.preventDefault();

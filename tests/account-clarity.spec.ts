@@ -69,18 +69,17 @@ test("portfolio equity and position bars include all markets but exclude pending
   );
   await page.goto("/demo?view=account&scope=all");
   await connectWallet(page);
-  await expect(page.locator(".d-header-balance")).toContainText("10,040.00");
+  await expect(page.locator(".d-header-balance")).toContainText("15,040.00");
   await expect(
     page.getByRole("heading", { name: "Account overview" }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("region", { name: "Capital availability" }),
-  ).toContainText("9,665.72 USDC");
-  await expect(
-    page.getByRole("region", { name: "Capital availability" }),
-  ).toContainText("Unavailable");
-  await expect(page.getByTestId("margin-committed")).toHaveText("234.00 USDC");
-  await expect(page.getByTestId("margin-pacifica")).toContainText("60.00 USDC");
+  await expect(page.getByTestId("available-pacifica")).toHaveText(
+    "4,839.72 USDC",
+  );
+  await expect(page.getByTestId("available-bulk")).toHaveText("4,826.00 USDC");
+  await expect(page.getByTestId("venue-balance-pacifica")).toContainText(
+    "60.00 USDC",
+  );
   const breakdown = page.locator(".d-balance-breakdown summary");
   await breakdown.focus();
   await page.keyboard.press("Enter");
@@ -88,7 +87,7 @@ test("portfolio equity and position bars include all markets but exclude pending
     page.getByRole("region", { name: "Equity valuation" }),
   ).toContainText("40.00 USDC");
   await expect(
-    page.getByRole("region", { name: "Paper margin capacity" }),
+    page.getByRole("region", { name: "Margin across venues" }),
   ).toContainText("100.28 USDC");
   await expect(page.locator(".d-paper-table")).toContainText("BTC-PERP");
   await expect(page.locator(".d-paper-table")).not.toContainText(
@@ -110,7 +109,7 @@ test("portfolio equity and position bars include all markets but exclude pending
   ).toBe(true);
   await page.getByRole("button", { name: "Trade", exact: true }).click();
   await expect(page.locator(".d-ticket-available")).toContainText(
-    "9,665.72 USDC",
+    "4,839.72 USDC",
   );
   await expect(page.getByLabel("Current position")).toContainText(
     "SOL · Pacifica",
@@ -120,7 +119,7 @@ test("portfolio equity and position bars include all markets but exclude pending
   );
   await page.getByRole("radio", { name: "Pro", exact: true }).check();
   await expect(page.locator(".d-ticket-available")).toContainText(
-    "9,665.72 USDC",
+    "4,826.00 USDC",
   );
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
@@ -196,25 +195,25 @@ test("stale portfolio marks make equity unavailable without erasing cash or marg
   );
   await page.goto("/demo?view=account");
   await connectWallet(page);
-  await expect(page.locator(".d-header-balance")).toContainText("10,020.00");
+  await expect(page.locator(".d-header-balance")).toContainText("15,020.00");
   // This mock streams books but sends each mark just once, modeling a stalled
   // valuation channel while the executable order books remain healthy.
   await expect(page.locator(".d-header-balance strong")).toContainText("—", {
     timeout: 12000,
   });
-  await expect(page.locator(".d-equity")).toContainText(
-    "Valuation unavailable",
+  await expect(page.locator(".d-mark-unavailable")).toContainText(
+    "Portfolio valuation incomplete",
   );
   await expect(page.locator(".d-paper-table")).toContainText(
     "Exposure unavailable",
   );
-  await expect(
-    page.getByRole("region", { name: "Capital availability" }),
-  ).toContainText("9,940.00 USDC");
+  await expect(page.getByTestId("available-pacifica")).toContainText(
+    "4,940.00 USDC",
+  );
   await page.locator(".d-balance-breakdown summary").click();
   await expect(
     page.getByRole("region", { name: "Equity valuation" }),
-  ).toContainText("10,000.00 USDC");
+  ).toContainText("15,000.00 USDC");
   await expect(page.locator(".d-mark-unavailable")).toContainText(
     "SOL · Pacifica",
   );
@@ -227,10 +226,10 @@ test("stale portfolio marks make equity unavailable without erasing cash or marg
         data: [{ symbol: "SOL", mark: "154", timestamp: Date.now() }],
       }),
     );
-  await expect(page.locator(".d-header-balance")).toContainText("10,040.00");
-  await expect(
-    page.getByRole("region", { name: "Capital availability" }),
-  ).toContainText("9,940.00 USDC");
+  await expect(page.locator(".d-header-balance")).toContainText("15,040.00");
+  await expect(page.getByTestId("available-pacifica")).toContainText(
+    "4,940.00 USDC",
+  );
 });
 
 for (const width of [375, 768, 1280]) {

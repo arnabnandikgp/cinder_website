@@ -4,6 +4,7 @@ import {
   decodePaperAccount,
   newPaperAccount,
   PAPER_PREFIX,
+  LEGACY_PAPER_PREFIX,
   type PaperAccount,
 } from "./paper-account";
 
@@ -72,11 +73,21 @@ function createPaperStore() {
         warning = "";
       if (!account) {
         try {
-          const raw = window.localStorage.getItem(PAPER_PREFIX + address);
+          const currentRaw = window.localStorage.getItem(
+            PAPER_PREFIX + address,
+          );
+          const legacyRaw =
+            currentRaw === null
+              ? window.localStorage.getItem(LEGACY_PAPER_PREFIX + address)
+              : null;
+          const raw = currentRaw ?? legacyRaw;
           account = decodePaperAccount(raw, address) ?? undefined;
+          if (legacyRaw && account)
+            warning =
+              "Saved demo upgraded to venue balances. Positions, orders and total cash are preserved; remaining cash is split across venues. The original saved account is retained as a backup.";
           if (raw && !account)
             warning =
-              "Unreadable paper records were reset to 10,000 simulated USDC.";
+              "Unreadable paper records were reset to 5,000 simulated USDC per supported venue.";
         } catch {
           warning =
             "Browser storage unavailable. Paper records last only for this visit.";

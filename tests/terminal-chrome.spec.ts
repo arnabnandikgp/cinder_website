@@ -27,11 +27,10 @@ for (const width of [375, 768, 1001, 1280, 1440]) {
     const row = page.locator(".d-account-actions");
     const actions = [
       row.getByRole("button", {
-        name: "View account equity (simulated)",
+        name: "View total equity (simulated)",
         exact: true,
       }),
-      row.getByRole("button", { name: "Deposit", exact: true }),
-      row.getByRole("button", { name: "Withdraw", exact: true }),
+      row.getByRole("button", { name: "Top up", exact: true }),
       row.getByRole("button", { name: "Connect wallet", exact: true }),
     ];
     let end = 0;
@@ -180,7 +179,7 @@ test("wallet connection never signs or sends and unlocks only simulated funds", 
     exact: true,
   });
   await expect(connected).toHaveAttribute("data-connected", "true");
-  await expect(page.locator(".d-header-balance")).toContainText("10,000.00");
+  await expect(page.locator(".d-header-balance")).toContainText("15,000.00");
   expect(await page.evaluate(() => window.cinderWalletTest.calls)).toEqual([
     "connect",
   ]);

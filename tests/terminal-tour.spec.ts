@@ -529,7 +529,9 @@ test.describe("first visit", () => {
           "data-presentation",
           "overview",
         );
-        await expect(page.locator(".d-view-heading")).toBeInViewport();
+        await expect(
+          page.locator(".d-view-heading, .d-portfolio-heading"),
+        ).toBeInViewport();
         expect(
           await page
             .locator(".d-account-content")
@@ -797,10 +799,12 @@ test("replay preserves both order tickets, saved draft, URL and account, with no
     "Paper limit order resting",
   );
   await page.getByRole("button", { name: "Account", exact: true }).click();
-  await expect(page.getByTestId("margin-committed")).toHaveText("0.00 USDC");
+  await expect(page.getByTestId("venue-balance-pacifica")).toContainText(
+    "0.00 USDC",
+  );
   await page.locator(".d-balance-breakdown summary").click();
   await expect(
-    page.getByRole("region", { name: "Paper margin capacity" }),
+    page.getByRole("region", { name: "Margin across venues" }),
   ).toContainText("228.37 USDC");
   expect(writes).toEqual([]);
 });

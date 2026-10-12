@@ -8,8 +8,11 @@ import {
   tickPaperAccount,
   paperValuation,
   previewPaperOrder,
+  transferPaperFunds,
+  paperVenues,
 } from "../src/components/demo/paper-account";
 import type { Draft } from "../src/components/demo/data";
+import { selectPaperRoute } from "../src/components/demo/paper-routing";
 import { MarketFeed } from "../src/components/demo/market-data/feed";
 import {
   compareLiveRoutes,
@@ -44,25 +47,239 @@ const draft = (patch: Partial<Draft> = {}): Draft => ({
   slippage: "0.5",
   ...patch,
 });
+test("fresh credit is venue-scoped, finite and separate from the demo wallet", () => {
+  const a = newPaperAccount(wallet, now);
+  expect(a.walletCash).toBe(10000);
+  expect(paperTotals(a).cash).toBe(15000);
+  for (const venue of paperVenues)
+    expect(paperTotals(a, venue).available).toBe(5000);
+  expect(a.venueCash.velocity).toBe(0);
+  expect(a.events).toHaveLength(3);
+  expect(decodePaperAccount(JSON.stringify(a), wallet)).toEqual(a);
+});
+
+test("orders cannot borrow another venue's cash or the demo wallet", () => {
+  const a = newPaperAccount(wallet, now);
+  a.venueCash.pacifica = 0;
+  expect(paperTotals(a).available).toBe(10000);
+  const preview = previewPaperOrder(a, draft(), feed(), now)!;
+  expect(preview.fundingRequired).toBe(true);
+  expect(preview.shortfall).toBeCloseTo(100.290028, 6);
+  expect(() => placePaperOrder(a, draft(), feed(), now)).toThrow(
+    /venue margin/,
+  );
+  expect(() =>
+    placePaperOrder(a, draft({ type: "Limit" }), feed(), now),
+  ).toThrow(/venue margin/);
+  expect(a.positions).toHaveLength(0);
+  expect(a.walletCash).toBe(10000);
+  expect(
+    previewPaperOrder(a, draft({ reduceOnly: true }), feed(), now)
+      ?.fundingRequired,
+  ).toBe(false);
+});
+
+test("top-ups and returns conserve funds, exclude locked amounts and reject invalid transfers", () => {
+  const initial = newPaperAccount(wallet, now);
+  const topped = transferPaperFunds(
+    initial,
+    "pacifica",
+    250.123456,
+    "topup",
+    now,
+  );
+  expect(initial.venueCash.pacifica).toBe(5000);
+  expect(topped.venueCash.pacifica).toBe(5250.123456);
+  expect(topped.walletCash).toBe(9749.876544);
+  expect(paperTotals(topped).cash + topped.walletCash).toBe(25000);
+  expect(topped.venueCash.bulk).toBe(5000);
+  expect(topped.events[0]).toMatchObject({
+    category: "transfers",
+    venue: "pacifica",
+    title: "Demo venue topped up",
+  });
+  const reserved = placePaperOrder(
+    topped,
+    draft({ type: "Limit", limit: "90" }),
+    feed(),
+    now,
+  ).account;
+  const free = paperTotals(reserved, "pacifica").available;
+  expect(() =>
+    transferPaperFunds(reserved, "pacifica", free + 1, "return", now),
+  ).toThrow(/required by/);
+  const returned = transferPaperFunds(
+    reserved,
+    "pacifica",
+    free,
+    "return",
+    now,
+  );
+  expect(paperTotals(returned, "pacifica").available).toBe(0);
+  expect(paperTotals(returned).cash + returned.walletCash).toBe(25000);
+  expect(returned.orders).toEqual(reserved.orders);
+  expect(() =>
+    transferPaperFunds(returned, "bulk", returned.walletCash + 1, "topup"),
+  ).toThrow(/demo wallet/);
+  expect(() => transferPaperFunds(returned, "velocity", 1, "topup")).toThrow(
+    /preview-only/,
+  );
+  for (const value of [0, -1, NaN, Infinity, 0.0000001, 1e10])
+    expect(() => transferPaperFunds(initial, "bulk", value, "topup")).toThrow();
+});
+
+test("fills, PnL, cancellation and releases affect only the execution venue", () => {
+  const a = newPaperAccount(wallet, now);
+  const filled = placePaperOrder(a, draft(), feed(), now).account;
+  const closed = placePaperOrder(
+    filled,
+    draft({ side: "Sell", reduceOnly: true }),
+    feed(102),
+    now,
+    102,
+    10,
+  ).account;
+  expect(closed.venueCash.pacifica).toBeGreaterThan(5019);
+  expect(closed.venueCash.bulk).toBe(5000);
+  expect(closed.venueCash.phoenix).toBe(5000);
+  expect(closed.walletCash).toBe(10000);
+  const reserved = placePaperOrder(
+    closed,
+    draft({ type: "Limit" }),
+    feed(),
+    now,
+  );
+  const cancelled = cancelPaperOrder(reserved.account, reserved.order.id, now);
+  expect(cancelled.venueCash).toEqual(closed.venueCash);
+  expect(cancelled.events.filter((e) => e.category === "transfers")).toEqual(
+    a.events,
+  );
+});
+
+test("v1 migration preserves records and exact total cash without issuing another credit", () => {
+  const filled = placePaperOrder(
+    newPaperAccount(wallet, now),
+    draft(),
+    feed(),
+    now,
+  ).account;
+  const saved = placePaperOrder(
+    filled,
+    draft({ type: "Limit" }),
+    feed(),
+    now,
+  ).account;
+  const old = { ...saved, version: 1, cash: 9999.719972 } as Record<
+    string,
+    unknown
+  >;
+  delete old.venueCash;
+  delete old.walletCash;
+  const migrated = decodePaperAccount(JSON.stringify(old), wallet)!;
+  expect(migrated.version).toBe(2);
+  expect(paperTotals(migrated).cash).toBe(9999.719972);
+  expect(paperTotals(migrated).available).toBeCloseTo(
+    9999.719972 - paperTotals(saved).margin - paperTotals(saved).reserved,
+    6,
+  );
+  expect(migrated.walletCash).toBe(0);
+  expect(migrated.positions).toEqual(saved.positions);
+  expect(migrated.orders).toEqual(saved.orders);
+  expect(migrated.fills).toEqual(saved.fills);
+  expect(migrated.events).toHaveLength(saved.events.length + 1);
+  expect(migrated.events.slice(1)).toEqual(saved.events);
+  expect(decodePaperAccount(JSON.stringify(migrated), wallet)).toEqual(
+    migrated,
+  );
+  const deficit = decodePaperAccount(
+    JSON.stringify({ ...old, cash: 0 }),
+    wallet,
+  )!;
+  expect(paperTotals(deficit).cash).toBe(0);
+  expect(paperTotals(deficit, "bulk").available).toBeLessThan(0);
+});
+
+test("v2 schema rejects absent venue balances and invalid wallet credit", () => {
+  const a = newPaperAccount(wallet, now);
+  for (const bad of [
+    { ...a, venueCash: { pacifica: 5000 } },
+    { ...a, walletCash: -1 },
+    { ...a, venueCash: { ...a.venueCash, bulk: "5000" } },
+  ])
+    expect(decodePaperAccount(JSON.stringify(bad), wallet)).toBeNull();
+});
+
+test("Pro preserves cost ranking while choosing only funded eligible routes", () => {
+  const feeds: ComparisonFeeds = {
+    pacifica: feed(),
+    bulk: { ...feed(), fee: { ...feed().fee, takerBps: 2.2 } },
+    phoenix: { ...feed(), connection: "offline" },
+  };
+  const comparison = compareLiveRoutes(
+    {
+      market: "SOL",
+      side: "Buy",
+      quantity: NaN,
+      notional: 1000,
+      leverage: 10,
+      slippage: 0.5,
+      allowed: ["pacifica", "bulk"],
+      snapshot: "balanced",
+      account: "funded",
+      availableCollateral: 10000,
+    },
+    feeds,
+    now,
+  );
+  expect(comparison.best?.venue).toBe("bulk");
+  const a = newPaperAccount(wallet, now);
+  a.venueCash.bulk = 0;
+  const route = selectPaperRoute(a, comparison, feeds, now);
+  expect(route.comparison.best?.venue).toBe("pacifica");
+  expect(route.comparison.ranked).toEqual(comparison.ranked);
+  expect(route.comparison.savings).toBeNull();
+  expect(route.cheapestUnfunded).toBe("bulk");
+  expect(route.funding.bulk).toMatchObject({ ready: false, available: 0 });
+  expect(route.funding.bulk!.shortfall).toBeGreaterThan(100);
+  const topped = transferPaperFunds(a, "bulk", 101, "topup", now);
+  expect(
+    selectPaperRoute(topped, comparison, feeds, now).comparison.best?.venue,
+  ).toBe("bulk");
+  a.venueCash.pacifica = 0;
+  const unfunded = selectPaperRoute(a, comparison, feeds, now);
+  expect(unfunded.comparison.best?.venue).toBe("bulk");
+  expect(Object.values(unfunded.funding).every((v) => !v.ready)).toBe(true);
+  expect(selectPaperRoute(null, comparison, feeds, now).comparison).toBe(
+    comparison,
+  );
+  expect(
+    selectPaperRoute(topped, comparison, feeds, now, true).funding.bulk?.ready,
+  ).toBe(false);
+  const stale = selectPaperRoute(topped, comparison, feeds, now + 10000);
+  expect(
+    Object.values(stale.funding).every((v) => !v.ready && !v.shortfall),
+  ).toBe(true);
+});
+
 test("paper credit, fill, netting and margin conservation", () => {
   const a = newPaperAccount(wallet, now);
   expect(paperTotals(a)).toEqual({
-    cash: 10000,
+    cash: 15000,
     margin: 0,
     reserved: 0,
-    available: 10000,
+    available: 15000,
   });
   const r = placePaperOrder(a, draft(), feed(), now);
   expect(a.positions).toHaveLength(0); // Immutable atomic intent.
   expect(r.order.status).toBe("Filled");
   expect(r.account.positions[0].quantity).toBe(10);
   expect(r.account.positions[0].margin).toBeCloseTo(100.01, 6);
-  expect(r.account.cash).toBeCloseTo(9999.719972, 6);
+  expect(r.account.venueCash.pacifica).toBeCloseTo(4999.719972, 6);
   expect(r.account.events.slice(0, 4).map((e) => e.category)).toEqual([
     "fees",
     "trades",
     "orders",
-    "transfers",
+    "orders",
   ]);
   const closed = placePaperOrder(
     r.account,
@@ -73,9 +290,9 @@ test("paper credit, fill, netting and margin conservation", () => {
     10,
   ).account;
   expect(closed.positions).toHaveLength(0);
-  expect(closed.cash).toBeCloseTo(9999.24, 6);
-  expect(paperTotals(closed).available).toBe(closed.cash);
-  expect(closed.events[0].title).toBe("Paper margin returned");
+  expect(closed.venueCash.pacifica).toBeCloseTo(4999.24, 6);
+  expect(paperTotals(closed).available).toBe(paperTotals(closed).cash);
+  expect(closed.events[0].title).toBe("Venue margin released");
 });
 
 test("router sizing, preview, paper fill and persisted local-cost receipt reconcile for buys and sells", () => {
@@ -137,7 +354,7 @@ test("router sizing, preview, paper fill and persisted local-cost receipt reconc
     });
     // Ledger cash is settled to six decimals before the final margin total.
     expect(preview.availableAfter).toBeCloseTo(
-      paperTotals(result.account).available,
+      paperTotals(result.account, selected.venue).available,
       5,
     );
     expect(decodePaperAccount(JSON.stringify(result.account), wallet)).toEqual(
@@ -184,7 +401,7 @@ test("fees, depth, freshness, slippage, margin and reduce-only are enforced", ()
   const a = newPaperAccount(wallet, now);
   expect(() =>
     placePaperOrder(a, draft({ size: "200000" }), feed(), now),
-  ).toThrow(/collateral/);
+  ).toThrow(/venue margin/);
   expect(() =>
     placePaperOrder(a, draft(), { ...feed(), bookAt: now - 10000 }, now),
   ).toThrow(/Stale/);
@@ -212,13 +429,13 @@ test("closing releases committed margin to cover fees even with no spare cash", 
     id: "P-O-reserved",
     draft: draft({ type: "Limit", limit: "90" }),
     quantity: 1,
-    reserve: paperTotals(a).available,
+    reserve: paperTotals(a, "pacifica").available,
     status: "Open",
     createdAt: new Date(now).toISOString(),
     updatedAt: new Date(now).toISOString(),
     bracket: {},
   });
-  expect(paperTotals(a).available).toBeCloseTo(0, 6);
+  expect(paperTotals(a, "pacifica").available).toBeCloseTo(0, 6);
   const closed = placePaperOrder(
     a,
     draft({ side: "Sell", reduceOnly: true }),
@@ -228,7 +445,7 @@ test("closing releases committed margin to cover fees even with no spare cash", 
     10,
   ).account;
   expect(closed.positions).toHaveLength(0);
-  expect(paperTotals(closed).available).toBeGreaterThan(99);
+  expect(paperTotals(closed, "pacifica").available).toBeGreaterThan(99);
 });
 test("resting limits reserve funds, cancel releases them, matching books fill them", () => {
   const a = newPaperAccount(wallet, now);
@@ -242,7 +459,7 @@ test("resting limits reserve funds, cancel releases them, matching books fill th
   expect(r.account.fills).toHaveLength(0);
   expect(paperTotals(r.account).reserved).toBeGreaterThan(99);
   const cancelled = cancelPaperOrder(r.account, r.order.id, now);
-  expect(paperTotals(cancelled).available).toBe(10000);
+  expect(paperTotals(cancelled).available).toBe(15000);
   expect(cancelled.orders[0].status).toBe("Cancelled");
   const filled = tickPaperAccount(
     r.account,
@@ -350,8 +567,8 @@ test("equity values every position, but unrealised PnL never expands paper spend
   ];
   expect(
     paperValuation(a, { "pacifica-SOL": 102, "bulk-BTC": 79000 }),
-  ).toMatchObject({ equity: 10030, unrealized: 30, missing: [] });
-  expect(paperTotals(a).available).toBe(9820);
+  ).toMatchObject({ equity: 15030, unrealized: 30, missing: [] });
+  expect(paperTotals(a).available).toBe(14820);
   for (const invalid of [undefined, 0, NaN, Infinity]) {
     const result = paperValuation(a, {
       "pacifica-SOL": 102,
@@ -363,8 +580,8 @@ test("equity values every position, but unrealised PnL never expands paper spend
   }
   expect(
     paperValuation(a, { "pacifica-SOL": 90, "bulk-BTC": 81000 }).equity,
-  ).toBe(9890);
-  expect(paperValuation(newPaperAccount(wallet, now), {}).equity).toBe(10000);
+  ).toBe(14890);
+  expect(paperValuation(newPaperAccount(wallet, now), {}).equity).toBe(15000);
 });
 
 test("inline fill impact matches the ledger for increases, reductions, reversals and other venues", () => {
@@ -384,7 +601,10 @@ test("inline fill impact matches the ledger for increases, reductions, reversals
     const after = placePaperOrder(a, intent, feed(), now).account;
     expect(preview.reservation).toBe(false);
     expect(preview.reason).toBeNull();
-    expect(preview.availableAfter).toBeCloseTo(paperTotals(after).available, 5);
+    expect(preview.availableAfter).toBeCloseTo(
+      paperTotals(after, intent.venue).available,
+      5,
+    );
     const delta = paperTotals(after).margin - paperTotals(a).margin;
     expect(preview.margin).toBeCloseTo(Math.max(0, delta), 5);
     expect(preview.released).toBeCloseTo(Math.max(0, -delta), 5);
@@ -412,7 +632,10 @@ test("resting reservation is not a prematurely released position requirement", (
   const after = placePaperOrder(a, intent, feed(), now).account;
   expect(preview.reservation).toBe(true);
   expect(preview.released).toBe(0);
-  expect(preview.availableAfter).toBeCloseTo(paperTotals(after).available, 5);
+  expect(preview.availableAfter).toBeCloseTo(
+    paperTotals(after, intent.venue).available,
+    5,
+  );
   expect(paperTotals(after).margin).toBe(paperTotals(a).margin);
   expect(paperTotals(after).reserved).toBeCloseTo(
     preview.margin + preview.fees,
@@ -420,7 +643,7 @@ test("resting reservation is not a prematurely released position requirement", (
   );
   expect(
     previewPaperOrder(a, draft({ size: "1000000" }), feed(), now)?.reason,
-  ).toContain("Not enough available margin");
+  ).toContain("Not enough available venue margin");
   expect(
     previewPaperOrder(a, draft(), { ...feed(), bookAt: now - 10000 }, now),
   ).toBeNull();

@@ -221,8 +221,8 @@ export function WalletConnect({
         >
           <p className="d-wallet-note">
             Connection only. No signatures or real transactions. Unlock a paper
-            account with 10,000 simulated USDC, saved for this wallet in this
-            browser.
+            account with 5,000 simulated USDC per supported venue, saved for
+            this wallet in this browser.
           </p>
           {connected ? (
             <div className="d-wallet-session">

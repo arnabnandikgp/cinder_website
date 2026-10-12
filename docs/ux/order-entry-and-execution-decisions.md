@@ -187,7 +187,7 @@ For future routed strategies, choose explicitly between one venue for the whole 
 
 ### Pro presentation
 
-Standard and Pro are discoverable button-style choices rather than matching underline tabs. Standard stays neutral; Pro has a cobalt-accented resting state, routing icon and a solid cobalt selected state. Short captions explain “Choose venue” versus “Compare venues”. Native radio semantics, visible focus and a selected checkmark keep the choice unambiguous. This is a workspace choice, not a paid upgrade, execution authorization or new account mode; switching still preserves the separate drafts.
+Standard and Pro are discoverable button-style choices rather than matching underline tabs. Both use the same solid cobalt fill, bright border and checkmark when selected; the inactive option remains neutral, including on hover. Pro's routing icon and the short captions explain “Choose venue” versus “Compare venues” without making inactive Pro look selected. Native radio semantics and visible keyboard focus retain accessible switching. This is a workspace choice, not a paid upgrade, execution authorization or new account mode; switching still preserves the separate drafts.
 
 Standard and Pro reuse one instrument header: actual coin artwork, USDC pair and requested leverage. Pro keeps this header when switching between Execution cost and Price chart; the price chart's source remains independently selectable without repeating the market picker.
 

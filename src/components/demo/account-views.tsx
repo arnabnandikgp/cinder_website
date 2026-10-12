@@ -24,11 +24,14 @@ import {
   type CancelState,
   type Draft,
   type Scenario,
+  type Venue,
+  type VenueScope,
 } from "./data";
 import { VenueIcon } from "./venue-select";
 import {
   paperTotals,
   paperValuation,
+  paperVenues,
   type PaperAccount,
 } from "./paper-account";
 import { paperTime } from "./paper-records";
@@ -38,213 +41,251 @@ export function AccountOverview({
   paper,
   marks,
   onReset,
+  scope,
+  onScope,
 }: {
-  onTransfer: (kind: "deposit" | "withdraw") => void;
+  onTransfer: (venue: Venue, kind?: "topup" | "return") => void;
   paper: PaperAccount | null;
   marks: Partial<Record<string, number>>;
   onReset?: () => void;
+  scope: VenueScope;
+  onScope: (venue: VenueScope) => void;
 }) {
-  const empty = !paper;
   const totals = paperTotals(paper);
   const valuation = paperValuation(paper, marks);
-  const requirements = Object.keys(venues).map((v) => ({
-    venue: v as keyof typeof venues,
-    positions: paper?.positions.filter((p) => p.venue === v).length ?? 0,
-    margin:
-      paper?.positions
-        .filter((p) => p.venue === v)
-        .reduce((sum, p) => sum + p.margin, 0) ?? 0,
-  }));
   const amount = (value: number | null) =>
-    value === null ? "—" : `${number(value)} USDC`;
+    value === null || !paper ? "—" : number(value) + " USDC";
+  const pnl = (value: number | null) =>
+    value === null || !paper
+      ? "—"
+      : (value > 0 ? "+" : "") + number(value) + " USDC";
+  const displayedVenues = (Object.keys(venues) as Venue[]).filter(
+    (v) =>
+      paperVenues.includes(v) ||
+      (paper?.venueCash[v] ?? 0) !== 0 ||
+      paper?.positions.some((p) => p.venue === v),
+  );
   return (
     <div className="d-account-overview">
-      <div className="d-view-heading d-account-heading">
+      <div className="d-portfolio-heading">
         <div>
           <h1>Account overview</h1>
-          <p>One Cinder account. Execution across venues.</p>
+          <p>Venue balances. One portfolio view.</p>
+          <span className="d-private-label">
+            <LockKeyhole size={13} aria-hidden="true" /> Simulated account ·
+            Saved in this browser
+          </span>
         </div>
-        <span className="d-private-label">
-          <LockKeyhole size={14} aria-hidden="true" /> Paper account · This
-          browser
-        </span>
-      </div>
-      <div className="d-account-capital">
-        <div className="d-capital-grid">
-          <section className="d-equity" aria-label="Account equity">
-            <span className="d-overline">ACCOUNT EQUITY</span>
-            <div>
-              {valuation.equity === null ? "—" : number(valuation.equity)}{" "}
-              <span>USDC</span>
-            </div>
-            <p>
-              {valuation.missing.length
-                ? `Valuation unavailable · Waiting for ${valuation.missing.length} fresh position mark${valuation.missing.length === 1 ? "" : "s"}.`
-                : "Estimated at live venue marks · Cash plus unrealised PnL"}
-            </p>
-            <div className="d-capital-actions">
-              <button
-                className="d-button d-primary"
-                disabled={empty}
-                onClick={() => onTransfer("deposit")}
-              >
-                <ArrowDownLeft size={15} aria-hidden="true" />
-                Deposit preview
-              </button>
-              <button
-                className="d-button"
-                disabled={empty}
-                onClick={() => onTransfer("withdraw")}
-              >
-                <ArrowUpRight size={15} aria-hidden="true" />
-                Withdraw preview
-              </button>
-              {onReset && (
-                <button
-                  className="d-text-button"
-                  disabled={empty}
-                  onClick={onReset}
-                >
-                  Reset paper account
-                </button>
-              )}
-            </div>
-          </section>
-          <section
-            className="d-capital-availability"
-            aria-label="Capital availability"
-          >
-            <h2>Capital availability</h2>
-            <dl className="d-detail-list">
-              <div>
-                <dt>Available margin</dt>
-                <dd>{amount(totals.available)}</dd>
-              </div>
-              <div>
-                <dt>Available to withdraw</dt>
-                <dd className="d-withdraw-unavailable">
-                  Unavailable <small>Simulated funds only</small>
-                </dd>
-              </div>
-            </dl>
-            <p>
-              Available margin is account-wide cash after requirements and
-              reservations, not leveraged buying power or guaranteed venue
-              capacity.
-            </p>
-          </section>
-        </div>
-        <details className="d-balance-breakdown">
-          <summary>
-            Balance breakdown <ChevronRight size={16} aria-hidden="true" />
-          </summary>
-          <div className="d-balance-breakdown-grid">
-            <section aria-label="Equity valuation">
-              <h2>Equity valuation</h2>
-              <DetailList
-                rows={[
-                  ["Cash balance", amount(totals.cash)],
-                  ["Unrealised PnL", amount(valuation.unrealized)],
-                  ["Estimated account equity", amount(valuation.equity)],
-                ]}
-              />
-              <p>
-                Cash already includes realised PnL and booked modeled fees.
-                Funding payments are not simulated.
-              </p>
-              {valuation.missing.length > 0 && (
-                <p className="d-mark-unavailable" role="status">
-                  Fresh mark missing:{" "}
-                  {valuation.missing
-                    .map((p) => `${p.market} · ${venues[p.venue]}`)
-                    .join(", ")}
-                  . No entry-price fallback is used.
-                </p>
-              )}
-            </section>
-            <section aria-label="Paper margin capacity">
-              <h2>Paper margin capacity</h2>
-              <DetailList
-                rows={[
-                  ["Cash balance", amount(totals.cash)],
-                  ["Position margin requirements", amount(totals.margin)],
-                  ["Pending reservations", amount(totals.reserved)],
-                  ["Available margin", amount(totals.available)],
-                ]}
-              />
-              <p>
-                Available margin = cash minus position requirements and pending
-                reservations. Reservations include estimated fees. Unrealised
-                gains are not spendable in this paper model.
-              </p>
-            </section>
-          </div>
-        </details>
-        <section
-          className="d-capital-detail d-margin-group"
-          aria-labelledby="d-margin-title"
+        <div
+          className="d-portfolio-totals"
+          aria-label="Portfolio across all venues"
         >
-          <div className="d-allocation-heading">
-            <div>
-              <h2 id="d-margin-title">Position margin requirements</h2>
-              <p>
-                Margin requirements for your positions, grouped by execution
-                venue.
-              </p>
-            </div>
-            <strong data-testid="margin-committed">
-              {number(totals.margin)} USDC
+          <section aria-label="Total equity">
+            <span>
+              Total equity <small>Across all venues</small>
+            </span>
+            <strong data-testid="portfolio-equity">
+              {amount(valuation.equity)}
             </strong>
-          </div>
-          <div className="d-allocation-labels" aria-hidden="true">
-            <span>Venue / positions</span>
-            <span>Position requirements · USDC</span>
-          </div>
-          <dl
-            className="d-margin-breakdown"
-            aria-label="Position margin requirements by venue"
-          >
-            {requirements.map(({ venue, positions, margin }) => (
-              <div key={venue} data-testid={`margin-${venue}`}>
-                <dt>
-                  <VenueIcon venue={venue} size={24} />
-                  <div>
-                    <strong>{venues[venue]}</strong>
-                    <span>
-                      {positions
-                        ? `${positions} open position${positions === 1 ? "" : "s"}`
-                        : "No open positions"}
-                    </span>
-                  </div>
-                </dt>
-                <dd>
-                  <meter
-                    min={0}
-                    max={totals.margin || 1}
-                    value={margin}
-                    aria-label={`${venues[venue]} share of position margin requirements`}
-                    aria-valuetext={`${number(margin)} of ${number(totals.margin)} USDC position requirements`}
-                  />
-                  <span>{number(margin)} USDC</span>
-                </dd>
-              </div>
-            ))}
-          </dl>
-          <p className="d-allocation-note">
-            Read-only requirements, not editable allocations or separate venue
-            accounts. Pending order reservations are shown in Balance breakdown,
-            not in these bars.
-          </p>
-        </section>
+          </section>
+          <section aria-label="Unrealised PnL">
+            <span>
+              Unrealised PnL <small>Across all venues</small>
+            </span>
+            <strong
+              className={
+                valuation.unrealized !== null && valuation.unrealized < 0
+                  ? "d-down"
+                  : "d-up"
+              }
+            >
+              {pnl(valuation.unrealized)}
+            </strong>
+          </section>
+        </div>
       </div>
-      <div className="d-account-context">
-        <Wallet size={18} aria-hidden="true" />
-        <p>
-          Saved per wallet in this browser. Paper requirements are not native
-          venue risk calculations. Funding, liquidation and cross-venue margin
-          offsets are not simulated.
+      {valuation.missing.length > 0 && (
+        <p className="d-mark-unavailable" role="status">
+          Portfolio valuation incomplete · Waiting for fresh marks:{" "}
+          {valuation.missing
+            .map((p) => `${p.market} · ${venues[p.venue]}`)
+            .join(", ")}
+          . Venue cash remains available below.
         </p>
+      )}
+      <section
+        className="d-venue-balances d-margin-group"
+        aria-labelledby="d-venue-balances-title"
+      >
+        <div className="d-venue-balances-heading">
+          <div>
+            <h2 id="d-venue-balances-title">Your venue balances</h2>
+            <p>
+              Margin stays with its venue. Select a card to filter the records
+              below.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="d-button"
+            aria-pressed={scope === "all"}
+            onClick={() => onScope("all")}
+          >
+            All venues
+          </button>
+        </div>
+        <div className="d-venue-balance-grid">
+          {displayedVenues.map((venue) => {
+            const capital = paperTotals(paper, venue);
+            const value = paperValuation(paper, marks, venue);
+            const positions =
+              paper?.positions.filter((p) => p.venue === venue).length ?? 0;
+            return (
+              <article
+                key={venue}
+                className={
+                  "d-venue-balance-card" +
+                  (scope === venue ? " is-selected" : "")
+                }
+                data-testid={"venue-balance-" + venue}
+              >
+                <button
+                  type="button"
+                  className="d-venue-balance-select"
+                  aria-label={"Show " + venues[venue] + " records"}
+                  aria-pressed={scope === venue}
+                  onClick={() => onScope(venue)}
+                >
+                  <span className="d-venue-balance-name">
+                    <VenueIcon venue={venue} size={26} />
+                    <strong>{venues[venue]}</strong>
+                    <span>{scope === venue ? "Selected" : "View records"}</span>
+                  </span>
+                  <span className="d-venue-balance-available">
+                    <span>Available venue margin</span>
+                    <strong data-testid={"available-" + venue}>
+                      {amount(capital.available)}
+                    </strong>
+                  </span>
+                  <span className="d-venue-balance-stat">
+                    <span>Venue equity</span>
+                    <strong>{amount(value.equity)}</strong>
+                  </span>
+                  <span className="d-venue-balance-stat">
+                    <span>Unrealised PnL</span>
+                    <strong
+                      className={
+                        value.unrealized !== null && value.unrealized < 0
+                          ? "d-down"
+                          : "d-up"
+                      }
+                    >
+                      {pnl(value.unrealized)}
+                    </strong>
+                  </span>
+                  <span className="d-venue-balance-stat">
+                    <span>Open positions</span>
+                    <strong>{positions}</strong>
+                  </span>
+                  <span className="d-venue-balance-stat">
+                    <span>Position requirements</span>
+                    <strong>{amount(capital.margin)}</strong>
+                  </span>
+                  <span className="d-venue-balance-stat">
+                    <span>Pending reservations</span>
+                    <strong>{amount(capital.reserved)}</strong>
+                  </span>
+                </button>
+                <div className="d-venue-balance-actions">
+                  <button
+                    type="button"
+                    className="d-button d-primary"
+                    disabled={!paper || !paperVenues.includes(venue)}
+                    aria-label={"Top up " + venues[venue]}
+                    onClick={() => onTransfer(venue)}
+                  >
+                    <ArrowDownLeft size={14} aria-hidden="true" /> Top up
+                  </button>
+                  <button
+                    type="button"
+                    className="d-text-button"
+                    disabled={!paper || capital.available <= 0}
+                    aria-label={
+                      "Return " + venues[venue] + " funds to demo wallet"
+                    }
+                    onClick={() => onTransfer(venue, "return")}
+                  >
+                    Return funds <ArrowUpRight size={13} aria-hidden="true" />
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+      <details className="d-balance-breakdown">
+        <summary>
+          Balance breakdown <ChevronRight size={16} aria-hidden="true" />
+        </summary>
+        <div className="d-balance-breakdown-grid">
+          <section aria-label="Equity valuation">
+            <h2>Portfolio valuation</h2>
+            <DetailList
+              rows={[
+                ["Cash across venues", amount(totals.cash)],
+                ["Unrealised PnL", amount(valuation.unrealized)],
+                ["Total equity", amount(valuation.equity)],
+              ]}
+            />
+            <p>
+              Cash includes realised PnL and booked fees. Unrealised PnL uses
+              fresh marks from each position’s venue. Missing marks are not
+              treated as zero.
+            </p>
+          </section>
+          <section aria-label="Margin across venues">
+            <h2>Margin by requirement</h2>
+            <DetailList
+              rows={[
+                ["Cash across venues", amount(totals.cash)],
+                ["Position margin requirements", amount(totals.margin)],
+                ["Pending reservations", amount(totals.reserved)],
+                [
+                  "Available margin · Sum across venues",
+                  amount(totals.available),
+                ],
+              ]}
+            />
+            <p>
+              This sum is not a shared trading balance. Each order uses its
+              execution venue’s available margin. Unrealised gains are not
+              spendable in this demo.
+            </p>
+          </section>
+        </div>
+      </details>
+      <div className="d-portfolio-footer">
+        <span>
+          <Wallet size={16} aria-hidden="true" /> Demo wallet:{" "}
+          {amount(paper?.walletCash ?? 0)}{" "}
+          <small>Separate from portfolio equity</small>
+        </span>
+        {onReset && (
+          <button
+            type="button"
+            className="d-text-button"
+            disabled={!paper}
+            onClick={onReset}
+          >
+            Reset paper account
+          </button>
+        )}
       </div>
+      <p className="d-account-context">
+        Simulated balances and execution only. No real deposits, withdrawals or
+        escrow transactions. Venue separation does not establish liquidation or
+        loss isolation.
+      </p>
     </div>
   );
 }

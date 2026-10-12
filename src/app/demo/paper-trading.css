@@ -103,9 +103,7 @@
   color: var(--off-white);
   margin-top: 8px;
 }
-.demo
-  :is(.d-demo-indicator, .d-balance-breakdown, .d-margin-info)
-  summary:focus-visible {
+.demo :is(.d-demo-indicator, .d-balance-breakdown) summary:focus-visible {
   outline: 2px solid var(--d-blue);
   outline-offset: 4px;
   border-radius: var(--d-radius);
@@ -227,41 +225,6 @@
 }
 .d-margin-control .d-margin-context {
   min-height: 40px;
-}
-.d-margin-info summary {
-  position: absolute;
-  right: 0;
-  top: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  cursor: pointer;
-  list-style: none;
-  color: var(--d-muted);
-}
-.d-margin-info summary:hover {
-  color: var(--off-white);
-}
-.d-margin-info summary::-webkit-details-marker {
-  display: none;
-}
-.d-margin-info p {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  z-index: 40;
-  width: min(300px, calc(100vw - 64px));
-  margin: 0;
-  padding: 12px;
-  border: 1px solid var(--d-line);
-  border-radius: var(--d-radius);
-  background: var(--d-panel);
-  color: var(--off-white);
-  font-size: 12px;
-  font-weight: 400;
-  line-height: 1.6;
 }
 .d-order-readiness {
   margin: 0;

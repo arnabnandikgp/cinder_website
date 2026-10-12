@@ -121,7 +121,7 @@ export function PaperRecords({
             }
           >
             {!account
-              ? "Start with 10,000 simulated USDC. No signing or real orders."
+              ? "Start with 5,000 simulated USDC per supported venue. No signing or real orders."
               : tab === "funding"
                 ? "Funding payments are not simulated. Live rates remain visible in the market header."
                 : "Your trades will appear here. Try All venues to see the whole account."}
