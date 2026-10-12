@@ -54,7 +54,7 @@ for (const [width, height] of [
     await page.setViewportSize({ width, height });
     await page.goto("/demo?view=agents");
     await expect(
-      page.getByRole("heading", { name: "Your agents. Your control." }),
+      page.getByRole("heading", { name: "Agents", exact: true }),
     ).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Agents", exact: true }),
@@ -62,6 +62,12 @@ for (const [width, height] of [
     await expect(page.getByTestId("agent-detail")).toContainText(
       "92 of 100 remaining",
     );
+    await expect(
+      page.getByRole("searchbox", { name: "Search agents" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("region", { name: "Per-order limits" }),
+    ).toContainText("200 lots");
     await expect(
       page.getByRole("button", { name: /Revoke agent/ }),
     ).toHaveCount(0);
@@ -273,6 +279,8 @@ test("switching from a scrolled Agents page opens Activity at its filters", asyn
   await expect(
     page.getByRole("button", { name: "Connect wallet", exact: true }),
   ).toBeEnabled();
+  await page.getByText("Revoking agent access", { exact: true }).click();
+  await page.getByText("Agent public key", { exact: true }).click();
   await page.locator(".d-account-content").evaluate((node) => {
     node.scrollTop = node.scrollHeight;
   });
@@ -284,6 +292,124 @@ test("switching from a scrolled Agents page opens Activity at its filters", asyn
   expect(
     await page.locator(".d-account-content").evaluate((node) => node.scrollTop),
   ).toBe(0);
+});
+
+test("agent search and status filters compose without silently changing the selection", async ({
+  page,
+}) => {
+  await page.goto("/demo?view=agents&agent=sol-execution");
+  const directory = page.getByRole("region", { name: "Agent directory" });
+  const search = directory.getByRole("searchbox", { name: "Search agents" });
+  const filters = directory.getByRole("group", { name: "Agent status filter" });
+  const detail = page.getByTestId("agent-detail");
+  await search.fill("  sOL  ");
+  await expect(directory.locator(".d-agent-row")).toHaveCount(1);
+  await expect(
+    directory.getByRole("button", { name: "Inspect SOL execution" }),
+  ).toBeVisible();
+  await expect(directory.locator(".d-agent-result-count")).toHaveText(
+    "1 of 2 agents",
+  );
+  await filters.getByRole("button", { name: /^Expired/ }).click();
+  await expect(
+    directory.getByRole("heading", { name: "No matching agents" }),
+  ).toBeVisible();
+  await expect(
+    detail.getByRole("heading", { name: "SOL execution", exact: true }),
+  ).toBeVisible();
+  await expect(detail.locator(".d-agent-filter-notice")).toContainText(
+    "Selected agent is hidden",
+  );
+  await expect(page).toHaveURL(/agent=sol-execution/);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await directory
+    .getByRole("button", { name: "Clear filters", exact: true })
+    .click();
+  await expect(search).toBeFocused();
+  await expect(search).toHaveValue("");
+  await expect(filters.getByRole("button", { name: /^All/ })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(directory.locator(".d-agent-row")).toHaveCount(2);
+  await expect(detail.locator(".d-agent-filter-notice")).toHaveCount(0);
+
+  await filters.getByRole("button", { name: /^Expired/ }).click();
+  await directory.getByRole("button", { name: "Inspect BTC hedger" }).click();
+  await expect(page).toHaveURL(/agent=btc-hedger/);
+  await expect(
+    detail.getByRole("heading", { name: "BTC hedger", exact: true }),
+  ).toBeVisible();
+  await expect(detail.locator(".d-agent-filter-notice")).toHaveCount(0);
+  await filters.getByRole("button", { name: /^Authorized/ }).click();
+  await detail.getByRole("button", { name: "Clear filters" }).click();
+  await expect(
+    directory.getByRole("button", { name: "Inspect BTC hedger" }),
+  ).toHaveAttribute("aria-pressed", "true");
+});
+
+test("agent search finds markets and public keys, clears by keyboard, and does not persist key queries", async ({
+  page,
+}) => {
+  await page.goto("/demo?view=agents");
+  const search = page.getByRole("searchbox", { name: "Search agents" });
+  await search.fill("btc hedger");
+  await expect(page.locator(".d-agent-row")).toHaveCount(1);
+  await expect(
+    page.getByRole("button", { name: "Inspect BTC hedger" }),
+  ).toBeVisible();
+  await search.fill(sampleAgents[0].publicKey.slice(0, 12));
+  await expect(page.locator(".d-agent-row")).toHaveCount(1);
+  await expect(
+    page.getByRole("button", { name: "Inspect SOL execution" }),
+  ).toBeVisible();
+  expect(page.url()).not.toContain(sampleAgents[0].publicKey.slice(0, 12));
+  await search.press("Escape");
+  await expect(search).toBeFocused();
+  await expect(search).toHaveValue("");
+  await expect(page.locator(".d-agent-row")).toHaveCount(2);
+  await search.fill("SOL-PERP");
+  await page.getByRole("button", { name: "Clear agent search" }).click();
+  await expect(search).toBeFocused();
+  await expect(page.locator(".d-agent-row")).toHaveCount(2);
+});
+
+test("mobile agent selection brings compact details into view and supports returning to search", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 900 });
+  await page.goto("/demo?view=agents");
+  await page.getByRole("button", { name: "Inspect BTC hedger" }).click();
+  const heading = page
+    .getByTestId("agent-detail")
+    .getByRole("heading", { name: "BTC hedger", exact: true });
+  await expect(heading).toBeFocused();
+  await expect(heading).toBeInViewport();
+  await expect(page).toHaveURL(/agent=btc-hedger/);
+  await expect(
+    page.getByRole("button", { name: "Back to directory" }),
+  ).toBeInViewport();
+  await page.getByRole("button", { name: "Back to directory" }).click();
+  await expect(
+    page.getByRole("searchbox", { name: "Search agents" }),
+  ).toBeFocused();
+  await expect(
+    page.getByRole("searchbox", { name: "Search agents" }),
+  ).toBeInViewport();
+  await page.getByRole("searchbox", { name: "Search agents" }).fill("sol");
+  await expect(
+    page.getByTestId("agent-detail").locator(".d-agent-filter-notice"),
+  ).toBeVisible();
+  await page
+    .getByTestId("agent-detail")
+    .getByRole("button", { name: "Clear filters" })
+    .click();
+  await expect(
+    page.getByRole("searchbox", { name: "Search agents" }),
+  ).toBeFocused();
+  await expect(
+    page.getByRole("searchbox", { name: "Search agents" }),
+  ).toBeInViewport();
 });
 
 test("empty and stale accounts retain truthful agent states", async ({
