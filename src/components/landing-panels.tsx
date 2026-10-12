@@ -247,6 +247,8 @@ export function TradingStory() {
   );
 }
 
+const ACCOUNT_STEP_DURATION_MS = 5000;
+
 const stages = [
   {
     id: "overview",
@@ -398,7 +400,8 @@ export function AccountStory() {
     let previous: number | undefined;
     const advance = (now: number) => {
       if (previous !== undefined) {
-        const next = progress.get() + (now - previous) / 7000;
+        const next =
+          progress.get() + (now - previous) / ACCOUNT_STEP_DURATION_MS;
         if (next >= 1) {
           progress.set(next % 1);
           setScene((value) => (value + 1) % stages.length);

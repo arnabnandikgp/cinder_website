@@ -1049,23 +1049,36 @@ test("guided product footage keeps its full camera aperture on every screen size
   }
 });
 
-test("the account sequence advances in view and pauses out of view", async ({
+test("the account sequence fills each rail in five seconds and pauses out of view", async ({
   page,
 }) => {
+  await page.clock.install();
   await page.goto("/");
   await page.locator("#account").scrollIntoViewIfNeeded();
-  await expect(page.locator(".account-story")).toHaveAttribute(
-    "data-advancing",
-    "true",
+  const story = page.locator(".account-story");
+  const activeRail = story.locator(
+    '[aria-pressed="true"] .account-step-rail > span',
   );
-  await expect(page.locator('[data-scene="positions"]')).toBeVisible({
-    timeout: 9000,
-  });
+  const fill = () =>
+    activeRail.evaluate(
+      (rail) => new DOMMatrixReadOnly(getComputedStyle(rail).transform).m22,
+    );
+  await expect(story).toHaveAttribute("data-advancing", "true");
+  await page.clock.runFor(2500);
+  expect(await fill()).toBeCloseTo(0.5, 1);
+  await expect(page.locator('[data-scene="overview"]')).toBeVisible();
+  await page.clock.runFor(2700);
+  await expect(page.locator('[data-scene="positions"]')).toBeVisible();
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
-  await expect(page.locator(".account-story")).toHaveAttribute(
-    "data-advancing",
-    "false",
-  );
+  await expect(story).toHaveAttribute("data-advancing", "false");
+  const pausedFill = await fill();
+  await page.clock.runFor(8000);
+  expect(await fill()).toBe(pausedFill);
+  await expect(page.locator('[data-scene="positions"]')).toBeAttached();
+  await page.locator("#account").scrollIntoViewIfNeeded();
+  await expect(story).toHaveAttribute("data-advancing", "true");
+  await page.clock.runFor(5000);
+  await expect(page.locator('[data-scene="activity"]')).toBeVisible();
 });
 
 test("theme still works when browser storage is unavailable", async ({
