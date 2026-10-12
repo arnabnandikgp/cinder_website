@@ -21,11 +21,11 @@ const RESULT_HOLD = 2200;
 const RETURN_DURATION = 1400;
 const CYCLE_DURATION = FORWARD_DURATION + RESULT_HOLD + RETURN_DURATION;
 const participants = [
-  { id: "trader-1", kind: "trader", label: "Trader", number: "01" },
-  { id: "agent-1", kind: "agent", label: "Agent", number: "01" },
-  { id: "trader-2", kind: "trader", label: "Trader", number: "02" },
-  { id: "agent-2", kind: "agent", label: "Agent", number: "02" },
-  { id: "trader-3", kind: "trader", label: "Trader", number: "03" },
+  { id: "trader-1", kind: "trader", label: "Trader" },
+  { id: "agent-1", kind: "agent", label: "Agent" },
+  { id: "trader-2", kind: "trader", label: "Trader" },
+  { id: "agent-2", kind: "agent", label: "Agent" },
+  { id: "trader-3", kind: "trader", label: "Trader" },
 ];
 const venues = [
   { id: "pacifica", name: "Pacifica" },
@@ -374,10 +374,6 @@ export function BrokerageDiagram() {
                   ) : (
                     <Bot size={28} strokeWidth={1.5} aria-hidden="true" />
                   )}
-                </span>
-                <span>
-                  {participant.label}{" "}
-                  <span className={styles.number}>{participant.number}</span>
                 </span>
               </li>
             ))}

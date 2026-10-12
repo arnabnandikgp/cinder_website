@@ -1,5 +1,6 @@
 import { ArrowUpRight, Play, BookOpen } from "lucide-react";
 import localFont from "next/font/local";
+import Image from "next/image";
 import Link from "next/link";
 import { Header } from "@/components/header";
 import { HeroBeams } from "@/components/hero-beams";
@@ -66,11 +67,10 @@ export default function Home() {
           <div className="container">
             <div className="landing-hero-heading">
               <h1 id="hero-title">
-                <span className="hero-title-line">A Solana-native</span>{" "}
                 <span className="hero-title-line">
-                  <span className="heading-accent">prime broker</span> for
-                  perps.
-                </span>
+                  Your <span className="heading-accent">prime broker</span>
+                </span>{" "}
+                <span className="hero-title-line">for perps.</span>
               </h1>
               <div className="landing-hero-copy">
                 <p className="hero-intro">
@@ -94,6 +94,17 @@ export default function Home() {
               </div>
             </div>
           </div>
+          <span className="hero-solana">
+            Built on{" "}
+            <Image
+              src="/brand/assets/sol.svg"
+              alt=""
+              width={28}
+              height={28}
+              unoptimized
+            />{" "}
+            <span>Solana</span>
+          </span>
         </section>
 
         <section
@@ -214,8 +225,8 @@ export default function Home() {
                   to trade perps.
                 </h2>
                 <p>
-                  Why we’re building a Solana-native prime broker, and what
-                  private positions and pooled volume change for traders.
+                  Why we’re building a prime broker for perps, and what private
+                  positions and pooled volume change for traders.
                 </p>
                 <span className="text-link">
                   Read the article on X{" "}
@@ -310,7 +321,7 @@ export default function Home() {
           <div className="footer-main">
             <div>
               <Brand large themeAware />
-              <p>A Solana-native prime broker for perps.</p>
+              <p>{site.tagline}</p>
             </div>
             <nav aria-label="Footer navigation">
               <a href={site.x} target="_blank" rel="noopener noreferrer">
@@ -337,7 +348,20 @@ export default function Home() {
             >
               Read the thesis <ArrowUpRight size={14} aria-hidden="true" />
             </a>
-            <a href="#">Back to top ↑</a>
+            <div className="footer-tools">
+              <a href="#">Back to top ↑</a>
+              <span className="footer-solana">
+                Built on{" "}
+                <Image
+                  src="/brand/assets/sol.svg"
+                  alt=""
+                  width={24}
+                  height={24}
+                  unoptimized
+                />{" "}
+                <span>Solana</span>
+              </span>
+            </div>
           </div>
         </div>
       </footer>

@@ -282,6 +282,13 @@ html:has(.landing-site) {
 .landing-site .hero-title-line {
   display: block;
 }
+.landing-site .hero-solana {
+  position: absolute;
+  inset-inline-end: max(var(--gutter), calc((100% - var(--page-width)) / 2));
+  bottom: 32px;
+  font-size: 15px;
+  font-weight: 500;
+}
 .landing-site .hero-intro {
   max-width: 530px;
   margin: 28px auto 0;
@@ -1074,6 +1081,33 @@ html:has(.landing-site) {
   align-items: center;
   gap: 8px;
 }
+.landing-site .footer-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+}
+.landing-site .footer-tools > a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+.landing-site :is(.hero-solana, .footer-solana) {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.landing-site :is(.hero-solana, .footer-solana) > span {
+  color: var(--foreground);
+  font-weight: 600;
+}
+@media (hover: hover) {
+  .landing-site .footer-tools > a:hover {
+    color: var(--cobalt-bright);
+  }
+}
 
 @keyframes account-scene-enter {
   from {
@@ -1394,6 +1428,9 @@ html:has(.landing-site) {
     flex-wrap: wrap;
     padding-block: 16px;
     font-size: 11px;
+  }
+  .landing-site .footer-tools {
+    flex-basis: 100%;
   }
 }
 @media (max-width: 360px) {

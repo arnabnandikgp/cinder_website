@@ -13,7 +13,7 @@ for (const width of [375, 768, 1280]) {
     });
     await page.goto("/");
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-      "A Solana-native prime broker for perps.",
+      "Your prime broker for perps.",
     );
     await page.evaluate(() => document.fonts.ready);
     for (const image of await page.locator("main img:visible").all()) {
@@ -46,6 +46,88 @@ for (const width of [375, 768, 1280]) {
         .screenshot({ path: `test-results/review/${id}-${width}.png` });
     }
   });
+}
+
+for (const colorScheme of ["light", "dark"] as const) {
+  for (const width of [375, 768, 1280]) {
+    test(`brokerage headline and Solana hero and footer attribution fit ${colorScheme} at ${width}px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });
+      await page.goto("/");
+      await expect(page.locator(".landing-hero-heading")).not.toContainText(
+        "Solana",
+      );
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+        "Your prime broker for perps.",
+      );
+      const hero = page.locator(".landing-hero");
+      const heroBadge = hero.locator(".hero-solana");
+      await expect(heroBadge).toHaveText("Built on Solana");
+      await expect(heroBadge.locator("img")).toHaveAttribute(
+        "src",
+        "/brand/assets/sol.svg",
+      );
+      await expect(heroBadge).toHaveCSS("font-size", "15px");
+      await expect(heroBadge.locator("img")).toHaveCSS("width", "28px");
+      await heroBadge
+        .locator("img")
+        .evaluate((image: HTMLImageElement) => image.decode());
+      const heroBox = (await hero.boundingBox())!;
+      const heroBadgeBox = (await heroBadge.boundingBox())!;
+      const heroContainer = (await hero.locator(".container").boundingBox())!;
+      const heroContent = (await hero
+        .locator(".landing-hero-heading")
+        .boundingBox())!;
+      expect(
+        Math.abs(
+          heroBadgeBox.x +
+            heroBadgeBox.width -
+            heroContainer.x -
+            heroContainer.width,
+        ),
+      ).toBeLessThanOrEqual(1);
+      expect(
+        heroBox.y + heroBox.height - heroBadgeBox.y - heroBadgeBox.height,
+      ).toBeGreaterThanOrEqual(32);
+      expect(heroContent.y + heroContent.height + 16).toBeLessThan(
+        heroBadgeBox.y,
+      );
+      await hero.screenshot({
+        path: `test-results/review/hero-attribution-${colorScheme}-${width}.png`,
+      });
+      const footer = page.getByRole("contentinfo");
+      await expect(footer.locator(".footer-main > div > p")).toHaveText(
+        "Your prime broker for perps.",
+      );
+      const badge = footer.locator(".footer-solana");
+      await badge.scrollIntoViewIfNeeded();
+      await expect(badge).toHaveText("Built on Solana");
+      await expect(badge.locator("img")).toHaveCSS("width", "24px");
+      await expect(badge.locator("img")).toHaveAttribute(
+        "src",
+        "/brand/assets/sol.svg",
+      );
+      await badge
+        .locator("img")
+        .evaluate((image: HTMLImageElement) => image.decode());
+      const badgeBox = (await badge.boundingBox())!;
+      const container = (await footer.locator(".container").boundingBox())!;
+      expect(badgeBox.x).toBeGreaterThanOrEqual(container.x);
+      expect(
+        Math.abs(badgeBox.x + badgeBox.width - container.x - container.width),
+      ).toBeLessThanOrEqual(1);
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      await footer.screenshot({
+        path: `test-results/review/footer-${colorScheme}-${width}.png`,
+      });
+    });
+  }
 }
 
 test("eight-section story leads with brokerage and follows the trader’s workflow", async ({
@@ -127,9 +209,12 @@ test("hero is screenshot-free and keeps demo, video and thesis links", async ({
   page,
 }) => {
   await page.goto("/");
-  await expect(
-    page.locator(".landing-hero img, .landing-hero video"),
-  ).toHaveCount(0);
+  await expect(page.locator(".landing-hero img")).toHaveCount(1);
+  await expect(page.locator(".hero-solana img")).toHaveAttribute(
+    "src",
+    "/brand/assets/sol.svg",
+  );
+  await expect(page.locator(".landing-hero video")).toHaveCount(0);
   await expect(page.locator(".hero-beams")).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Watch launch video" }),
@@ -204,13 +289,7 @@ test("brokerage diagram connects three traders and two agents through one Cinder
   });
   const participants = diagram.locator(".brokerage-participant");
   await expect(participants).toHaveCount(5);
-  await expect(participants).toHaveText([
-    "Trader 01",
-    "Agent 01",
-    "Trader 02",
-    "Agent 02",
-    "Trader 03",
-  ]);
+  await expect(participants).toHaveText(["", "", "", "", ""]);
   expect(
     await participants.evaluateAll((nodes) =>
       nodes.map((node) => node.getAttribute("data-kind")),
@@ -263,6 +342,20 @@ test("brokerage diagram connects three traders and two agents through one Cinder
       expect(layer!.x).toBeGreaterThan(individual!.x + individual!.width);
       expect(venues!.x).toBeGreaterThan(layer!.x + layer!.width);
     }
+    const routeStarts = await diagram
+      .locator(
+        `svg[viewBox="${width <= 800 ? "0 0 360 760" : "0 0 1000 432"}"] > g > path`,
+      )
+      .evaluateAll((paths) =>
+        paths.slice(0, 5).map((node) => {
+          const path = node as SVGPathElement;
+          const start = path
+            .getPointAtLength(0)
+            .matrixTransform(path.getScreenCTM()!);
+          return { x: start.x, y: start.y };
+        }),
+      );
+    let participantIndex = 0;
     for (const participant of await participants.all()) {
       const box = await participant.boundingBox();
       expect(box!.x).toBeGreaterThanOrEqual(individual!.x);
@@ -276,14 +369,44 @@ test("brokerage diagram connects three traders and two agents through one Cinder
       const icon = await participant.locator("svg").boundingBox();
       expect(avatar!.width).toBeGreaterThanOrEqual(44);
       expect(avatar!.height).toBeGreaterThanOrEqual(44);
-      expect(icon!.width).toBeGreaterThanOrEqual(28);
-      expect(icon!.height).toBeGreaterThanOrEqual(28);
+      expect(icon!.width).toBeGreaterThanOrEqual(36);
+      expect(icon!.height).toBeGreaterThanOrEqual(36);
+      await expect(
+        participant.locator(".brokerage-participant-avatar"),
+      ).toHaveCSS("border-style", "none");
+      await expect(
+        participant.locator(".brokerage-participant-avatar"),
+      ).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+      const start = routeStarts[participantIndex++];
+      if (width <= 800) {
+        expect(Math.abs(start.x - avatar!.x - avatar!.width / 2)).toBeLessThan(
+          1,
+        );
+        expect(Math.abs(start.y - avatar!.y - avatar!.height)).toBeLessThan(8);
+      } else {
+        expect(Math.abs(start.y - avatar!.y - avatar!.height / 2)).toBeLessThan(
+          1,
+        );
+        expect(Math.abs(start.x - box!.x - box!.width)).toBeLessThan(1);
+      }
+    }
+    if (width > 800) {
+      const offsets = await participants.evaluateAll((nodes) =>
+        nodes.map((node) => Math.round(node.getBoundingClientRect().left)),
+      );
+      expect(new Set(offsets).size).toBeGreaterThanOrEqual(3);
     }
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
+    for (const colorScheme of ["light", "dark"] as const) {
+      await page.emulateMedia({ colorScheme });
+      await diagram.screenshot({
+        path: `test-results/review/brokerage-silhouettes-${colorScheme}-${width}.png`,
+      });
+    }
   }
 });
 
@@ -297,6 +420,9 @@ test("brokerage comparison loops, distinguishes its states and pauses offscreen"
   await expect(diagram).toHaveAttribute("data-playing", "true");
   await expect(diagram).toHaveAttribute("data-phase", "0");
   await expect(diagram).toHaveAttribute("data-view", "today");
+  await diagram.screenshot({
+    path: "test-results/review/brokerage-silhouettes-today.png",
+  });
   await expect(diagram.getByRole("button")).toHaveCount(0);
   await expect(diagram).toContainText("Direct connections");
   await expect(diagram).toContainText("Cinder-routed flow");
@@ -315,6 +441,9 @@ test("brokerage comparison loops, distinguishes its states and pauses offscreen"
   await page.clock.runFor(5000);
   await expect(diagram).toHaveAttribute("data-phase", "4");
   await expect(diagram).toHaveAttribute("data-view", "cinder");
+  await diagram.screenshot({
+    path: "test-results/review/brokerage-silhouettes-cinder.png",
+  });
   await expect(diagram).toHaveAttribute("data-playing", "true");
   await page.clock.runFor(2100);
   await expect(diagram).toHaveAttribute("data-returning", "true");
@@ -710,8 +839,14 @@ test("metadata and reduced-motion variants retain the product’s identity", asy
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  await expect(page).toHaveTitle(
-    "Cinder | A Solana-native prime broker for perps",
+  await expect(page).toHaveTitle("Cinder | Your prime broker for perps");
+  await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
+    "content",
+    "Cinder | Your prime broker for perps",
+  );
+  await expect(page.locator('meta[property="og:image:alt"]')).toHaveAttribute(
+    "content",
+    "Cinder: Your prime broker for perps.",
   );
   expect(await page.locator("body").innerText()).not.toContain("—");
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
@@ -742,7 +877,7 @@ test("server-rendered landing copy and primary links remain available without Ja
   try {
     await page.goto(baseURL!);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-      "A Solana-native prime broker for perps.",
+      "Your prime broker for perps.",
     );
     await expect(
       page.getByRole("link", { name: "Explore the demo", exact: true }).first(),

@@ -135,29 +135,35 @@
 }
 .participant {
   position: absolute;
-  left: 0;
-  width: 100%;
+  left: var(--participant-inset);
+  width: calc(100% - var(--participant-inset));
   display: flex;
   align-items: center;
   gap: 12px;
   min-height: 44px;
   transform: translateY(-50%);
   background: var(--showcase-surface);
-  font-size: 14px;
 }
+/* Open, staggered silhouettes suggest a community rather than named demo
+   profiles. Each stem still meets the unchanged SVG route at the column edge. */
 .participant:nth-child(1) {
+  --participant-inset: 4%;
   top: 16.6667%;
 }
 .participant:nth-child(2) {
+  --participant-inset: 44%;
   top: 33.3333%;
 }
 .participant:nth-child(3) {
+  --participant-inset: 20%;
   top: 50%;
 }
 .participant:nth-child(4) {
+  --participant-inset: 40%;
   top: 66.6667%;
 }
 .participant:nth-child(5) {
+  --participant-inset: 8%;
   top: 83.3333%;
 }
 .participant::after {
@@ -175,25 +181,14 @@
   width: 44px;
   height: 44px;
   flex: 0 0 44px;
-  border: 1px solid var(--border);
-  border-radius: 50%;
-  background: var(--surface-raised);
   color: var(--muted);
 }
 .avatar > svg {
-  width: 28px;
-  height: 28px;
-}
-.participant[data-kind="agent"] .avatar {
-  border-radius: 14px;
+  width: 36px;
+  height: 36px;
 }
 .diagram[data-view="cinder"] .avatar {
   color: var(--cobalt-bright);
-  background: var(--cobalt-tint);
-  border-color: var(--diagram-outline);
-}
-.number {
-  color: var(--muted);
 }
 .layer {
   position: absolute;
@@ -408,10 +403,6 @@
   .privateAccounts h3 {
     white-space: normal;
   }
-  .participant {
-    font-size: 13px;
-    gap: 8px;
-  }
   .venue {
     padding-left: 8px;
   }
@@ -467,13 +458,11 @@
     text-align: center;
   }
   .participant {
-    top: 64.5161% !important;
+    /* Put the silhouette immediately above the vertical SVG route's start. */
+    top: 82.2581% !important;
     width: 20%;
     flex-direction: column;
-    gap: 4px;
-    text-align: center;
-    font-size: 12px;
-    line-height: 1.4;
+    background: transparent;
   }
   .participant:nth-child(1) {
     left: 0;
@@ -489,9 +478,6 @@
   }
   .participant:nth-child(5) {
     left: 80%;
-  }
-  .participant > span:last-child {
-    max-width: 54px;
   }
   .participant::after {
     display: none;

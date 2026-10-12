@@ -2,8 +2,9 @@
 import { ImageResponse } from "next/og";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { site } from "@/lib/site";
 
-export const alt = "Cinder: A Solana-native prime broker for perps.";
+export const alt = `Cinder: ${site.tagline}`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -71,8 +72,8 @@ export default async function OpenGraphImage() {
           letterSpacing: -4,
         }}
       >
-        <span>A Solana-native</span>
-        <span style={{ color: "#6093FF" }}>prime broker for perps.</span>
+        <span>Your prime broker</span>
+        <span style={{ color: "#6093FF" }}>for perps.</span>
       </div>
       <div
         style={{

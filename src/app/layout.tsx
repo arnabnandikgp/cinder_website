@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { site } from "@/lib/site";
 import "./globals.css";
 
-const pageTitle = "Cinder | A Solana-native prime broker for perps";
+const pageTitle = `Cinder | ${site.tagline.replace(/\.$/, "")}`;
 
 export const metadata: Metadata = {
   metadataBase: site.url ? new URL(site.url) : undefined,

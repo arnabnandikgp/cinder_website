@@ -10,8 +10,9 @@ function publicUrl(value: string | undefined) {
 
 export const site = {
   name: "Cinder",
+  tagline: "Your prime broker for perps.",
   description:
-    "A Solana-native prime broker for perps. Access venues through one account, with private positions and the fee advantages of pooled trading volume.",
+    "Your prime broker for perps. Trade across supported venues from one workspace, with private positions and the fee advantages of pooled trading volume.",
   url: publicUrl(process.env.NEXT_PUBLIC_SITE_URL) || "https://cinder.exchange",
   x: "https://x.com/CinderExchange",
   github: "https://github.com/arnabnandikgp/cinder",
