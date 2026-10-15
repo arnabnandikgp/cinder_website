@@ -3,7 +3,7 @@ import localFont from "next/font/local";
 import Image from "next/image";
 import Link from "next/link";
 import { Header } from "@/components/header";
-import { HeroBeams } from "@/components/hero-beams";
+import { HeroArchitecture } from "@/components/hero-architecture";
 import { AgentAccessDiagram } from "@/components/agent-access-diagram";
 import { BrokerageDiagram } from "@/components/brokerage-diagram";
 import { AccountStory, TradingStory } from "@/components/landing-panels";
@@ -63,7 +63,7 @@ export default function Home() {
       <Header />
       <main id="main" className="landing-page">
         <section className="landing-hero" aria-labelledby="hero-title">
-          <HeroBeams />
+          <HeroArchitecture />
           <div className="container">
             <div className="landing-hero-heading">
               <h1 id="hero-title">

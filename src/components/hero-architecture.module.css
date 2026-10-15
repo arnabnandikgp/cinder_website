@@ -1,0 +1,99 @@
+.artwork {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+.artwork > svg {
+  width: 100%;
+  height: 100%;
+}
+.artwork::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  /* Keep the reading aperture quiet, without washing out the edge geometry. */
+  background:
+    linear-gradient(to bottom, transparent 76%, var(--hero-background)),
+    radial-gradient(
+      ellipse at 50% 47%,
+      var(--hero-background) 0 25%,
+      transparent 66%
+    );
+}
+.construction {
+  opacity: 0.65;
+}
+.plane {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.left {
+  opacity: 0.95;
+  transform: translateX(-32px);
+}
+.right {
+  opacity: 0.8;
+  transform: translateX(-32px);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .plane {
+    animation: architectural-drift 16s cubic-bezier(0.45, 0, 0.55, 1) infinite
+      alternate;
+    animation-play-state: paused;
+  }
+  .right .plane {
+    animation-delay: -8s;
+  }
+  .artwork[data-active="true"] .plane {
+    animation-play-state: running;
+  }
+}
+@keyframes architectural-drift {
+  from {
+    transform: translateY(-8px);
+  }
+  to {
+    transform: translateY(8px);
+  }
+}
+@media (max-width: 800px) {
+  .artwork > svg {
+    width: 150%;
+    max-width: none;
+    margin-left: -25%;
+  }
+  .artwork::after {
+    background:
+      linear-gradient(to bottom, transparent 76%, var(--hero-background)),
+      radial-gradient(
+        ellipse at center,
+        var(--hero-background) 0 34%,
+        transparent 78%
+      );
+  }
+}
+@media (max-width: 520px) {
+  .artwork > svg {
+    width: 200%;
+    height: 80%;
+    margin-left: -50%;
+  }
+  .left {
+    /* Frame the copy, rather than allowing cobalt faces behind its letters. */
+    transform: translate(240px, -96px);
+  }
+  .right {
+    transform: translate(240px, -160px);
+  }
+  .artwork::after {
+    background:
+      linear-gradient(to bottom, transparent 72%, var(--hero-background)),
+      radial-gradient(
+        ellipse at 50% 44%,
+        var(--hero-background) 0 25%,
+        transparent 74%
+      );
+  }
+}

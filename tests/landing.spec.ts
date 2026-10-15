@@ -215,7 +215,7 @@ test("hero is screenshot-free and keeps demo, video and thesis links", async ({
     "/brand/assets/sol.svg",
   );
   await expect(page.locator(".landing-hero video")).toHaveCount(0);
-  await expect(page.locator(".hero-beams")).toBeVisible();
+  await expect(page.locator(".hero-architecture")).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Watch launch video" }),
   ).toHaveAttribute(
@@ -238,7 +238,7 @@ test("hero is screenshot-free and keeps demo, video and thesis links", async ({
   ).toBeAttached();
 });
 
-test("light-mode depth uses blue section washes, richer panels and cobalt hero beams", async ({
+test("light-mode depth distinguishes neutral sections, blue washes and showcase panels", async ({
   page,
 }) => {
   await page.goto("/");
@@ -255,6 +255,7 @@ test("light-mode depth uses blue section washes, richer panels and cobalt hero b
       hero: color(".landing-hero"),
       trading: color("#trading"),
       agents: color("#agents"),
+      account: color("#account"),
       panel: color(".account-stage"),
     };
   });
@@ -262,21 +263,19 @@ test("light-mode depth uses blue section washes, richer panels and cobalt hero b
   for (const surface of [
     palette.hero,
     palette.trading,
-    palette.agents,
+    palette.account,
     palette.panel,
   ]) {
-    expect(surface[2] - surface[0]).toBeGreaterThan(15);
+    expect(surface[2] - surface[0]).toBeGreaterThan(10);
   }
   // Panels read more strongly than the broad section wash.
   expect(palette.panel[0]).toBeLessThan(palette.trading[0]);
-  await expect(page.locator(".hero-beams")).toHaveAttribute(
+  expect(palette.agents).toEqual(palette.neutral);
+  await expect(page.locator(".hero-architecture")).toHaveAttribute(
     "aria-hidden",
     "true",
   );
-  await expect(page.locator(".hero-beams")).toHaveAttribute(
-    "data-color",
-    /#0051fe/i,
-  );
+  await expect(page.locator(".hero-architecture svg")).toBeVisible();
 });
 
 test("brokerage diagram connects three traders and two agents through one Cinder layer", async ({
@@ -335,6 +334,15 @@ test("brokerage diagram connects three traders and two agents through one Cinder
       .boundingBox();
     const layer = await diagram.locator(".brokerage-layer").boundingBox();
     const venues = await diagram.locator(".brokerage-venues").boundingBox();
+    const hub = diagram.locator(".brokerage-hub");
+    const hubBox = (await hub.boundingBox())!;
+    for (const content of await hub.locator(":scope > div").all()) {
+      const box = (await content.boundingBox())!;
+      expect(box.y).toBeGreaterThanOrEqual(hubBox.y);
+      expect(box.y + box.height).toBeLessThanOrEqual(
+        hubBox.y + hubBox.height + 1,
+      );
+    }
     if (width <= 800) {
       expect(layer!.y).toBeGreaterThan(individual!.y + individual!.height);
       expect(venues!.y).toBeGreaterThan(layer!.y + layer!.height);
@@ -413,7 +421,9 @@ test("brokerage diagram connects three traders and two agents through one Cinder
 test("brokerage comparison loops, distinguishes its states and pauses offscreen", async ({
   page,
 }) => {
-  await page.clock.install();
+  // Screenshots must not consume the choreography's hold time on a busy runner.
+  await page.clock.install({ time: new Date("2026-10-15T00:00:00Z") });
+  await page.clock.pauseAt(new Date("2026-10-15T00:00:01Z"));
   await page.goto("/");
   const diagram = page.locator(".brokerage-map");
   await diagram.scrollIntoViewIfNeeded();

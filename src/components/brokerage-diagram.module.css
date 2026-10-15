@@ -1,11 +1,12 @@
 .diagram {
+  --showcase-surface: var(--diagram-surface);
   --brokerage-route: color-mix(
     in srgb,
     var(--cobalt-bright) 65%,
     var(--showcase-surface)
   );
   margin: 0;
-  padding: 20px 36px 28px;
+  padding: 20px 32px 24px;
   border: 1px solid var(--border-soft);
   border-radius: var(--landing-panel-radius);
   background: var(--showcase-surface);
@@ -29,7 +30,7 @@
   border: 1px solid var(--border);
   border-radius: var(--landing-control-radius);
   color: var(--muted);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -49,7 +50,7 @@
   flex-wrap: wrap;
   gap: 12px 20px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 14px;
 }
 .legend > span {
   display: inline-flex;
@@ -67,7 +68,8 @@
 }
 .canvas {
   position: relative;
-  aspect-ratio: 1000 / 432;
+  aspect-ratio: 1000 / 400;
+  min-height: 420px;
   isolation: isolate;
 }
 .connections {
@@ -116,8 +118,8 @@
 }
 .canvas h3 {
   margin: 0;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 600;
   color: var(--muted);
   letter-spacing: 0;
   line-height: 24px;
@@ -229,7 +231,7 @@
 }
 .brand span {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 14px;
 }
 .privateAccounts {
   margin-top: 20px;
@@ -243,7 +245,7 @@
   align-items: center;
   gap: 6px;
   color: var(--cobalt-bright);
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.5;
   white-space: nowrap;
 }
@@ -258,8 +260,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  min-height: 26px;
-  font-size: 12px;
+  min-height: 28px;
+  font-size: 14px;
   color: var(--muted);
 }
 .privateRecord {
@@ -304,12 +306,12 @@
   gap: 10px;
 }
 .venueName strong {
-  font-size: 16px;
-  font-weight: 500;
+  font-size: 18px;
+  font-weight: 600;
 }
 .venueName img {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
   border-radius: 8px;
   padding: 3px;
@@ -320,7 +322,7 @@
   align-items: center;
   gap: 8px;
   margin-top: 8px;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--muted);
   white-space: nowrap;
 }
@@ -359,18 +361,18 @@
 .comparison > div > span {
   display: block;
   margin-bottom: 8px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
 }
 .comparison strong {
-  font-size: 17px;
-  font-weight: 500;
+  font-size: 20px;
+  font-weight: 600;
   letter-spacing: -0.025em;
 }
 .comparison p {
   margin: 6px 0 0;
-  font-size: 13px;
-  line-height: 1.65;
+  font-size: 15px;
+  line-height: 1.6;
 }
 .comparison > div[data-active="true"] {
   color: var(--foreground);
@@ -422,6 +424,7 @@
   }
   .canvas {
     aspect-ratio: 360 / 760;
+    min-height: 0;
     max-width: 400px;
     margin-inline: auto;
   }
@@ -486,7 +489,8 @@
     left: 11.1111%;
     top: 31.5789%;
     width: 77.7778%;
-    height: 39.4737%;
+    /* Keep the larger private-record labels contained at narrow widths. */
+    height: max(39.4737%, 304px);
   }
   .hub {
     padding: 16px;
@@ -519,7 +523,7 @@
     gap: 8px;
   }
   .venueName strong {
-    font-size: 14px;
+    font-size: 15px;
   }
   .volume {
     flex-direction: column;
@@ -531,10 +535,13 @@
     height: 14px;
   }
   .comparison strong {
-    font-size: 16px;
+    font-size: 18px;
   }
 }
 @media (max-width: 480px) {
+  .canvas {
+    min-height: 660px;
+  }
   .diagram {
     padding-inline: 12px;
   }
@@ -552,9 +559,9 @@
     margin-top: 12px;
   }
   .accountRecord {
-    min-height: 24px;
+    min-height: 26px;
   }
   .comparison p {
-    font-size: 12px;
+    font-size: 14px;
   }
 }

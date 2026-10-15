@@ -4,10 +4,10 @@
   min-width: 0;
   width: 100%;
   margin: 0;
-  padding: 16px 24px;
+  padding: 20px 28px;
   border: 1px solid var(--border);
   border-radius: var(--landing-panel-radius, 8px);
-  background: var(--showcase-surface, var(--surface));
+  background: var(--surface-raised);
 }
 .heading {
   display: flex;
@@ -42,8 +42,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
-  font-weight: 400;
+  font-size: 16px;
+  font-weight: 600;
 }
 .heading > strong svg {
   color: var(--cobalt-bright);
@@ -56,18 +56,19 @@
 }
 .authorization dt {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 14px;
 }
 .authorization dd {
   margin: 4px 0 0;
-  font-size: 13px;
+  font-size: 15px;
+  font-weight: 500;
   line-height: 1.5;
 }
 .flow {
   position: relative;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  padding: 20px 0 16px;
+  padding: 24px 0 20px;
 }
 .node {
   display: flex;
@@ -82,8 +83,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
+  width: 60px;
+  height: 60px;
   margin-bottom: 6px;
   border: 1px solid var(--border);
   border-radius: 50%;
@@ -95,31 +96,31 @@
   background: var(--cobalt-tint);
 }
 .permissionGate img {
-  width: 24px;
+  width: 30px;
   height: auto;
 }
 .node > strong {
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.5;
-  font-weight: 400;
+  font-weight: 600;
 }
 .node > span:last-child {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.5;
 }
 .connector {
   position: absolute;
-  top: 34px;
-  width: calc(100% / 3 - 48px);
+  top: 44px;
+  width: calc(100% / 3 - 60px);
   height: 20px;
   overflow: visible;
 }
 .incoming {
-  left: calc(100% / 6 + 24px);
+  left: calc(100% / 6 + 30px);
 }
 .outgoing {
-  left: calc(50% + 24px);
+  left: calc(50% + 30px);
 }
 .track {
   stroke: var(--border);
@@ -170,7 +171,7 @@
 }
 .activityHeading > span:last-child {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 13px;
 }
 .activity ul {
   list-style: none;
@@ -183,7 +184,7 @@
   grid-template-columns: 16px minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
-  padding: 8px;
+  padding: 12px 8px;
   border-bottom: 1px solid var(--border-soft);
 }
 .activity li::before {
@@ -200,14 +201,14 @@
 }
 .activity li strong {
   display: block;
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.5;
-  font-weight: 400;
+  font-weight: 500;
 }
 .activity li div > span {
   display: block;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.5;
 }
 .allowedEvent > svg,
@@ -215,7 +216,7 @@
   color: var(--cobalt-bright);
 }
 .eventStatus {
-  font-size: 11px;
+  font-size: 13px;
 }
 .activity .blockedEvent::before {
   border-left-color: var(--muted);
@@ -227,7 +228,7 @@
   justify-content: space-between;
   gap: 12px;
   padding-top: 12px;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--muted);
 }
 .withdrawal > span:first-child {
@@ -410,7 +411,7 @@
     gap: 8px;
   }
   .authorization dd {
-    font-size: 12px;
+    font-size: 14px;
   }
   .activity li {
     gap: 8px;

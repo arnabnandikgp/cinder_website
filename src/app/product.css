@@ -4,7 +4,7 @@
   color-scheme: light;
   --background: light-dark(#fafafb, #0b0b0b);
   --foreground: light-dark(#181b22, #f3f4f7);
-  --surface: light-dark(#edf3ff, #121416);
+  --surface: light-dark(#f0f4fc, #14171c);
   --surface-raised: light-dark(#ffffff, #1a1d21);
   --muted: light-dark(#4e5d76, #a9b0bc);
   --subtle: light-dark(#586782, #949eaf);
@@ -14,25 +14,36 @@
   --cobalt-tint: light-dark(#dce8ff, #101c35);
   /* Cobalt-derived surface roles add depth without introducing another hue.
      Broad section washes stay lighter than the explanatory panels inside them. */
-  --section-tint: light-dark(#edf3ff, #0b0b0b);
-  --showcase-surface: light-dark(#e3ecff, #121416);
+  --section-tint: light-dark(#f0f4fc, #101318);
+  --showcase-surface: light-dark(#e5edfc, #171d28);
+  --diagram-surface: light-dark(#f5f7fc, #13171d);
   --diagram-line: light-dark(#a5b7d4, #3b4c68);
   --diagram-outline: light-dark(#b9caeb, #3a5d98);
-  --hero-background: light-dark(#edf3ff, #0d121b);
+  --hero-background: light-dark(#eff4fc, #0d121b);
   --hero-copy: light-dark(#34435f, #a9b0bc);
-  /* Light-mode ribbons need more ink against the pale surface, rather than
-     the low opacity used for illuminated artwork on dark backgrounds. */
-  --hero-scrim: light-dark(rgb(237 243 255 / 0.86), rgb(13 18 27 / 0.93));
-  --hero-beam-opacity: 0.72;
+  /* Bespoke planes use the mark's angles, not a logo watermark. */
+  --hero-plane-start: light-dark(#dae6fa, #24334e);
+  --hero-plane-end: light-dark(#f8faff, #111a29);
+  --hero-plane-outline: light-dark(#bccde7, #33445e);
+  --hero-edge-start: var(--cobalt);
+  --hero-edge-end: light-dark(#739fff, #163874);
+  --hero-side-start: light-dark(#a2bdeb, #142f5c);
+  --hero-side-end: light-dark(#dce7fa, #1b2538);
+  --hero-highlight: light-dark(#ffffff, #5278ad);
+  --hero-rule: light-dark(#becde5, #283b58);
   --on-cobalt: #fafafb;
   --terminal-surface: #101010;
   --venue-logo-surface: #121416;
   --art-line: rgb(250 250 251 / 0.2);
   --landing-control-radius: 12px;
   --landing-panel-radius: 24px;
+  --landing-body-size: 18px;
+  --landing-detail-size: 15px;
+  --landing-reading-height: 1.6;
+  --landing-header-height: 80px;
   --font-ui: var(--font-landing), Arial, Helvetica, sans-serif;
   --gutter: clamp(22px, 4vw, 64px);
-  --section-space: clamp(80px, 9vw, 128px);
+  --section-space: clamp(64px, 6.25vw, 96px);
   min-height: 100vh;
   background: var(--background);
   color: var(--foreground);
@@ -42,12 +53,10 @@
 }
 .landing-site[data-theme="dark"] {
   color-scheme: dark;
-  --hero-beam-opacity: 0.7;
 }
 @media (prefers-color-scheme: dark) {
   .landing-site[data-theme="system"] {
     color-scheme: dark;
-    --hero-beam-opacity: 0.7;
   }
 }
 html:has(.landing-site) {
@@ -59,26 +68,29 @@ html:has(.landing-site) {
 .landing-site h1,
 .landing-site h2,
 .landing-site h3 {
-  font-weight: 500;
+  font-weight: 600;
 }
 .landing-site h2 {
   font-size: clamp(36px, 4.2vw, 58px);
-  line-height: 1.12;
-  letter-spacing: -0.055em;
+  line-height: 1.08;
+  letter-spacing: -0.045em;
 }
 .landing-site .section {
   padding-block: var(--section-space);
   border-bottom: 1px solid var(--border-soft);
 }
-.landing-site :is(.landing-trading, .landing-agents) {
+.landing-site :is(.landing-trading, .landing-account) {
   background: var(--section-tint);
+}
+.landing-site .landing-agents {
+  background: var(--background);
 }
 .landing-site .button {
   min-height: 52px;
   padding-inline: 24px;
   gap: 16px;
   border-radius: var(--landing-control-radius);
-  font-size: 14px;
+  font-size: var(--landing-detail-size);
   font-weight: 600;
 }
 .landing-site .button-primary {
@@ -90,8 +102,8 @@ html:has(.landing-site) {
   border-color: var(--border);
 }
 .landing-site .text-link {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: var(--landing-detail-size);
+  font-weight: 600;
   gap: 12px;
 }
 .landing-site :is(button, a, summary):focus-visible {
@@ -115,7 +127,7 @@ html:has(.landing-site) {
   z-index: 10;
 }
 .landing-site .header-inner {
-  min-height: 88px;
+  min-height: var(--landing-header-height);
   padding: 0;
   gap: 24px;
   border: 0;
@@ -129,7 +141,7 @@ html:has(.landing-site) {
 }
 .landing-site .desktop-nav a {
   padding-inline: 16px 12px;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--muted);
   border-radius: 10px;
 }
@@ -143,7 +155,7 @@ html:has(.landing-site) {
   min-height: 44px;
   padding-inline: 16px;
   margin: 0;
-  font-size: 13px;
+  font-size: 14px;
   border-radius: var(--landing-control-radius);
   border: 1px solid var(--border);
   background: var(--surface-raised);
@@ -216,56 +228,17 @@ html:has(.landing-site) {
   }
 }
 
-/* React Bits Beams in the approved cobalt. A quiet central reading area
-   preserves contrast while the illuminated ribbons remain visible at the edges. */
+/* A reading aperture, framed by mark-derived architectural artwork. */
 .landing-site .landing-hero {
   position: relative;
   display: grid;
   align-items: center;
-  min-height: min(780px, calc(100svh - 88px));
-  padding-block: 96px 112px;
+  /* Include the stationary header and its 1px border in the first viewport. */
+  min-height: calc(100svh - var(--landing-header-height) - 1px);
+  padding-block: 80px 104px;
   isolation: isolate;
   border-bottom: 1px solid var(--border-soft);
   background: var(--hero-background);
-}
-.landing-site .hero-beams {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: -1;
-}
-.landing-site .hero-beams::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse at 50% 48%, var(--hero-scrim) 16%, transparent 86%),
-    linear-gradient(to bottom, transparent 76%, var(--hero-background));
-}
-.landing-site .hero-beams .beams-container,
-.landing-site .hero-beams-fallback {
-  position: absolute;
-  inset: 0;
-  opacity: var(--hero-beam-opacity);
-}
-.landing-site .hero-beams .beams-canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-.landing-site .hero-beams-fallback {
-  background: repeating-linear-gradient(
-    120deg,
-    transparent 0 78px,
-    color-mix(in srgb, var(--cobalt) 6%, transparent) 80px,
-    color-mix(in srgb, var(--cobalt) 42%, transparent) 138px,
-    transparent 140px 220px
-  );
-}
-.landing-site .hero-beams[data-renderer="ready"] .hero-beams-fallback,
-.landing-site .hero-beams:not([data-renderer="ready"]) .beams-container {
-  opacity: 0;
 }
 .landing-site .landing-hero-heading {
   position: relative;
@@ -275,9 +248,9 @@ html:has(.landing-site) {
 }
 .landing-site .landing-hero h1 {
   font-size: clamp(48px, 6.6vw, 92px);
-  line-height: 1.1;
-  letter-spacing: -0.065em;
-  font-weight: 500;
+  line-height: 1.04;
+  letter-spacing: -0.045em;
+  font-weight: 600;
 }
 .landing-site .hero-title-line {
   display: block;
@@ -290,10 +263,10 @@ html:has(.landing-site) {
   font-weight: 500;
 }
 .landing-site .hero-intro {
-  max-width: 530px;
-  margin: 28px auto 0;
-  font-size: 18px;
-  line-height: 1.75;
+  max-width: 580px;
+  margin: 24px auto 0;
+  font-size: 20px;
+  line-height: var(--landing-reading-height);
   color: var(--hero-copy);
 }
 .landing-site .landing-hero .landing-actions {
@@ -303,14 +276,14 @@ html:has(.landing-site) {
 .landing-site .landing-section-heading {
   display: grid;
   grid-template-columns: 1.15fr 1fr;
-  gap: 96px;
+  gap: 64px;
   align-items: end;
-  margin-bottom: 56px;
+  margin-bottom: 40px;
 }
 .landing-site .landing-section-heading > p {
-  max-width: 440px;
-  font-size: 17px;
-  line-height: 1.8;
+  max-width: 480px;
+  font-size: var(--landing-body-size);
+  line-height: var(--landing-reading-height);
 }
 
 .landing-site .venue-logo img {
@@ -323,10 +296,11 @@ html:has(.landing-site) {
   justify-content: space-between;
   gap: 24px;
   list-style: none;
-  padding: 28px 0 0;
+  padding: 24px 0 0;
   margin: 0;
   color: var(--muted);
-  font-size: 15px;
+  font-size: 16px;
+  font-weight: 500;
 }
 .landing-site .brokerage-principles li {
   display: flex;
@@ -342,9 +316,9 @@ html:has(.landing-site) {
 .landing-site .trading-story-heading {
   display: grid;
   grid-template-columns: 1.15fr 1fr;
-  gap: 96px;
+  gap: 64px;
   align-items: center;
-  margin-bottom: 44px;
+  margin-bottom: 32px;
 }
 .landing-site .trading-mode-switch {
   display: inline-flex;
@@ -354,14 +328,14 @@ html:has(.landing-site) {
   background: var(--surface);
 }
 .landing-site .trading-mode-switch button {
-  min-width: 112px;
-  min-height: 44px;
+  min-width: 120px;
+  min-height: 48px;
   padding: 8px 24px;
   border: 0;
   border-radius: 12px;
   background: transparent;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
 }
 .landing-site .trading-mode-switch button[aria-pressed="true"] {
@@ -369,13 +343,13 @@ html:has(.landing-site) {
   color: var(--on-cobalt);
 }
 .landing-site .trading-mode-copy {
-  padding-top: 20px;
-  min-height: 104px;
+  padding-top: 16px;
+  min-height: 88px;
 }
 .landing-site .trading-mode-copy > p {
-  max-width: 440px;
-  font-size: 16px;
-  line-height: 1.75;
+  max-width: 480px;
+  font-size: var(--landing-body-size);
+  line-height: var(--landing-reading-height);
 }
 .landing-site .trading-preview {
   min-width: 0;
@@ -390,7 +364,7 @@ html:has(.landing-site) {
   align-items: center;
   gap: 16px;
   padding: 14px 20px;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--muted);
 }
 .landing-site .preview-window-dots {
@@ -447,8 +421,8 @@ html:has(.landing-site) {
 /* A click-through account sequence. No invented customer balances or returns. */
 .landing-site .account-story {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
-  gap: 80px;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 48px;
   align-items: center;
 }
 .landing-site .account-stage {
@@ -464,45 +438,47 @@ html:has(.landing-site) {
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  padding: 20px 28px;
-  font-size: 12px;
+  padding: 16px 28px;
+  font-size: 14px;
+  font-weight: 500;
   color: var(--muted);
   border-bottom: 1px solid var(--border-soft);
   background: var(--surface-raised);
 }
 .landing-site .account-scenes {
   position: relative;
-  min-height: 458px;
+  min-height: 510px;
 }
 .landing-site .account-scene {
-  padding: 36px 32px 28px;
+  padding: 32px;
 }
 .landing-site .account-scene[hidden] {
   display: none;
 }
 .landing-site .account-visual-heading h3 {
-  font-size: 25px;
+  font-size: 28px;
   letter-spacing: -0.04em;
   line-height: 1.3;
   font-weight: 600;
 }
 .landing-site .account-visual-heading p {
   margin-top: 6px;
-  font-size: 13px;
+  font-size: var(--landing-detail-size);
+  line-height: var(--landing-reading-height);
 }
 .landing-site .visual-kicker {
   display: block;
   margin-bottom: 16px;
   color: var(--cobalt-bright);
-  font-size: 12px;
+  font-size: 14px;
 }
 .landing-site .account-orbit {
   position: relative;
   display: grid;
   place-items: center;
-  width: 108px;
-  height: 108px;
-  margin: 0 auto 20px;
+  width: 76px;
+  height: 76px;
+  margin: 0;
 }
 .landing-site .account-orbit > span {
   position: absolute;
@@ -511,7 +487,7 @@ html:has(.landing-site) {
   border-radius: 50%;
 }
 .landing-site .account-orbit > span:nth-child(2) {
-  inset: 12px;
+  inset: 8px;
   background: var(--cobalt-tint);
   border-color: var(--border-soft);
 }
@@ -519,41 +495,55 @@ html:has(.landing-site) {
   position: relative;
   width: 36px;
 }
-.landing-site [data-scene="overview"] .account-visual-heading {
-  text-align: center;
+.landing-site .account-scene[data-scene="overview"]:not([hidden]) {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  align-items: center;
+  gap: 24px 20px;
 }
 .landing-site .account-metrics {
-  margin: 28px 0 0;
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 12px;
+  margin: 0;
 }
 .landing-site .account-metrics > div {
   display: grid;
-  grid-template-columns: 24px 1fr;
-  column-gap: 12px;
-  padding: 10px 0;
+  grid-template-columns: 44px 1fr;
+  column-gap: 16px;
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--surface-raised);
 }
 .landing-site .account-metrics svg {
   grid-row: span 2;
   align-self: center;
+  width: 44px;
+  height: 44px;
+  padding: 11px;
+  border-radius: 13px;
+  background: var(--cobalt-tint);
   color: var(--cobalt-bright);
 }
 .landing-site .account-metrics dt {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 17px;
+  font-weight: 600;
 }
 .landing-site .account-metrics dd {
   margin: 2px 0 0;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 14px;
+  line-height: 1.5;
 }
 .landing-site .position-illustration {
-  margin-top: 28px;
+  margin-top: 24px;
 }
 .landing-site .illustrative-position {
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 78px;
-  padding: 12px 0;
+  min-height: 88px;
+  padding: 16px 0;
   border-bottom: 1px solid var(--border);
 }
 .landing-site .venue-logo {
@@ -567,21 +557,21 @@ html:has(.landing-site) {
 }
 .landing-site .illustrative-position strong {
   display: block;
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 600;
 }
 .landing-site .illustrative-position div > span {
   display: block;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 14px;
   margin-top: 3px;
 }
 .landing-site .position-label {
   margin-left: auto;
   text-align: right;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--cobalt-bright);
-  line-height: 1.8;
+  line-height: 1.6;
 }
 .landing-site .position-label > span {
   color: var(--muted);
@@ -590,10 +580,10 @@ html:has(.landing-site) {
   display: block;
   margin-top: 20px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 14px;
 }
 .landing-site .activity-illustration {
-  margin: 24px 0 0;
+  margin: 20px 0 0;
   padding: 0;
   list-style: none;
 }
@@ -601,15 +591,15 @@ html:has(.landing-site) {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 14px;
-  min-height: 68px;
+  gap: 16px;
+  min-height: 80px;
 }
 .landing-site .activity-illustration li:not(:last-child)::after {
   content: "";
   position: absolute;
-  left: 15px;
-  top: 49px;
-  height: 38px;
+  left: 19px;
+  top: 60px;
+  height: 40px;
   width: 1px;
   background: var(--diagram-line);
 }
@@ -618,8 +608,8 @@ html:has(.landing-site) {
   z-index: 1;
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border: 1px solid var(--diagram-outline);
   border-radius: 50%;
   background: var(--cobalt-tint);
@@ -628,24 +618,25 @@ html:has(.landing-site) {
 }
 .landing-site .activity-illustration strong {
   display: block;
-  font-weight: 500;
-  font-size: 14px;
+  font-weight: 600;
+  font-size: 17px;
 }
 .landing-site .activity-illustration div > span {
   display: block;
-  font-size: 12px;
+  font-size: 14px;
+  line-height: 1.5;
   color: var(--muted);
 }
 .landing-site .activity-sequence {
   margin-left: auto;
   color: var(--subtle);
-  font-size: 12px;
+  font-size: 14px;
 }
 .landing-site .account-step-list {
   display: grid;
   gap: 8px;
   align-content: start;
-  min-height: 340px;
+  min-height: 320px;
 }
 .landing-site .account-step-list > button {
   position: relative;
@@ -655,7 +646,7 @@ html:has(.landing-site) {
   text-align: left;
   min-height: 76px;
   width: 100%;
-  padding: 22px 20px 22px 28px;
+  padding: 20px 20px 20px 28px;
   border: 1px solid transparent;
   border-radius: 18px;
   background: transparent;
@@ -690,16 +681,16 @@ html:has(.landing-site) {
 }
 .landing-site .account-step-list strong {
   display: block;
-  font-size: 20px;
-  font-weight: 500;
+  font-size: 23px;
+  font-weight: 600;
   letter-spacing: -0.04em;
   color: var(--foreground);
 }
 .landing-site .account-step-detail {
   display: grid;
   grid-template-rows: 0fr;
-  font-size: 14px;
-  line-height: 1.7;
+  font-size: 16px;
+  line-height: 1.6;
 }
 .landing-site .account-step-detail > span {
   overflow: hidden;
@@ -752,15 +743,15 @@ html:has(.landing-site) {
 /* Agent permissions keep their established diagram, with theme-aware surfaces. */
 .landing-site .landing-agent-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
-  gap: 80px;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.25fr);
+  gap: 64px;
   align-items: center;
 }
 .landing-site .landing-agent-copy > p {
-  max-width: 370px;
-  margin-top: 28px;
-  font-size: 17px;
-  line-height: 1.8;
+  max-width: 400px;
+  margin-top: 24px;
+  font-size: var(--landing-body-size);
+  line-height: var(--landing-reading-height);
 }
 .landing-site .landing-agent-layout > figure {
   min-width: 0;
@@ -822,7 +813,7 @@ html:has(.landing-site) {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--muted);
 }
 .landing-site .thesis-copy h2 {
@@ -832,8 +823,8 @@ html:has(.landing-site) {
 .landing-site .thesis-copy p {
   max-width: 400px;
   margin-top: 20px;
-  font-size: 15px;
-  line-height: 1.8;
+  font-size: var(--landing-body-size);
+  line-height: var(--landing-reading-height);
 }
 .landing-site .thesis-copy .text-link {
   margin-top: 20px;
@@ -845,7 +836,7 @@ html:has(.landing-site) {
   background: var(--background);
 }
 .landing-site .faq-layout {
-  gap: 96px;
+  gap: 64px;
 }
 .landing-site .faq-layout h2 {
   margin-bottom: 20px;
@@ -854,8 +845,9 @@ html:has(.landing-site) {
   margin-top: 0;
 }
 .landing-site .faq-list summary {
-  min-height: 88px;
-  font-size: 16px;
+  min-height: 80px;
+  font-size: 18px;
+  font-weight: 500;
   gap: 16px;
 }
 .landing-site .faq-number {
@@ -869,8 +861,8 @@ html:has(.landing-site) {
 .landing-site .landing-faq-answer > p {
   margin: 0;
   padding: 0;
-  font-size: 14px;
-  line-height: 1.8;
+  font-size: 16px;
+  line-height: 1.65;
 }
 .landing-site .landing-faq-answer .text-link {
   margin-top: 12px;
@@ -914,7 +906,7 @@ html:has(.landing-site) {
   min-height: 44px;
   margin-top: 12px;
   color: var(--cobalt-bright);
-  font-size: 14px;
+  font-size: 15px;
   text-decoration: underline;
   text-underline-offset: 4px;
 }
@@ -924,7 +916,7 @@ html:has(.landing-site) {
 .landing-site .closing-inner > .waitlist-intro {
   margin-top: 20px;
   color: var(--on-cobalt);
-  font-size: 17px;
+  font-size: 18px;
   line-height: 1.6;
   letter-spacing: 0;
 }
@@ -1062,13 +1054,13 @@ html:has(.landing-site) {
   padding-top: 56px;
 }
 .landing-site .footer-main > div > p {
-  font-size: 13px;
+  font-size: 15px;
 }
 .landing-site .footer-main nav {
   gap: 28px;
 }
 .landing-site .footer-main nav a {
-  font-size: 13px;
+  font-size: 14px;
 }
 .landing-site .footer-bottom {
   font-size: 12px;
@@ -1185,18 +1177,14 @@ html:has(.landing-site) {
   }
 }
 @media (max-width: 800px) {
-  .landing-site .header-inner {
-    min-height: 80px;
-  }
   .landing-site .landing-hero {
-    min-height: 680px;
-    padding-block: 100px;
+    padding-block: 72px 104px;
   }
   .landing-site .landing-hero h1 {
     font-size: clamp(48px, 8.3vw, 68px);
   }
   .landing-site .hero-intro {
-    font-size: 17px;
+    font-size: 18px;
     max-width: 470px;
   }
   .landing-site .landing-section-heading,
@@ -1207,7 +1195,7 @@ html:has(.landing-site) {
   }
   .landing-site .landing-section-heading > p {
     max-width: 540px;
-    font-size: 16px;
+    font-size: 18px;
   }
   .landing-site .brokerage-principles {
     font-size: 14px;
@@ -1225,17 +1213,17 @@ html:has(.landing-site) {
     gap: 28px;
   }
   .landing-site .account-scenes {
-    min-height: 458px;
+    min-height: 510px;
   }
   .landing-site .account-step-list > button {
     padding: 20px 20px 20px 28px;
   }
   .landing-site .account-step-list strong {
-    font-size: 20px;
+    font-size: 23px;
   }
   .landing-site .landing-agent-copy > p {
     max-width: 500px;
-    font-size: 16px;
+    font-size: 18px;
     margin-top: 24px;
   }
   .landing-site .thesis-card {
@@ -1265,8 +1253,10 @@ html:has(.landing-site) {
   }
 }
 @media (max-width: 520px) {
+  .landing-site {
+    --landing-header-height: 76px;
+  }
   .landing-site .header-inner {
-    min-height: 76px;
     gap: 12px;
   }
   .landing-site .header-actions {
@@ -1299,16 +1289,15 @@ html:has(.landing-site) {
     height: 40px;
   }
   .landing-site .landing-hero {
-    min-height: 650px;
-    padding-block: 88px 96px;
+    padding-block: 64px 104px;
   }
   .landing-site .landing-hero h1 {
-    font-size: clamp(42px, 10.8vw, 56px);
-    line-height: 1.14;
+    font-size: clamp(38px, 10.3vw, 50px);
+    line-height: 1.08;
   }
   .landing-site .hero-intro {
     margin-top: 24px;
-    font-size: 16px;
+    font-size: 18px;
     max-width: 320px;
   }
   .landing-site .landing-hero .landing-actions {
@@ -1319,7 +1308,12 @@ html:has(.landing-site) {
     min-width: 204px;
   }
   .landing-site h2 {
-    font-size: 36px;
+    font-size: 38px;
+  }
+  .landing-site .landing-section-heading > p,
+  .landing-site .trading-mode-copy > p,
+  .landing-site .landing-agent-copy > p {
+    font-size: 17px;
   }
   .landing-site .brokerage-principles {
     flex-wrap: wrap;
@@ -1350,20 +1344,41 @@ html:has(.landing-site) {
   }
   .landing-site .account-stage > figcaption {
     padding: 16px 20px;
-    font-size: 11px;
+    font-size: 13px;
     gap: 8px;
   }
   .landing-site .account-scene {
     padding: 28px 20px 24px;
   }
   .landing-site .account-visual-heading h3 {
-    font-size: 23px;
+    font-size: 25px;
   }
   .landing-site .account-scenes {
-    min-height: 452px;
+    min-height: 520px;
+  }
+  .landing-site .account-scene[data-scene="overview"]:not([hidden]) {
+    grid-template-columns: 56px minmax(0, 1fr);
+    column-gap: 14px;
+  }
+  .landing-site .account-orbit {
+    width: 56px;
+    height: 56px;
+  }
+  .landing-site .account-orbit img {
+    width: 27px;
+  }
+  .landing-site .account-metrics > div {
+    padding: 14px 12px;
+    column-gap: 12px;
+  }
+  .landing-site .account-metrics dt {
+    font-size: 16px;
+  }
+  .landing-site .account-step-list {
+    min-height: 0;
   }
   .landing-site .position-label {
-    font-size: 11px;
+    font-size: 13px;
   }
   .landing-site .illustrative-position {
     gap: 10px;
@@ -1373,17 +1388,17 @@ html:has(.landing-site) {
     gap: 12px;
   }
   .landing-site .account-step-list strong {
-    font-size: 19px;
+    font-size: 21px;
   }
   .landing-site .account-step-detail {
-    font-size: 13px;
+    font-size: 15px;
   }
   .landing-site .activity-illustration li {
     gap: 10px;
-    min-height: 72px;
+    min-height: 84px;
   }
   .landing-site .activity-illustration div > span {
-    font-size: 11px;
+    font-size: 14px;
   }
   .landing-site .activity-sequence {
     display: none;
@@ -1401,10 +1416,10 @@ html:has(.landing-site) {
     padding: 28px;
   }
   .landing-site .thesis-copy h2 {
-    font-size: 36px;
+    font-size: 38px;
   }
   .landing-site .faq-list summary {
-    font-size: 15px;
+    font-size: 17px;
     gap: 12px;
   }
   .landing-site .landing-faq-answer {
