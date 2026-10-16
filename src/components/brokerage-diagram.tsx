@@ -14,9 +14,11 @@ import { Mark } from "./ui";
 import styles from "./brokerage-diagram.module.css";
 
 const DURATION = 9600;
-// The forward choreography is 30% quicker. Hold the result long enough to
-// read it, then retrace the connections smoothly instead of cutting to start.
-const FORWARD_DURATION = DURATION / 1.3;
+const FORWARD_RATE = 1.3;
+// Skip only the static opening's first 400 authoring milliseconds (~0.3s).
+// Moving segments, the readable final hold and the smooth return keep their pace.
+const INTRO_SKIP = 400;
+const FORWARD_DURATION = (DURATION - INTRO_SKIP) / FORWARD_RATE;
 const RESULT_HOLD = 2200;
 const RETURN_DURATION = 1400;
 const CYCLE_DURATION = FORWARD_DURATION + RESULT_HOLD + RETURN_DURATION;
@@ -253,14 +255,14 @@ export function BrokerageDiagram() {
         time.set(DURATION);
       } else if (inView && !document.hidden && !started.current) {
         started.current = true;
-        time.set(0);
+        time.set(INTRO_SKIP);
       }
     };
     const updateVisibility = () => {
       const active = inView && !document.hidden;
       if (active && !started.current && !preference.matches) {
         started.current = true;
-        time.set(0);
+        time.set(INTRO_SKIP);
       }
       setVisible(active);
     };
@@ -303,7 +305,7 @@ export function BrokerageDiagram() {
                       CYCLE_DURATION,
                     ),
                   ))
-            : Math.min(DURATION, position * 1.3),
+            : Math.min(DURATION, INTRO_SKIP + position * FORWARD_RATE),
         );
       }
       previous = now;

@@ -438,7 +438,16 @@ test("brokerage comparison loops, distinguishes its states and pauses offscreen"
   await expect(diagram).toContainText("Cinder-routed flow");
   const path = diagram.locator('svg[viewBox="0 0 1000 432"] > path').first();
   const direct = await path.getAttribute("d");
-  await page.clock.runFor(2800);
+  // The opening pause is shorter, without speeding up the actual morph/fade.
+  await page.clock.runFor(1000);
+  expect(await path.getAttribute("d")).not.toBe(direct);
+  await page.clock.runFor(650);
+  expect(
+    await diagram
+      .locator(".brokerage-layer")
+      .evaluate((element) => Number(getComputedStyle(element).opacity)),
+  ).toBeGreaterThan(0);
+  await page.clock.runFor(1150);
   await expect(diagram).toHaveAttribute("data-phase", "1");
   expect(await path.getAttribute("d")).not.toBe(direct);
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
